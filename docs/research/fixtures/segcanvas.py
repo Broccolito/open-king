@@ -37,6 +37,7 @@ Nothing here reads KING's source.
 from __future__ import annotations
 
 import hashlib
+import itertools
 import json
 import os
 import random
@@ -871,6 +872,132 @@ def predict_old(info, w0=0, w1=None, lo=None, hi=None):
     return out
 
 
+# ---------------------------------------------------------------------------
+# §14 — the corrected caller
+#
+# `predict` above is §7 as it was first fitted, kept byte-for-byte so the numbers §10
+# quotes still reproduce.  `predict19` is the same geometry with the one clause §11.1
+# flagged replaced by the bisected one: the bridge is the ordinary gate, asked twice.
+# ---------------------------------------------------------------------------
+
+def wordinfo2(spec, ibs1b_inf2=False):
+    """`wordinfo` with the corrected `inf2` — a het-vs-A1A1 marker is not informative.
+
+    §14.3: 20 words carrying one het-vs-A1A1 marker each are refused by the gate, where
+    10 HetHet or 10 A1A1/A1A1 markers pass it.  Pass `ibs1b_inf2=True` for the old
+    `p1 & p1` statistic, which §14.5's batteries reject.
+    """
+    ks = expand(spec)
+    mis = [i for i, k in enumerate(ks) if k in ("ibs1", "ibs1b")]
+    z = any(k in ("ibs0", "ibs0b") for k in ks)
+    kinds = ("hethet", "hom1", "ibs1b") if ibs1b_inf2 else ("hethet", "hom1")
+    inf2 = sum(1 for k in ks if k in kinds)
+    return (z, len(mis), mis[0] if mis else None, mis[-1] if mis else None, inf2)
+
+
+def predict19(info, w0=0, w1=None, lo=None, hi=None, dirty=DIRTY_MIS, gate=GATE,
+              reach=REACH, bridge="both", push="always", clip=0):
+    """The corrected `.seg` IBD2 caller — `17-seg-caller.md` §14.
+
+    Identical to `predict` outside the bridge.  `bridge` selects how a lone unusable
+    word is absorbed: `"both"` (the measured rule — the run so far must already pass the
+    gate *and* the continuation must pass it from the very next word), `"left"` or
+    `"cont"` for either half alone, `"none"` for no absorption at all.
+    """
+    n = len(info)
+    w1 = n - 1 if w1 is None else w1
+    lo = WORD * w0 if lo is None else lo
+    hi = WORD * (w1 + 1) - 1 if hi is None else hi
+    z = [info[k][0] for k in range(n)]
+    m = [info[k][1] for k in range(n)]
+    fb = [info[k][2] for k in range(n)]
+    lb = [info[k][3] for k in range(n)]
+    i2 = [info[k][4] for k in range(n)]
+    usable = [(not z[k]) and m[k] < dirty for k in range(n)]
+
+    def ge_of(b):
+        """The last word a run ending at `b` reaches into — the §5 reach, whole-word."""
+        return b + 1 if (b + 1 <= w1 and not z[b + 1] and m[b + 1]) else b
+
+    def gate_ok(g, b):
+        return sum(i2[t] for t in range(g, ge_of(b) + 1)) >= gate
+
+    ok = list(usable)
+    a = gs = None
+    for k in range(w0, w1 + 1):
+        if usable[k]:
+            if a is None:
+                a = k
+            if gs is None and m[k] == 0:
+                gs = k
+            continue
+        # An IBS0 word, a run that never found a gate-start, and two unusable words in a
+        # row all end the run outright.
+        if z[k] or a is None or gs is None or k == w1 or not usable[k + 1]:
+            a = gs = None
+            continue
+        left_ok = bridge in ("both", "left") and gate_ok(gs, k - 1)
+        if bridge == "cont":
+            left_ok = True
+        if not left_ok or m[k + 1] != 0:
+            a = gs = None
+            continue
+        if bridge in ("both", "cont"):
+            b2 = k + 1
+            while b2 + 1 <= w1 and usable[b2 + 1]:
+                b2 += 1
+            if not gate_ok(k + 1, b2):
+                a = gs = None
+                continue
+        ok[k] = True
+
+    runs, k = [], w0
+    while k <= w1:
+        if not ok[k]:
+            k += 1
+            continue
+        a = k
+        while k <= w1 and ok[k]:
+            k += 1
+        runs.append((a, k - 1))
+
+    out, emitted = [], 0
+    for a, b in runs:
+        left = WORD * a
+        if a - 1 >= w0 and not z[a - 1] and lb[a - 1] is not None:
+            left = WORD * (a - 1) + lb[a - 1] - reach
+            if a - 2 < w0 or z[a - 2]:
+                left = max(left, WORD * (a - 1))
+        right = WORD * b + WORD - 1
+        if b + 1 <= w1 and not z[b + 1] and fb[b + 1] is not None:
+            right = WORD * (b + 1) + fb[b + 1] + reach
+            if b + 2 > w1 or z[b + 2]:
+                right = min(right, WORD * (b + 2) - 1)
+        gs = next((t for t in range(a, b + 1) if m[t] == 0), None)
+        if gs is None or not gate_ok(gs, b):
+            continue
+        if emitted and push == "always":
+            left = max(left, WORD * (gs + 1))
+        emitted += 1
+        if a == w0:
+            left = min(left, lo)
+        if b == w1:
+            right = max(right, hi)
+        left, right = max(left, lo), min(right, hi)
+        if out:
+            left = max(left, out[-1][1] + clip)
+        if left <= right:
+            out.append((left, right))
+    return out
+
+
+def predict19_mk(cv, ibs1b_inf2=False, **kw):
+    """`predict19`'s answer for a canvas, in marker intervals."""
+    info = [wordinfo2(x, ibs1b_inf2) for x in cv.words]
+    _, p2 = cv.positions()
+    return sum(p2[b] - p2[a] for a, b in predict19(info, **kw)) / cv.s
+
+
 def compare(seeds=(101, 777, 8081), count=80, width=10):
     """`predict` and `predict_old` against the reference on random canvases."""
     tot = new = old = 0
@@ -886,9 +1013,220 @@ def compare(seeds=(101, 777, 8081), count=80, width=10):
     return new, old, tot
 
 
+# ---------------------------------------------------------------------------
+# §14 — the campaign that bisected the bridge
+# ---------------------------------------------------------------------------
+
+#: The alphabet §14 works in.  `d` and `q` are the two letters §5's alphabet was missing:
+#: an unusable word that carries *no* informative markers, and a clean word that carries
+#: exactly the gate.  Between them they separate every candidate bridging clause.
+ALPHA9 = dict(ALPHA)
+ALPHA9.update({
+    "d": {"ibs1": 2, "zero": 62},          # unusable and worth nothing
+    "q": {"hethet": 10, "zero": 54},       # clean, exactly clears the gate
+})
+
+
+def seq_canvas9(s, **kw):
+    return Canvas("sq2_" + s, [ALPHA9[c] for c in s], **kw)
+
+
+def _b9(items, tag, one=255.0, other=253.0, labels=("BRIDGED", "refused")):
+    res = many([(cv, ("--seglength", "1")) for _, cv in items])
+    print("    %s" % tag)
+    for (lab, cv), r in zip(items, res):
+        v = mk(cv, r)
+        if one is None:
+            which = ""
+        else:
+            which = labels[0] if abs(v - one) < .5 else (
+                labels[1] if abs(v - other) < .5 else "?")
+        print("      %-26s %7.1f mk   %-8s  model %6.1f"
+              % (lab, v, which, predict19_mk(cv)))
+
+
+def section9():
+    hdr("9. §14 — the bridge, bisected: the gate asked twice")
+    print("    A lone unusable word is absorbed iff BOTH halves pass the ordinary gate:")
+    print("    the run so far (from its gate-start, through this word), and the")
+    print("    continuation (from the very next word, which must be mismatch-free).")
+
+    print("\n  9.1 the left half — [Q(j), d, C, C]; bridged 255, refused 253")
+    items = [("hethet=%d" % j,
+              Canvas("s9L_h%d" % j, [{"hethet": j, "zero": 64 - j}, ALPHA9["d"],
+                                     ALPHA["C"], ALPHA["C"]]))
+             for j in (0, 8, 9, 10, 11, 20)]
+    _b9(items, "j informative markers before the dirty word:")
+    items = [("hom1=%d" % j, Canvas("s9L_m%d" % j,
+                                    [{"hom1": j, "zero": 64 - j}, ALPHA9["d"],
+                                     ALPHA["C"], ALPHA["C"]])) for j in (9, 10)]
+    items += [("hethet=%d+hom1=%d" % (a, b),
+               Canvas("s9L_x%d_%d" % (a, b),
+                      [{"hethet": a, "hom1": b, "zero": 64 - a - b}, ALPHA9["d"],
+                       ALPHA["C"], ALPHA["C"]])) for a, b in ((5, 4), (5, 5), (4, 5))]
+    _b9(items, "...the same 9/10 bisection, and the two kinds interchangeable:")
+
+    print("\n  9.2 the right half — [C, y, Q(j)]; bridged 191, refused 127")
+    items = [("hethet=%d" % j, Canvas("s9R_h%d" % j,
+                                      [ALPHA["C"], ALPHA["y"], {"hethet": j}]))
+             for j in (0, 9, 10, 11)]
+    _b9(items, "j informative markers after the dirty word:", 191.0, 126.9)
+
+    print("\n  9.3 the window the right half counts over — [C, y, z*r, Q10] and stops")
+    items = [("z*%d then q" % r, Canvas("s9W_%d" % r, [ALPHA["C"], ALPHA["y"]]
+                                        + [ALPHA["z"]] * r + [ALPHA9["q"]]))
+             for r in (0, 1, 2, 3, 4)]
+    _b9(items, "distance: the continuation is a whole usable run, however long:", None)
+    stops = [("then z, then q", [ALPHA["z"], ALPHA9["q"]]),
+             ("then 1 IBS0, then q", [{"ibs0": 1, "zero": 63}, ALPHA9["q"]]),
+             ("then 2 mis, then q", [ALPHA9["d"], ALPHA9["q"]]),
+             ("then 1 mis, then q", [ALPHA["p"], ALPHA9["q"]]),
+             ("then a 2-mis word worth 62", [{"ibs1": 2, "hethet": 62}]),
+             ("then a 2-mis word worth 9", [{"ibs1": 2, "hethet": 9, "zero": 53}]),
+             ("then an IBS0 word worth 63", [{"ibs0": 1, "hethet": 63}])]
+    items = [(lab, Canvas("s9S_" + slug(lab), [ALPHA["C"], ALPHA["y"], ALPHA["z"]] + tail))
+             for lab, tail in stops]
+    _b9(items, "what ends it: the first unusable word is counted, an IBS0 word is not:",
+        None)
+
+    print("\n  9.4 the informativeness correction — one informative marker per word,")
+    print("      k words: 10 HetHet or 10 A1A1/A1A1 pass the gate, 20 het-vs-A1A1 do not")
+    kinds = [("hethet", {"hethet": 1, "zero": 63}), ("hom1", {"hom1": 1, "zero": 63}),
+             ("ibs1b (het/A1A1)", {"ibs1b": 1, "zero": 63}),
+             ("ibs1  (het/A2A2)", {"ibs1": 1, "zero": 63})]
+    ks = (9, 10, 20)
+    cvs = [(lab, k, Canvas("s9I_%s_%d" % (slug(lab), k),
+                           [{"zero": 64}] + [spec] * k, nw2=30))
+           for lab, spec in kinds for k in ks]
+    res = many([(cv, ("--seglength", "1")) for _, _, cv in cvs])
+    print("      %-20s %s" % ("one marker per word", "".join("%10s" % ("k=%d" % k)
+                                                             for k in ks)))
+    row, cur = [], None
+    for (lab, k, cv), r in zip(cvs, res):
+        if lab != cur:
+            if row:
+                print("      %-20s %s" % (cur, "".join(row)))
+            cur, row = lab, []
+        v = mk(cv, r)
+        row.append("%10s" % ("called" if abs(v - (64 * (k + 1) - 1)) < .5 else "refused"))
+    print("      %-20s %s" % (cur, "".join(row)))
+
+    print("\n  9.5 two unusable words in a row are never absorbed, at any composition")
+    def dword(bits, het=0):
+        ks = ["zero"] * WORD
+        for b in bits:
+            ks[b] = "ibs1"
+        free = [i for i in range(WORD) if ks[i] == "zero"]
+        for i in free[:het]:
+            ks[i] = "hethet"
+        return ks
+    ds = [dword([0, 1], 62), dword([62, 63], 62), dword([0, 1], 0), dword([31, 32], 62),
+          dword([0, 1, 2], 61), dword(list(range(8)), 56), dword(list(range(64))),
+          dword([0, 1], 10)]
+    pairs = [(u, v) for u in range(len(ds)) for v in range(len(ds))]
+    cvs = [Canvas("s9T_%d_%d" % (u, v),
+                  [ALPHA["C"], ALPHA["C"], ds[u], ds[v], ALPHA["C"], ALPHA["C"]])
+           for u, v in pairs]
+    res = many([(c, ("--seglength", "1")) for c in cvs])
+    merged = sum(1 for c, r in zip(cvs, res) if abs(mk(c, r) - 383.0) < .5)
+    okc = sum(1 for c, r in zip(cvs, res) if abs(mk(c, r) - predict19_mk(c)) <= .3)
+    print("      %d compositions of [C C d1 d2 C C]: %d merged into one call, "
+          "model exact on %d" % (len(cvs), merged, okc))
+
+    print("\n  9.6 the batteries")
+    fams = [("length<=4 over {C,z,x,y}",
+             ["".join(t) for n in (1, 2, 3, 4)
+              for t in itertools.product("Czxy", repeat=n)], seq_canvas),
+            ("length-5 over {C,z,x,y}",
+             ["".join(t) for t in itertools.product("Czxy", repeat=5)], seq_canvas),
+            ("length-4 over {C,z,x,p,y,d,W,q}",
+             ["".join(t) for t in itertools.product("CzxpydWq", repeat=4)],
+             seq_canvas9)]
+    for tag, seqs, mkcv in fams:
+        cvs = [mkcv(s) for s in seqs]
+        res = many([(c, ("--seglength", "1")) for c in cvs])
+        got = [mk(c, r) for c, r in zip(cvs, res)]
+        new = sum(1 for c, g in zip(cvs, got) if abs(g - predict19_mk(c)) <= .3)
+        nob = sum(1 for c, g in zip(cvs, got)
+                  if abs(g - predict19_mk(c, bridge="none")) <= .3)
+        b1b = sum(1 for c, g in zip(cvs, got)
+                  if abs(g - predict19_mk(c, ibs1b_inf2=True)) <= .3)
+        old = sum(1 for c, g in zip(cvs, got)
+                  if abs(g - predict_bp(c, predict([wordinfo(x) for x in c.words]))
+                         / c.s) <= .3)
+        print("    %-34s §14 %4d/%4d   §7 %4d   no bridge %4d   inf2 with ibs1b %4d"
+              % (tag, new, len(cvs), old, nob, b1b))
+    for seed in (101, 777, 8081):
+        cvs = random_canvases(seed, 80, 10)
+        res = many([(c, ("--seglength", "1")) for c in cvs])
+        got = [mk(c, r) for c, r in zip(cvs, res)]
+        new = sum(1 for c, g in zip(cvs, got) if abs(g - predict19_mk(c)) <= .3)
+        old = sum(1 for c, g in zip(cvs, got)
+                  if abs(g - predict_bp(c, predict([wordinfo(x) for x in c.words]))
+                         / c.s) <= .3)
+        print("    %-34s §14 %4d/  80   §7 %4d" % ("random seed %d" % seed, new, old))
+    for seed in (31337, 424242, 90210):
+        cvs = rich_canvases(seed, 100)
+        res = many([(c, ("--seglength", "1")) for c in cvs])
+        got = [mk(c, r) for c, r in zip(cvs, res)]
+        new = sum(1 for c, g in zip(cvs, got) if abs(g - predict19_mk(c)) <= .3)
+        old = sum(1 for c, g in zip(cvs, got)
+                  if abs(g - predict_bp(c, predict([wordinfo(x) for x in c.words]))
+                         / c.s) <= .3)
+        b1b = sum(1 for c, g in zip(cvs, got)
+                  if abs(g - predict19_mk(c, ibs1b_inf2=True)) <= .3)
+        print("    %-34s §14 %4d/ 100   §7 %4d   inf2 with ibs1b %4d"
+              % ("rich random seed %d" % seed, new, old, b1b))
+
+
+    print("\n  9.7 §14.8 — `--seglength` is not a post-filter")
+    y = ALPHA["y"]
+    cvL = Canvas("s9len", [ALPHA["C"], ALPHA["C"], y, y, ALPHA["C"], ALPHA["C"]],
+                 nw1=5, sp1=100_000, nw2=16)     # a 31.9 Mb carrier: the row survives
+    steps = [1.0, 4.0, 4.25, 4.5, 8.0, 10.0, 10.25, 15.0, 20.0]
+    res = many([(cvL, ("--seglength", "%.6f" % L)) for L in steps])
+    print("      [C C y y C C], one word = %.3f Mb" % (WORD * cvL.s / 1e6))
+    print("      --seglength Mb %s" % "".join("%8.2f" % L for L in steps))
+    print("      IBD2Seg, mk    %s"
+          % "".join("%8.0f" % mk(cvL, r) for r in res))
+    print("      -> it RISES past one word and falls back past 10 Mb; three re-runs on")
+    print("         fresh working directories give the same numbers, so this is not the")
+    print("         unseeded QC RNG. A minimum length that only dropped short calls")
+    print("         could not do this.")
+
+
+def rich_word(rng):
+    """A random word drawing on *every* marker class the caller can read."""
+    ks = ["zero"] * WORD
+    slots = list(range(WORD))
+    rng.shuffle(slots)
+    n = 0
+
+    def put(kind, cnt):
+        nonlocal n
+        for _ in range(cnt):
+            if n < WORD:
+                ks[slots[n]] = kind
+                n += 1
+    if rng.random() < 0.28:
+        put("ibs0", rng.choice([1, 1, 2, 3, 9, 64]))
+    put("ibs1", rng.choice([0, 0, 0, 1, 1, 1, 2, 2, 3, 6, 20, 64]))
+    put("ibs1b", rng.choice([0, 0, 0, 0, 1, 1, 2, 5, 30]))
+    put(rng.choice(["hethet", "hom1", "hethet", "zero"]),
+        rng.choice([0, 1, 4, 9, 10, 11, 25, 64]))
+    put("miss", rng.choice([0, 0, 0, 3, 20]))
+    return ks
+
+
+def rich_canvases(seed, count, width=12, nw2=20):
+    rng = random.Random(seed)
+    return [Canvas("r2_%d_%d" % (seed, t), [rich_word(rng) for _ in range(width)],
+                   nw2=nw2) for t in range(count)]
+
+
 SECTIONS = {"0": section0, "1": section1, "2": section2, "3": section3,
             "4": section4, "5": section5, "6": section6, "7": section7,
-            "8": section8}
+            "8": section8, "9": section9}
 
 
 def main(argv):

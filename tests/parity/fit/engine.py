@@ -13,10 +13,12 @@ all 982 corpus rows and the Rust binary's `MaxIBD2` on all 158 non-zero rows. An
 divergence there is a bug in this file, never a discovery.
 
 The `.seg` IBD2 caller is `SegScan.ibd2_17` — the rule of
-`docs/research/17-seg-caller.md`, committed to `Scan::ibd2`. The geometry it replaced is
-still reachable as `RETIRED` (`seg_rule="word"`), because the sweeps in `sweep2.py`,
-`segtry.py` and `rules*.py` were scored against it and their numbers are quoted in the
-research write-ups; passing `RETIRED` reproduces them.
+`docs/research/17-seg-caller.md` §7 with §14's corrected bridge, gate window and `inf2`,
+committed to `Scan::ibd2`. Every clause §14 replaced is still reachable as a knob
+(`bridge_rule="17"`, `gate_end="right"`, `inf2_ibs1b=True`) and the geometry both
+replaced is `RETIRED` (`seg_rule="word"`), because the sweeps in `sweep2.py`,
+`segtry.py` and `rules*.py` were scored against them and their numbers are quoted in the
+research write-ups; passing those reproduces them.
 
 Two rulers are implemented over one caller, exactly as `analysis/segments.rs` describes:
 
@@ -57,7 +59,22 @@ class Params:
     #                                 scored against it still run — see `RETIRED`
     ibd2_dirty_ibs1: int = 2        # IBS1 count that makes a word too dirty for IBD2
     bridge: bool = True             # a lone dirty word between clean ones is absorbed
+    #                                 (`seg_rule="word"` only — the `.seg` caller's own
+    #                                 bridge is `bridge_rule` below)
     gate: int = 10                  # MIN_INFORMATIVE
+    # How a lone unusable word between usable ones is absorbed by the `.seg` caller.
+    # "19" is the committed rule (`docs/research/17-seg-caller.md` §14): the ordinary
+    # gate, asked twice — once over the run so far, from its gate-start through this
+    # word, and once over the continuation, from the very next word. "17" is the fitted
+    # lookahead it replaced (§7), kept so the sweeps scored against it still run.
+    bridge_rule: str = "19"
+    # Where the gate's window stops on the right. "next" is the committed rule — the one
+    # word the reach touches (§14.2); "right" is §7's, which followed the reach into the
+    # word after next when the mismatch sat late in its word.
+    gate_end: str = "next"
+    # `inf2`, the gate's statistic. False is the committed rule — HetHet + A1A1/A1A1
+    # (§14.3); True is the retired `p1 & p1`, which also counts het-vs-A1A1.
+    inf2_ibs1b: bool = False
     min_run1: int = 1
     min_run2: int = 1
 
@@ -74,6 +91,11 @@ class Params:
     clip_before_len: bool = True    # clip against the previous call before the length test
     ibd1_clip_ibd2: bool = False    # IBD1 calls are clipped off IBD2 territory, not
     #                                 just subtracted from the total
+    # How an IBD1 call and the IBD2 calls inside it make `IBD1Seg`
+    # (`docs/research/18-ibd1-caller.md` §6). "pieces" is the committed rule: cut at
+    # marker granularity, excluding the IBD2 call's own end markers, and apply the
+    # `--seglength` floor to each piece. "overlap" is the retired `length - overlap`.
+    ibd1_sub: str = "pieces"
 
     # --- marker-level boundary refinement --------------------------------
     # Where inside the flanking word a call stops. `last`/`first` name which IBS0 of that
@@ -95,10 +117,10 @@ class Params:
 
 BASE = Params()
 
-#: The geometry `BASE` replaced: word-aligned ends, a five-mismatch word predicate and
-#: the two-word tail snap. Scores 705 exact `.seg` rows against 709, MAE 0.00138
-#: against 0.00037. Kept so the sweeps that were scored against it still reproduce.
-RETIRED = Params(seg_rule="word", ibd2_dirty_ibs1=5)
+#: The geometry `BASE` replaced: word-aligned ends, a five-mismatch word predicate, the
+#: two-word tail snap and `length - overlap`. Scores 705 exact `.seg` rows against 747,
+#: MAE 0.00138 against 0.000067. Kept so the sweeps scored against it still reproduce.
+RETIRED = Params(seg_rule="word", ibd2_dirty_ibs1=5, ibd1_sub="overlap")
 
 
 # ---------------------------------------------------------------------------
@@ -125,10 +147,15 @@ def masks(ds, i, j):
         ibs1 = (het_i & p0j) | (p0i & het_j)
         share = p1i & p1j
         inf1 = share & (p0i | p0j)
+        # The `.seg` gate's `inf2` is `share & ~ibs1` — HetHet + A1A1/A1A1, a het-vs-A1A1
+        # marker being uninformative (§14.3). `share` alone is the retired statistic,
+        # kept as its own cumulative so `inf2_ibs1b=True` and the older scripts that read
+        # `cum2` directly still reproduce.
         v = (ibs0, PC(ibs0).astype(np.int32), PC(ibs1).astype(np.int32),
              np.concatenate(([0], np.cumsum(PC(inf1).astype(np.int64)))),
              np.concatenate(([0], np.cumsum(PC(share).astype(np.int64)))),
-             PC(het_i & het_j).astype(np.int32), ibs1)
+             PC(het_i & het_j).astype(np.int32), ibs1,
+             np.concatenate(([0], np.cumsum(PC(share & ~ibs1).astype(np.int64)))))
         _MASKS[key] = v
     return v
 
@@ -163,13 +190,15 @@ class SegScan:
         self.w0 = -(-lo // WORD)
         self.w1 = (hi + 1) // WORD - 1
         self.n = max(0, self.w1 - self.w0 + 1)
-        ibs0, n0, n1, k1, k2, nhh, ibs1 = masks(ds, i, j)
+        ibs0, n0, n1, k1, k2, nhh, ibs1, k2s = masks(ds, i, j)
         self.ibs0 = ibs0
         self.ibs1 = ibs1
         self.n0 = n0
         self.n1 = n1
         self.nhh = nhh
         self.cum1, self.cum2 = k1, k2
+        # the `.seg` gate's own cumulative — see `Params.inf2_ibs1b`
+        self.cum2s = k2 if p.inf2_ibs1b else k2s
         # fringe IBS0 masks: the segment's own markers in the words it does not own
         self.head = 0
         self.tail = 0
@@ -239,35 +268,67 @@ class SegScan:
     def ibd2_17(self, pos, min_bp):
         """The committed `.seg` IBD2 caller — the mirror of `Scan::ibd2`.
 
-        `docs/research/17-seg-caller.md` §7. A word is usable iff it carries no opposite
-        homozygote and at most one het-vs-hom mismatch; a lone unusable word is absorbed
-        only when the next word is mismatch-free and the usable words from there carry the
-        gate between them; the gate is counted from the run's first mismatch-free word;
-        the endpoints reach `REACH` markers past the nearest mismatch and are blocked
-        whole-word by an IBS0; every call after the first in a usable segment starts one
-        word past its gate-start word; and the segment's own fringes take a touching call
-        to its first or last marker.
+        `docs/research/17-seg-caller.md` §7, with §14's corrected bridge. A word is usable
+        iff it carries no opposite homozygote and at most one het-vs-hom mismatch; a lone
+        unusable word is absorbed iff the gate passes on both sides of it; the gate is
+        `inf2` counted from the run's first mismatch-free word through the one word the
+        reach touches; the endpoints reach `REACH` markers past the nearest mismatch and
+        are blocked whole-word by an IBS0; every call after the first in a usable segment
+        starts one word past its gate-start word; and the segment's own fringes take a
+        touching call to its first or last marker.
         """
         p = self.p
         n = self.n
         if n == 0:
             return []
         w0, w1 = self.w0, self.w1
+        cum = self.cum2s
         z = [int(self.n0[w0 + k]) != 0 for k in range(n)]
         mis = [int(self.n1[w0 + k]) for k in range(n)]
         usable = [(not z[k]) and mis[k] < p.ibd2_dirty_ibs1 for k in range(n)]
+
+        def ge_of(b):
+            """The one word a run ending at `b` reaches into — whole-word."""
+            return b + 1 if (b + 1 < n and not z[b + 1] and mis[b + 1]) else b
+
+        def gate_ok(g, b):
+            return int(cum[w0 + ge_of(b) + 1] - cum[w0 + g]) >= p.gate
+
         ok = list(usable)
-        for k in range(1, max(0, n - 1)):
-            if usable[k] or z[k] or not usable[k - 1] or not usable[k + 1]:
-                continue
-            if mis[k + 1] != 0:
-                continue
-            acc, t = 0, k + 1
-            while t < n and usable[t] and acc < p.gate:
-                acc += int(self.cum2[w0 + t + 1] - self.cum2[w0 + t])
-                t += 1
-            if acc >= p.gate:
-                ok[k] = True
+        if p.bridge_rule == "19":
+            # The bridge is the gate asked twice: over the run so far, from its
+            # gate-start through this word, and over the continuation, from the very
+            # next word — which must therefore be mismatch-free — through the words its
+            # own right end reaches.
+            gs0 = None
+            for k in range(n):
+                if usable[k]:
+                    if gs0 is None and mis[k] == 0:
+                        gs0 = k
+                    continue
+                bridged = False
+                if (gs0 is not None and k > 0 and not z[k] and k + 1 < n
+                        and usable[k + 1] and mis[k + 1] == 0):
+                    b2 = k + 1
+                    while b2 + 1 < n and usable[b2 + 1]:
+                        b2 += 1
+                    bridged = gate_ok(gs0, k - 1) and gate_ok(k + 1, b2)
+                if bridged:
+                    ok[k] = True
+                else:
+                    gs0 = None
+        else:
+            for k in range(1, max(0, n - 1)):
+                if usable[k] or z[k] or not usable[k - 1] or not usable[k + 1]:
+                    continue
+                if mis[k + 1] != 0:
+                    continue
+                acc, t = 0, k + 1
+                while t < n and usable[t] and acc < p.gate:
+                    acc += int(cum[w0 + t + 1] - cum[w0 + t])
+                    t += 1
+                if acc >= p.gate:
+                    ok[k] = True
 
         out, emitted = [], 0
         for a, b in _runs(ok):
@@ -288,11 +349,15 @@ class SegScan:
             gs = next((t for t in range(a, b + 1) if mis[t] == 0), None)
             if gs is None:
                 continue
-            ge = b
-            if right > WORD * v + WORD - 1:
-                ge = min(n - 1, right // WORD - w0)
-            if int(self.cum2[w0 + ge + 1] - self.cum2[w0 + gs]) < p.gate:
-                continue
+            if p.gate_end == "next":
+                if not gate_ok(gs, b):
+                    continue
+            else:
+                ge = b
+                if right > WORD * v + WORD - 1:
+                    ge = min(n - 1, right // WORD - w0)
+                if int(cum[w0 + ge + 1] - cum[w0 + gs]) < p.gate:
+                    continue
             if emitted:
                 left = max(left, WORD * (w0 + gs + 1))
             emitted += 1
@@ -392,8 +457,32 @@ def call_pair(ds, i, j, p=BASE, min_bp=SEGLEN):
         for lo, hi in c1:
             ln = int(pos[hi] - pos[lo])
             longest = max(longest, ln)
-            ibd1_bp += ln - _overlap((lo, hi), c2, pos)
+            if p.ibd1_sub == "pieces":
+                ibd1_bp += sum(v for v in
+                               (int(pos[b] - pos[a]) for a, b in _pieces((lo, hi), c2))
+                               if v >= min_bp)
+            else:
+                ibd1_bp += ln - _overlap((lo, hi), c2, pos)
     return ibd1_bp, ibd2_bp, longest, max_ibd2(ds, i, j, p)
+
+
+def _pieces(c, others):
+    """`c` with the IBD2 calls cut out — `docs/research/18-ibd1-caller.md` §6.1.
+
+    The cut excludes the IBD2 call's own end markers, so `[lo, hi]` cut by `[a, b]`
+    leaves `[lo, a-1]` and `[b+1, hi]`; each piece then faces `--seglength` on its own.
+    """
+    lo, hi = c
+    out, cur = [], lo
+    for a, b in sorted(others):
+        if b < lo or a > hi:
+            continue
+        if a > cur:
+            out.append((cur, a - 1))
+        cur = max(cur, b + 1)
+    if cur <= hi:
+        out.append((cur, hi))
+    return out
 
 
 def _overlap(c, others, pos):

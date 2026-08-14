@@ -1,6 +1,8 @@
 # The `.seg` IBD2 caller, measured on a canvas built out of opposite homozygotes
 
-**Status: measurement, fitted, validated out of sample — not committed to Rust.**
+**Status: measured, validated out of sample, committed to Rust.** §1–§13 are the campaign
+that replaced `Scan::ibd2`; §14 and §14.10 are the follow-up that bisected its one fitted
+clause and landed that too, taking the binary to 6 000 of 6 000 on the canvas batteries.
 `docs/research/16-segment-extension.md` §10 said the next campaign's first job was to
 build a `.seg`-native canvas, because the `--ibs` rig drives `IBD2Seg` to zero. That
 canvas is `docs/research/fixtures/segcanvas.py`, and this is what it says.
@@ -356,7 +358,12 @@ mean, tail, and the `IBD2Seg` column — it beats the committed rule by a wide m
 
 ## 11. What is still open
 
-1. **The bridging condition is the least-supported clause.** "The next word carries no
+> **§11.1, §11.2 and §11.3 are closed by §14**, which bisected the bridge, the gate's
+> window and the gate's statistic and took the binary to 6 000 of 6 000 on the canvas
+> batteries — including every canvas named below. They are left standing verbatim because
+> the sections after them quote their numbers; read §14 and §14.10 for the current state.
+
+1. **The bridging condition is the least-supported clause.** *(Closed — §14.)* "The next word carries no
    mismatch and the usable words from there carry `inf2 ≥ 10`" is fitted from about thirty
    canvases and it is the only clause with a free shape rather than a bisected integer.
    The corpus likes it — `IBD2Seg` exact on 896 rows against 874 with no bridging at all —
@@ -444,3 +451,358 @@ to drop) and costs 20 rows at 5 Mb.
 
 Reproduce: `python3 tests/parity/fit/seg17.py` for the column scorecard, and
 `docs/research/fixtures/avfs_score.py` for the union columns and the `--build` consequence.
+
+---
+
+## 14. The bridge, bisected — it carries no constant of its own
+
+**Status: measured, bisected, validated out of sample on 6 000 canvases, and **committed to
+Rust** — see §14.10, which also names a third clause §14 changed without saying so. The
+corpus cannot see any of it: it is identical row for row, before and after.**
+
+§11.1 named the one clause of §7 that was fitted rather than bisected — *"a lone unusable
+word is absorbed iff the next word carries no mismatch and the usable words from there
+carry `inf2 >= 10`"* — and said its lookahead was guessed. It was, and it was guessed
+twice over: the window is wrong **and** the clause is missing its other half. The
+corrected clause introduces no new constant at all.
+
+> **A lone unusable word carrying no IBS0, with usable words on both sides, is absorbed
+> iff *both halves would pass the ordinary gate on their own*: the run so far, counted
+> from its gate-start through this word; and the continuation, counted from the very next
+> word — which therefore has to be mismatch-free — through the words its own right end
+> reaches.**
+
+Nothing else in §7 changes. One constant elsewhere does: a **het-vs-A1A1 marker is not
+informative for the `.seg` IBD2 gate** (§14.3), which §4 assumed it was.
+
+| claim | evidence |
+| --- | --- |
+| The bridge is the gate, asked twice — once backwards, once forwards. Each side bisects at **9 refused / 10 accepted**, on HetHet and on A1A1/A1A1 separately and on 5 + 5 against 4 + 5: the same constant as the run gate, not a second one. | §14.2, §14.5 |
+| The forward window is **the whole continuation run plus the one word its right end reaches into** — not "the usable words from there". It crosses `z` words without limit, it *counts* the first unusable word, and it stops dead at an IBS0 word without counting it. | §14.5 |
+| The backward window counts from the run's **gate-start**, not its first word: `xzdC` is refused although the run's first word carries 63 informative markers. | §14.5 |
+| `inf2` is **HetHet + A1A1/A1A1**, i.e. `p1 & p1 & ~ibs1`. Twenty words carrying one het-vs-A1A1 marker each are refused where ten HetHet or ten A1A1/A1A1 pass. | §14.3 |
+| **Two unusable words in a row are never absorbed** — 64 compositions, including mismatch bits placed so that 124 consecutive clean markers separate them. Zero merged. | §14.4 |
+| Exhaustive: **340/340**, **1024/1024** and **4096/4096** against 329, 962 and 3942 for §7. Random: **240/240** on the three §10.2 seeds against 223, and **300/300** on three fresh seeds with a richer generator against 267. **6 000 canvases, no miss.** | §14.6 |
+| The corpus is **unchanged** — 709 exact, `IBD2Seg` 896, MAE 0.00037, worst 0.0089, 0 extra / 0 missing, identical row for row. It cannot see any bridge variant. | §14.6 |
+
+### 14.1 The two families that broke §7, and the trap between them
+
+The eleven exhaustive misses of §11.2 are two families pulling in opposite directions:
+
+* `Cyzy`, `zyzy` — the reference bridges where §7 refuses, because §7's lookahead stops at
+  the next unusable word and the reference counts that word's own informative markers.
+* `xyC`, `xxyC`, `xyCC`, `yxyC`, … — the reference refuses where §7 bridges, because the
+  run *before* the dirty word has to qualify too, and a run of `x` words has no
+  gate-start at all.
+
+A richer alphabet — `d` = two mismatches and **no** informative markers, `q` = a clean
+word carrying exactly the gate — adds a third family that separates the rest: `zdC` (189),
+`zdCC` (253), `zzdC` (189), `xzdC` (189). All are cases where the words before the dirty
+one are clean but *worthless*, and the reference refuses the bridge.
+
+**One trap is worth recording, because it nearly reversed this conclusion.** A bridge and
+a *pair of touching calls* measure the same base pairs: `[192, 447]` as one call and
+`[192, 383] + [383, 447]` as two are the same total in any ruler, and `--seglength` cannot
+separate them either (§14.7). So "the bridge" was for a while indistinguishable from "no
+bridge, and the §6 push simply does not fire across a single dirty word". The `zd` family
+is what breaks the tie: when the left-hand run is *refused by the gate*, no call is emitted
+and the surviving call opens at its own §5 reach — two markers to the right of where a
+merged run would have started. `zdCC` reads 253 against a bridged 255, and that
+two-marker gap is 17.5 ulps of the printed column.
+
+### 14.2 The clause
+
+Writing `gs` for a run's gate-start (its first mismatch-free word) and `ge(b)` for the last
+word a run ending at `b` reaches into (`b + 1` when that word carries a mismatch and no
+IBS0, else `b` — exactly §5's reach, whole-word):
+
+```
+gate(g, b)  ==  sum of inf2 over words [g .. ge(b)]  >=  10
+
+a lone unusable word k (no IBS0, mismatches >= 2, usable words at k-1 and k+1)
+is ABSORBED iff
+    the run [a..k-1] has a gate-start gs   and   gate(gs, k-1) holds     # ge(k-1) = k
+    the next word is mismatch-free                                       # mis[k+1] == 0
+    the continuation [k+1 .. b'] satisfies gate(k+1, b')                 # b' = its last
+                                                                         #      usable word
+```
+
+`gate(gs, k-1)` counts *through the dirty word itself*, because `ge(k-1) = k`: that is why
+`zyCC` bridges (the `y` carries 62) and `zdCC` does not (the `d` carries none). The middle
+condition is not a separate rule either — it is the continuation's gate-start being
+required to sit at `k + 1`, which is what separates `CCyC` (bridged, 255) from `CyxC`
+(refused, 127).
+
+### 14.3 `inf2` does not count a het-vs-A1A1 marker
+
+§4 measured the gate on HetHet markers and on A1A1/A1A1 markers, found 9 refused / 10
+accepted on each and the two interchangeable, and called the statistic "`inf2` — both
+samples carry A1". The third category that satisfies "both carry A1" — **het vs A1A1** —
+was never tested, because two of them in a word make it unusable, so it can only be
+reached one marker per word:
+
+```
+[z0] + k words carrying one informative marker each, walled     k = 9   k = 10   k = 20
+  HetHet                                                       refused  called   called
+  A1A1/A1A1                                                    refused  called   called
+  het vs A1A1                                                  refused  refused  refused
+  het vs A2A2  (control: not informative under either reading)  refused  refused  refused
+```
+
+So the statistic is `p1_i & p1_j & ~ibs1`, not `p1_i & p1_j` — HetHet plus A1A1/A1A1,
+exactly the two categories §4 actually measured. `engine.py`'s `share` and the Rust
+`inf2` plane both use the wider mask today.
+
+Three canvases in §14.5 depend on this and nothing else: `[C, y, z, 64 x het-vs-A1A1]` is
+refused (127) although that word carries 64 markers where both samples hold an A1. Out of
+sample the wider mask costs 12 of 300 rich-random canvases; the narrower one loses none.
+
+**Not touched:** the *acceptance* gate that decides whether a pair is scanned at all, and
+`inf1`. Both keep their current masks — the corpus reports 0 extra and 0 missing rows
+either way, so this campaign has no evidence about them.
+
+### 14.4 Two unusable words are never absorbed
+
+64 compositions of `[C C d1 d2 C C]`, with `d1`, `d2` drawn from eight unusable words —
+2, 3, 8 and 64 mismatches; mismatch bits at 0–1, at 31–32 and at 62–63 (so that in
+`d1@0,1 | d2@62,63` the two words' mismatches are 124 clean markers apart); informative
+content 0, 10 and 62. **Zero merged into one call**, and the model — which never absorbs
+two — is exact on all 64. Absorption is a property of a *single* word, and it is not
+marker-level.
+
+### 14.5 The bisections
+
+Each family is read through a two-valued readout, so a single printed number is the
+answer. `python3 segcanvas.py 9`.
+
+**The left half** — `[Q(j), d, C, C]`: bridged reads 255 markers, refused 253 (the run
+before the dirty word is itself refused, nothing is emitted, and the call opens at its own
+reach).
+
+```
+HetHet j      0     8     9    10    11    20        A1A1/A1A1 j    9    10
+            253   253   253   255   255   255                     253   255
+5 HetHet + 4 A1A1 -> 253      5 + 5 -> 255      4 + 5 -> 253
+```
+
+**The right half** — `[C, y, Q(j)]`: bridged 191, refused 127.
+
+```
+HetHet j      0     9    10    11
+            127   127   191   191
+```
+
+**The forward window** — `[C, y, z*r, q]`, `q` carrying exactly 10:
+
+```
+r          0     1     2     3     4
+         191   255   319   383   447          bridged at every distance
+```
+
+so the window is not one word, not two, and not a fixed span. What ends it, from
+`[C, y, z, X, q]`:
+
+```
+X = z            (clean, worthless)      319   the window runs past it to q
+X = 1 mismatch   (usable, worthless)     319   ...and past it too
+X = 2 mismatches (unusable, worthless)   127   the window ends AT X, counting X's 0
+X = one IBS0     (unusable, worthless)   127   the window ends BEFORE X
+```
+
+and the last two are separated by what the terminating word *carries*, from `[C, y, z, X]`:
+
+```
+X = 2 mismatches + 62 HetHet             255   counted
+X = 2 mismatches + 10 HetHet             255   counted -- exactly the gate
+X = 2 mismatches +  9 HetHet             127   counted, and one short
+X = one IBS0     + 63 HetHet             127   NOT counted
+X = 64 het-vs-A1A1 (64 "informative")    127   NOT informative -- §14.3
+```
+
+**The backward window counts from the gate-start.** `xzdC` (189) refuses the bridge
+although its first word carries 63 informative markers: the gate-start is the `z` that
+follows, and `[z, d]` carries nothing. `zqdC` (255) is the same shape with the
+informativeness moved after the gate-start, and it bridges.
+
+**The decisive canvases**, reference against both rules:
+
+| canvas | ref | §7 | §14 |
+| --- | ---: | ---: | ---: |
+| `CyC` | 191 | 191 | 191 |
+| `zyC` | 191 | 191 | 191 |
+| `xyC` | 189 | 191 ✗ | 189 |
+| `CxyC` | 255 | 255 | 255 |
+| `xxyC` | 189 | 255 ✗ | 189 |
+| `yxyC` | 189 | 255 ✗ | 189 |
+| `Cyx` | 127 | 127 | 127 |
+| `CyxC` | 127 | 127 | 127 |
+| `Cyz` | 127 | 127 | 127 |
+| `Cyzz` | 127 | 127 | 127 |
+| `Cyzy` | 255 | 190 ✗ | 255 |
+| `zyzy` | 255 | 190 ✗ | 255 |
+| `xyCC` | 253 | 255 ✗ | 253 |
+| `zdC` | 189 | 191 ✗ | 189 |
+| `zdCC` | 253 | 255 ✗ | 253 |
+| `zyCC` | 255 | 255 | 255 |
+| `CdCC` | 255 | 255 | 255 |
+| `zzdC` | 189 | 255 ✗ | 189 |
+| `xzdC` | 189 | 255 ✗ | 189 |
+| `zqdC` | 255 | 255 | 255 |
+| `CCyC` | 255 | 255 | 255 |
+| `CCyyCC` | 254 | 254 | 254 |
+
+### 14.6 Out of sample
+
+Nothing below chose a constant. `d` and `q` were added to the alphabet *after* the clause
+was written down, and the three rich-random seeds have never been used for anything else.
+
+```
+battery                                              §14        §7    no bridge    +ibs1b
+exhaustive, length <= 4 over {C,z,x,y}          340 /  340      329        314       340
+exhaustive, length 5    over {C,z,x,y}         1024 / 1024      962        854      1024
+exhaustive, length 4    over {C,z,x,p,y,d,W,q} 4096 / 4096     3942       3890      4096
+random seeds 101 / 777 / 8081  (§10.2)          240 /  240      223        225         -
+rich random 31337 / 424242 / 90210              300 /  300      267        298       288
+------------------------------------------------------------------------------------
+total                                          6000 / 6000
+```
+
+The rich generator draws IBS0 density, mismatch count and placement, informative content,
+missing calls **and het-vs-A1A1 markers** independently per word, 12 words per canvas. Its
+last column is the §14.3 control: keeping the wider `inf2` mask costs 12 of those 300.
+
+**The corpus is blind to all of it.** `python3 tests/parity/fit/seg17.py`:
+
+```
+committed (engine.py)   exact 709  both 825  ibd2 896  extra 0  miss 0  MAE 0.00037  worst 0.0089
+17 fitted               exact 709  both 825  ibd2 896  extra 0  miss 0  MAE 0.00037  worst 0.0089
+19 corrected            exact 709  both 825  ibd2 896  extra 0  miss 0  MAE 0.00037  worst 0.0089
+```
+
+row for row identical, and `seg17.py grid19` shows why: `bridge=both`, `bridge=cont` and
+`bridge=left` all score 896 and only `bridge=none` moves it (874). `inf2_ibs1b` moves
+nothing; `gate=9`, `10` and `11` score identically. The corpus discriminates `dirty`,
+`reach` and `push` and nothing else — which is the §11.3 prediction confirmed, and the
+reason this had to be settled on canvases.
+
+**So landing §14 changes no parity case and costs nothing.** The port is the `ok[k]` loop
+of `Scan::ibd2` plus one mask: hoist the run's gate check into a helper taking
+`(gate_start, last_word)`, call it twice at the bridge, and build the `inf2` plane as
+`p1_i & p1_j & !ibs1`. The two existing bridging unit tests still hold (`…absorbed_when
+_the_run_picks_up_cleanly` opens on three clean HetHet words, so its left half passes;
+`…not_absorbed_when_the_next_word_carries_a_mismatch` fails the same clause it always
+did). It was landed; §14.10 is the record, and it corrects one thing in this paragraph —
+the helper is called **three** times, not twice.
+
+### 14.7 What is ruled out
+
+* **The forward window is not "the usable words from `k+1`"** (§7), not one word, not two,
+  not three, and not "to the end of the segment": `[C,y,z,d,q]` (127) and
+  `[C,y,z,W,q]` (127) both refuse a bridge that a to-the-end window would take, while
+  `[C,y,z,z,z,z,q]` (447) takes one that any fixed window would refuse.
+* **The lookahead is not recursive.** `[C, y, z, d, q]` would bridge if the window were
+  allowed to absorb the second dirty word on its way to `q`. It reads 127.
+* **The bridge is not a property of the neighbouring words' mismatch counts.** "The
+  previous word is mismatch-free" (308/340), "the run so far contains a mismatch-free
+  word" (326/340 with the forward clause) and "the next word is mismatch-free" (316/340)
+  were each tried and each fails; only the *gate*, asked on both sides, reaches 340.
+* **A het-vs-A1A1 marker is not informative**, and no rule that counts it survives the
+  rich-random battery.
+* **Two unusable words are never one** (§14.4).
+* **`--seglength` cannot arbitrate**, because it is not a post-filter — §14.8.
+
+### 14.8 New open item — `--seglength` is not a post-filter
+
+Sweeping `--seglength` on one fixed canvas (`C C y y C C`, carrier lengthened to 31.9 Mb
+so the pair keeps its row at every length) does not produce a step function:
+
+```
+--seglength         < 4.25 Mb   4.25 .. 4.5   4.5 .. 10.25   >= 10.25
+IBD2Seg, in markers       254           191            383        254
+```
+
+`IBD2Seg` **rises** from 191 to 383 as the minimum length rises past ~4.3 Mb (one word,
+4.288 Mb at this canvas's spacing), and comes back to 254 past 10 Mb. Re-run three times
+on fresh working directories: identical every time, so it is not the unseeded QC RNG.
+A minimum length that only dropped short calls could never do this — `--seglength` reaches
+into the caller.
+
+This is visible on the corpus too: the captured `__ibdseg_seglength5` and
+`__ibdseg_seglength10` cases score worse than the default capture under **both** rules
+(`IBD2Seg` exact 880 and 877 against 896; MAE 0.00066 and 0.00158 against 0.00037), which
+is the same signature. Every canvas in §14 and in §1–§12 was measured at
+`--seglength 1`, and the corpus at its default, so nothing above depends on this — but
+whatever `--seglength` does inside the scan is the next unexplained mechanism, and it is
+worth a campaign of its own before anyone trusts `.seg` at a non-default minimum.
+
+### 14.9 Reproducing
+
+```bash
+cd docs/research/fixtures
+python3 segcanvas.py 9        # every bisection and battery in §14, from the cache
+cd ../../../tests/parity/fit
+python3 seg17.py              # the corpus scorecard, §7 and §14 side by side
+python3 seg17.py grid19       # §14's knobs swept against the corpus
+```
+
+`predict19` / `wordinfo2` in `segcanvas.py` and `R19` / `ibd2_19` in
+`tests/parity/fit/seg17.py` are the corrected rule; `predict` and `R17` are §7 unchanged,
+so §10's numbers still reproduce exactly (`segcanvas.py 5` still prints 329 of 340).
+
+### 14.10 Landed — and the third clause §14 changed without saying so
+
+§14 above was written as a proposal and validated model-against-reference. Landing it meant
+grading the **binary** against the reference on the same 6 000 canvases, which is a stronger
+test than the one above and turned up something §14 did not state.
+
+**The instrument.** `segcanvas_measured.json` already holds the reference's own reading for
+every canvas of §14.6, keyed by `Canvas.key(extra)`. Rebuild those canvases, run *our*
+binary on them, and compare marker totals — no model in the loop on either side. Do it in a
+scratch directory with its own cache; a non-reference binary must never write that file.
+
+**The finding.** `predict19` differs from `predict` in **three** places, not two. Besides the
+bridge (§14.2) and `inf2` (§14.3), it moved the *run gate's own window*: §7 followed the
+right-hand reach into whichever word the endpoint landed in — which is the word after next
+whenever the bounding mismatch sits late in its word, since the reach is 63 markers — while
+§14's `ge_of` stops at the **first** word the reach touches. That difference is real and it
+is worth 21 canvases. Ablated one clause at a time out of the committed binary:
+
+```
+engine                                                     canvases exact / 6000   lost
+committed (§7 + §14)                                              6000               -
+  ...with §7's fitted bridging lookahead                          5754             246
+  ...with §7's gate window (follow the reach into word b+2)       5979              21
+  ...with §7's `inf2 = p1 & p1`                                   5988              12
+§7 throughout — the rule before this one                          5723             277
+```
+
+So each of the three is independently necessary, and the losses compose: 246 + 21 + 12 = 279
+against 277 for all three together, so the clauses overlap on two canvases and nothing else.
+The committed `Scan::ibd2` therefore calls `gate_ok` three times: twice at the bridge and once
+at the run gate.
+
+> **Correction, final-publication pass.** This table first went in with **5979** on the
+> bridging row, which cannot be right: 21 + 21 + 12 does not reach the 277 that reverting all
+> three costs. Re-measured by building four binaries, each with one clause of `Scan::ibd2`
+> reverted in a scratch copy of the tree, and grading each with
+> `docs/research/fixtures/gradebinary.py`: the bridge is worth **246**, and it is by a wide
+> margin the largest of the three. The other three rows reproduced exactly. The composition
+> check above is now part of the claim, precisely so that a mis-transcription of this kind
+> shows up on its face.
+
+**What landing it cost, measured.** Nothing, on every axis the corpus can see:
+
+* `.seg` scorecard identical to the digit at 3 / 5 / 10 Mb — 747 / 729 / 692 exact rows,
+  `IBD1Seg` 982 / 909 / 841, `IBD2Seg` 896 / 880 / 877, MAE 0.000067 / 0.000177 / 0.000399,
+  worst 0.0042 / 0.0598 / 0.0874, 0 extra and 0 missing throughout;
+* the parity harness identical — 408 PASS / 72 FAIL, and every failing case fails on the
+  same files with the same notes;
+* every output file byte-identical across 91 paired invocations (13 datasets × 7 analyses),
+  `--ibs` included, so `Scan::ibd2_words` and its 21 561 exact rows did not move;
+* `check_mirror.py` MIRROR OK — `tests/parity/fit/engine.py` still is the binary.
+
+**Where the knobs live now.** `engine.py`'s `Params` carries `bridge_rule` (`"19"` | `"17"`),
+`gate_end` (`"next"` | `"right"`) and `inf2_ibs1b`, defaulting to §14; setting all three to
+their §7 values reproduces this document's §7 numbers, and `RETIRED` is untouched. `R17` and
+`R19` in `seg17.py` and `predict` / `predict19` in `segcanvas.py` are unchanged, so every
+number above still reproduces.

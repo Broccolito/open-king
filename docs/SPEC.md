@@ -141,7 +141,7 @@ Supporting flags that are **in Tier 1** because these five analyses consume them
 | `--build` | Pedigree reconstruction from SNP data | `<p>updateids.txt`, `<p>updateparents.txt`, `<p>build.log`, `<p>splitped.txt` | The data-derived FS/PO IBS0 cutoff (§8 item 18) |
 | `--bysample` | Sample-level QC | `<p>bySample.txt` (6 dynamic header variants) | Mendelian-error accounting |
 | `--bySNP` | SNP-level QC | `<p>bySNP.txt` (3 dynamic header variants) | Mendelian-error accounting; a non-deterministic KING fatal at tiny N (§8 item 22) |
-| `--autoQC` | Call-rate + sex QC pipeline | `<p>_autoQC_Summary.txt`, `<p>_autoQC_snptoberemoved.txt`, `<p>_autoQC_sampletoberemoved.txt`, `<p>_autoQC_updatesex.txt` | **None — implemented.** Layouts and rules: VERIFIED_FORMULAS.md § `--autoQC`, PARITY.md § 11.3 |
+| `--autoQC` | Call-rate + sex QC pipeline | `<p>_autoQC_Summary.txt`, `<p>_autoQC_snptoberemoved.txt`, `<p>_autoQC_sampletoberemoved.txt`, `<p>_autoQC_updatesex.txt` | **None — implemented.** Layouts and rules: VERIFIED_FORMULAS.md § `--autoQC`; byte-identical on all 13 datasets, PARITY.md §3 |
 
 Tier-2 supporting flags: `--seglength`, `--callrateN`, `--callrateM`.
 
