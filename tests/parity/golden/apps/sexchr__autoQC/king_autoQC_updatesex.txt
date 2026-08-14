@@ -1,0 +1,2 @@
+SU1	S_U0A	2
+SU2	S_U0B	2

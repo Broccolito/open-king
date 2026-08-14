@@ -1,0 +1,2 @@
+NUC	N_F
+NUC	N_M

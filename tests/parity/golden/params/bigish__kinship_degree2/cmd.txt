@@ -1,0 +1,1 @@
+king -b {DATA}/bigish.bed --kinship --degree 2

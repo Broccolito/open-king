@@ -1,0 +1,99 @@
+# Non-deterministic / environment-dependent lines in the captured KING output
+#
+# Scope: tests/parity/golden/apps/**  (flag group: --unrelated, --build,
+#        --bysample, --bySNP, --autoQC, --cluster)
+#
+# The captured files under apps/ are VERBATIM reference-binary output and must
+# never be hand-edited. The diff harness must normalize the patterns below on
+# BOTH sides (reference capture and open-king output) before comparing.
+#
+# Every OUTPUT FILE (kingbySample.txt, kingbySNP.txt, kingunrelated.txt,
+# kingunrelated_toberemoved.txt, kingallsegs.txt, kingcluster.kin,
+# kingupdateids.txt, kingupdateparents.txt, kingbuild.log,
+# king_autoQC_*.txt) was verified byte-stable across repeat runs and across
+# --cpus 1 vs 4.  Only stdout.txt needs normalization.  All 91 stderr.txt
+# files are 0 bytes and all 91 exitcode.txt files are "0".
+#
+# ---------------------------------------------------------------------------
+# 1. TIMESTAMPS  -- wall-clock, changes every run
+# ---------------------------------------------------------------------------
+# Format is C ctime(): "Thu Aug 13 18:01:47 2026".
+# Normalize by replacing everything after " at " to end-of-line with "<TS>".
+#
+# Regex (ERE), anchored at start of line:
+#   ^KING starts at .*$
+#   ^KING ends at .*$
+#   ^Family clustering starts at .*$
+#   ^KING cluster analysis ends at .*$
+#   ^Extracting a subset of unrelated individuals ends at .*$
+#   ^Pedigree reconstruction starts at .*$
+#   ^Pedigree reconstruction ends at .*$
+#   ^QC-by-sample starts at .*$
+#   ^QC-by-SNP starts at .*$
+#   ^QC-by-SNP ends at .*$
+#   ^Auto-QC starts at .*$
+#   ^Auto-QC ends at .*$
+#
+# Single catch-all that covers all of the above:
+#   s/^(.*[a-z]) (starts|ends) at .*$/\1 \2 at <TS>/
+#
+# NOTE the asymmetry: "QC-by-sample starts at" is printed but KING prints NO
+# matching "QC-by-sample ends at" line.  That is reference behaviour, not a
+# capture artifact -- do not "fix" it.
+#
+# ---------------------------------------------------------------------------
+# 2. CPU-CORE COUNT  -- depends on the host machine, not on the data
+# ---------------------------------------------------------------------------
+# Captured on a host that KING reports as 8 cores (hw.ncpu = 16; KING uses the
+# physical-core count).  Overridden by --cpus N.
+#
+#   ^[0-9]+ CPU cores are used to compute the pairwise kinship coefficients\.\.\.$
+#   ^Scanning autosomes for QC-by-SNP with [0-9]+ CPU cores\.\.\.$
+#
+# Normalize the leading integer to <NCPU>.
+#
+# ---------------------------------------------------------------------------
+# 3. PROGRESS-PERCENTAGE OUTPUT  -- thread-scheduling dependent
+# ---------------------------------------------------------------------------
+# KING emits bare "N%" tokens with no newline; they land mid-line and interleave
+# with real messages, e.g.
+#
+#   0%6%13%19%25%31%38%44%50%56%63%69%75%81%88%  PLINK binary genotypes loaded.
+#   94%  KING format genotype data successfully converted.
+#   0%1%2%Clustering up to 1st-degree relatives in families...
+#
+# WHICH percentages appear, and which line they attach to, is a function of
+# thread count and timing.  Verified: --cpus 1 on bigish --cluster emits
+# 7%..27% lines that --cpus 4 does not.  (All resulting FILES were still
+# byte-identical -- only stdout differed.)
+#
+# Normalize by deleting every ^[0-9]{1,3}%$ line and stripping all
+# ([0-9]{1,3}%)+ runs from the head of any remaining line.
+#
+# ---------------------------------------------------------------------------
+# 4. ABSOLUTE INPUT PATHS  -- host/checkout dependent, deterministic per host
+# ---------------------------------------------------------------------------
+# The -b argument is echoed into stdout three-to-four times:
+#
+#   ^                   Binary File : (.*) \(-bname\)$
+#   ^Read in PLINK fam file (.*)\.\.\.$
+#   ^Read in PLINK bim file (.*)\.\.\.$
+#   ^Read in PLINK bed file (.*)\.\.\.$
+#
+# Captured with DATA = /Users/wgu/Desktop/open-king/tests/parity/work/data
+# Normalize that directory to the literal token {DATA} (same placeholder used
+# in every cmd.txt).
+#
+# ---------------------------------------------------------------------------
+# 5. NOT non-deterministic (verified stable -- do NOT normalize these)
+# ---------------------------------------------------------------------------
+# - The 27-line banner / "parameters are in effect" block, including the
+#   constant garbage default "--noscreen [-1717986816]" (uninitialized value in
+#   the reference; it is stable and must be reproduced verbatim).
+# - "--degree [N]" / "--cpus [N]" echo lines: deterministic given argv.
+# - The "Options in effect:" block: tab-indented, one flag per line, in the
+#   order KING checks them (NOT the order given on the command line).  Note
+#   KING lower-cases the echo of --bySNP to "--bysnp".
+# - "Clustering up to 3nd-degree relatives in families..." -- "3nd" is a literal
+#   typo in the reference for --degree 3.  Reproduce it.
+# - All numeric columns in every output file.

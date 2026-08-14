@@ -1,0 +1,4 @@
+king
+-b
+{DATA}/missing.bed
+--autoQC

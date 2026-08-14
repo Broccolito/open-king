@@ -1,0 +1,1 @@
+{KING} -b {DATA}/trio.bed --ibdseg --seglength 5

@@ -1,0 +1,1 @@
+king -b {DATA}/dups.bed --duplicate --minConc 0.5

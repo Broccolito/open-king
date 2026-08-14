@@ -1,0 +1,1 @@
+{KING} -b {DATA}/pair.bed --ibdseg

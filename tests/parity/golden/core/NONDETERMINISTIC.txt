@@ -1,0 +1,99 @@
+# NONDETERMINISTIC.txt
+#
+# Lines in captured stdout.txt that are NOT reproducible across machines, runs,
+# or checkout locations. The diff harness must normalize these before comparing
+# open-king stdout to the reference capture in this directory.
+#
+# Scope: the "core" flag group (--kinship, --related [--degree N], --duplicate, --ibs).
+# Captured from KING 2.3.2 (macOS arm64) on 2026-08-13.
+#
+# NOTHING in any *output file* (.kin .kin0 .ibs .ibs0 .con kingallsegs.txt) is
+# nondeterministic: two back-to-back runs of the same argv produced byte-identical
+# output files AND byte-identical stdout (see class A note), and --cpus 1/2/4/8/16
+# all produced byte-identical output files. Normalization is needed for stdout only.
+
+# ---------------------------------------------------------------------------
+# CLASS A — wall-clock timestamps.  Format is C ctime(): "Thu Aug 13 18:01:04 2026"
+# ---------------------------------------------------------------------------
+# Regex for the timestamp itself (apply everywhere):
+#   (Mon|Tue|Wed|Thu|Fri|Sat|Sun) [A-Z][a-z]{2} +[0-9]{1,2} [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]{4}
+# Replace with a fixed token, e.g. <CTIME>.
+#
+# Exact host lines observed (note the leading-whitespace column alignment, which
+# IS deterministic and must be preserved):
+KING starts at <CTIME>
+KING ends at <CTIME>
+Relationship inference across families starts at <CTIME>
+IBS and relationship inference across families starts at <CTIME>
+Computing pairwise genotype concordance starts at <CTIME>
+                                         ends at <CTIME>            # 41 leading spaces (--related/--ibs)
+                                          ends at <CTIME>           # 42 leading spaces (--duplicate)
+                               Inference ends at <CTIME>
+                               Screening ends at <CTIME>
+        Stage 2 (with all SNPs) inference ends at <CTIME>
+#
+# NOTE: the "ends at" lines are frequently PREFIXED, on the same physical line, by
+# the progress-percentage stream (see class D), e.g.
+#   0%1%2%                               Inference ends at <CTIME>
+# so normalize the timestamp inside the line rather than dropping whole lines.
+
+# ---------------------------------------------------------------------------
+# CLASS B — CPU-count-dependent lines (machine-dependent when --cpus is absent)
+# ---------------------------------------------------------------------------
+# The number is the OpenMP default thread count on the host: this Mac reports
+# hw.ncpu=16 but KING printed 8 (performance cores). It changes per machine.
+# When --cpus N is passed explicitly, the number equals N and is deterministic.
+# Two spellings exist (trailing "." vs "..."); both are real, do not unify them.
+<N> CPU cores are used.        # --kinship, --ibs path  (no leading space)
+<N> CPU cores are used...      # --related path         (no leading space)
+  <N> CPU cores are used...    # --duplicate path       (two leading spaces)
+#
+# Also emitted into the parameter echo block when --cpus is given:
+#               Computing Parameter : --cpus [<N>]
+# and into the "Options in effect" block:
+# 	--cpus <N>
+# Those two are deterministic given argv; only the bare "CPU cores are used" line
+# is host-dependent.
+#
+# VERIFIED: --cpus in {1,2,4,8,16} on bigish x {--kinship, --ibs, --related --degree 4}
+# gives byte-identical king.kin / king.kin0 / king.ibs / king.ibs0. Summation order
+# does NOT leak into the numbers.
+
+# ---------------------------------------------------------------------------
+# CLASS C — absolute input paths (checkout-location dependent)
+# ---------------------------------------------------------------------------
+                   Binary File : <ABS>/<dataset>.bed (-bname)
+Read in PLINK fam file <ABS>/<dataset>.fam...
+Read in PLINK bim file <ABS>/<dataset>.bim...
+Read in PLINK bed file <ABS>/<dataset>.bed...
+# Normalize the directory portion to {DATA} (cmd.txt already stores it that way).
+
+# ---------------------------------------------------------------------------
+# CLASS D — progress percentage streams (deterministic here, but fragile)
+# ---------------------------------------------------------------------------
+# Written with \r-free "%d%%" and no newline, so they glue onto the next line:
+#   0%6%13%19%25%31%38%44%50%56%63%69%75%81%88%  PLINK binary genotypes loaded.
+#   94%  KING format genotype data successfully converted.
+#   0%1%2%3%...39%                               ends at <CTIME>
+# These were byte-identical across repeat runs and across --cpus values in every
+# run captured here (they are a function of block counts, not of timing), so the
+# harness can compare them literally. Treat as SOFT-normalizable: if open-king ever
+# diverges only in these, that is a progress-granularity difference, not a numeric one.
+
+# ---------------------------------------------------------------------------
+# CLASS E — uninitialized parameter echo (suspicious constant)
+# ---------------------------------------------------------------------------
+              Inference Parameter : --degree, --noscreen [-1717986816],
+# The bracketed --noscreen value is uninitialized memory in KING 2.3.2. It printed
+# the identical value -1717986816 on every invocation on this host/binary, but it is
+# NOT a documented default and may differ on another host or build. Normalize the
+# bracketed integer after "--noscreen".
+
+# ---------------------------------------------------------------------------
+# NOT nondeterministic (do not normalize these — they are real signal)
+# ---------------------------------------------------------------------------
+# * "Total length of N chromosomal segments usable for IBD segment analysis is X Mb."
+# * "Autosome genotypes stored in N words for each of M individuals."
+# * "Between-family relatives (kinship >= 0.17678) saved in file king.kin0"
+# * every "Relationship summary" table cell
+# * every byte of every output file

@@ -1,0 +1,1 @@
+king -b {DATA}/admixed.bed --kinship --bim {ALT}/admixed.altbim.bim

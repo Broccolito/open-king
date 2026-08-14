@@ -1,0 +1,4 @@
+king
+-b
+{DATA}/admixed.bed
+--build

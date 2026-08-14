@@ -1,0 +1,2 @@
+MD5 (king.ibs) = 168174eb4d19a3cc329472ede1226d87
+MD5 (king.ibs0) = 912abcc35a582fc773516ec57343e704

@@ -1,0 +1,6 @@
+king
+-b
+{DATA}/pair.bed
+--unrelated
+--degree
+2

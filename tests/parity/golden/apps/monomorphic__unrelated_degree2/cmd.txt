@@ -1,0 +1,6 @@
+king
+-b
+{DATA}/monomorphic.bed
+--unrelated
+--degree
+2

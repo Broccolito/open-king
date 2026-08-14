@@ -1,0 +1,6 @@
+king
+-b
+{DATA}/singleton.bed
+--unrelated
+--degree
+2

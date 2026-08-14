@@ -1,0 +1,2 @@
+MZFAM	MZ_2
+POFAM	PO_P

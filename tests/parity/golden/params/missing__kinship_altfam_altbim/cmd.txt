@@ -1,0 +1,1 @@
+king -b {DATA}/missing.bed --kinship --fam {ALT}/missing.altfam.fam --bim {ALT}/missing.altbim.bim

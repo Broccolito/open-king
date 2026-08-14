@@ -1,0 +1,36 @@
+KING 2.3.2 - (c) 2010-2023 Wei-Min Chen
+
+The following parameters are in effect:
+                   Binary File : /Users/wgu/Desktop/open-king/tests/parity/work/data/trio.bed (-bname)
+
+Additional Options
+         Close Relative Inference : --related, --duplicate
+   Pairwise Relatedness Inference : --kinship [ON], --ibdseg, --ibs, --makeGRM
+              Inference Parameter : --degree, --noscreen [-1717986816],
+                                    --seglength, --minConc [0.80]
+         Relationship Application : --unrelated, --cluster, --build
+                        QC Report : --bysample, --bySNP, --roh, --autoQC
+                     QC Parameter : --callrateN, --callrateM
+             Population Structure : --pca, --mds
+              Structure Parameter : --projection, --pcs
+          Quantitative Trait GWAS : --lmm
+                Binary Trait GWAS : --tdt, --gdt
+                Association Model : --trait [], --covariate [], --maxP
+     Association Method Parameter : --invnorm
+               Genetic Risk Score : --risk, --model [], --prevalence, --noflip
+              Computing Parameter : --cpus
+                   Optional Input : --fam [],
+                                    --bim [/Users/wgu/Desktop/open-king/tests/parity/work/alt/trio.no_such_file.bim],
+                                    --phefile [], --covfile [], --prunedsnp [],
+                                    --sexchr [23]
+                           Output : --rplot, --pngplot, --plink
+                 Output Parameter : --prefix [king], --rpath []
+
+KING starts at Thu Aug 13 18:04:35 2026
+Loading genotype data in PLINK binary format...
+Read in PLINK fam file /Users/wgu/Desktop/open-king/tests/parity/work/data/trio.fam...
+  PLINK pedigrees loaded: 3 samples
+
+FATAL ERROR - 
+Map file /Users/wgu/Desktop/open-king/tests/parity/work/alt/trio.no_such_file.bim cannot be opened
+

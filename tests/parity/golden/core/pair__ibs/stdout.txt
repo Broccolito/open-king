@@ -1,0 +1,53 @@
+KING 2.3.2 - (c) 2010-2023 Wei-Min Chen
+
+The following parameters are in effect:
+                   Binary File : /Users/wgu/Desktop/open-king/tests/parity/work/data/pair.bed (-bname)
+
+Additional Options
+         Close Relative Inference : --related, --duplicate
+   Pairwise Relatedness Inference : --kinship, --ibdseg, --ibs [ON], --makeGRM
+              Inference Parameter : --degree, --noscreen [-1717986816],
+                                    --seglength, --minConc [0.80]
+         Relationship Application : --unrelated, --cluster, --build
+                        QC Report : --bysample, --bySNP, --roh, --autoQC
+                     QC Parameter : --callrateN, --callrateM
+             Population Structure : --pca, --mds
+              Structure Parameter : --projection, --pcs
+          Quantitative Trait GWAS : --lmm
+                Binary Trait GWAS : --tdt, --gdt
+                Association Model : --trait [], --covariate [], --maxP
+     Association Method Parameter : --invnorm
+               Genetic Risk Score : --risk, --model [], --prevalence, --noflip
+              Computing Parameter : --cpus
+                   Optional Input : --fam [], --bim [], --phefile [],
+                                    --covfile [], --prunedsnp [],
+                                    --sexchr [23]
+                           Output : --rplot, --pngplot, --plink
+                 Output Parameter : --prefix [king], --rpath []
+
+KING starts at Thu Aug 13 18:01:48 2026
+Loading genotype data in PLINK binary format...
+Read in PLINK fam file /Users/wgu/Desktop/open-king/tests/parity/work/data/pair.fam...
+  PLINK pedigrees loaded: 2 samples
+Read in PLINK bim file /Users/wgu/Desktop/open-king/tests/parity/work/data/pair.bim...
+  Genotype data consist of 5000 autosome SNPs
+  PLINK maps loaded: 5000 SNPs
+Read in PLINK bed file /Users/wgu/Desktop/open-king/tests/parity/work/data/pair.bed...
+0%6%13%19%25%31%38%44%50%56%63%69%75%81%88%  PLINK binary genotypes loaded.
+94%  KING format genotype data successfully converted.
+Autosome genotypes stored in 79 words for each of 2 individuals.
+
+Options in effect:
+	--ibs
+
+Total length of 2 chromosomal segments usable for IBD segment analysis is 42.6 Mb.
+  Information of these chromosomal segments can be found in file kingallsegs.txt
+
+Segments too short.
+Each family consists of one individual.
+IBS and relationship inference across families starts at Thu Aug 13 18:01:48 2026
+8 CPU cores are used.
+                                         ends at Thu Aug 13 18:01:48 2026
+Between-family IBS data saved in file king.ibs0
+KING ends at Thu Aug 13 18:01:48 2026
+

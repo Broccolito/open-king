@@ -1,0 +1,6 @@
+king
+-b
+{DATA}/missing.bed
+--unrelated
+--degree
+2

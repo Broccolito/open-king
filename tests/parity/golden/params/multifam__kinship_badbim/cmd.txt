@@ -1,0 +1,1 @@
+king -b {DATA}/multifam.bed --kinship --bim {ALT}/multifam.badbim.bim

@@ -1,0 +1,1 @@
+king -b {DATA}/monomorphic.bed --kinship --sexchr 23

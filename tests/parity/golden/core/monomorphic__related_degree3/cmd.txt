@@ -1,0 +1,1 @@
+king -b {DATA}/monomorphic.bed --related --degree 3

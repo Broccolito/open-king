@@ -1,0 +1,1 @@
+{KING} -b {DATA}/singleton.bed --ibdseg --degree 2

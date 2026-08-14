@@ -1,0 +1,1 @@
+king -b {DATA}/multifam.bed --bysample --prefix custom

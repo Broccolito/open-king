@@ -1,0 +1,1 @@
+king -b {DATA}/bigish.bed --kinship --fam {ALT}/bigish.altfam.fam --bim {ALT}/bigish.altbim.bim

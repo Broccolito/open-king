@@ -1,0 +1,18 @@
+Family KING1:
+  Family KING1 RULE FS0: Sibship (B01_F B02_F)'s parents are (1 2)
+
+  Family KING1 INFERENCE AV.FS: B02_F is uncle of B01_C2 and B01_C3, Join3/Join2=0.778
+  Family KING1 INFERENCE AV.FS: B01_F is uncle of B02_C3 and B02_C4, Join3/Join2=0.801
+    HS B02_C4 unrelated to B01_M
+    HS B01_C3 unrelated to B02_M
+  Family KING1 INFERENCE HS.UN2: B01_C3 and B02_C4 are HS
+Family KING2:
+  Family KING2 RULE FS0: Sibship (B13_F B14_F)'s parents are (3 4)
+
+  Family KING2 INFERENCE AV.FS: B14_F is uncle of B13_C2 and B13_C1, Join3/Join2=0.779
+  Family KING2 INFERENCE AV.FS: B13_F is uncle of B14_C1 and B14_C2, Join3/Join2=0.827
+Family KING3:
+  Family KING3 RULE FS0: Sibship (B25_F B26_F)'s parents are (5 6)
+
+
+  Family KING3 INFERENCE AV.FS: B25_F is uncle of B26_C3 and B26_C1, Join3/Join2=0.803

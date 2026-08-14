@@ -1,0 +1,4 @@
+king
+-b
+{DATA}/dups.bed
+--bysample

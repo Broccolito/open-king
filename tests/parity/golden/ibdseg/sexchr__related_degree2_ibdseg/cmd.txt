@@ -1,0 +1,1 @@
+{KING} -b {DATA}/sexchr.bed --related --degree 2 --ibdseg

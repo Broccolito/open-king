@@ -1,0 +1,4 @@
+NUC	N_C1
+NUC	N_C2
+NUC	N_C3
+NUC	N_C4

@@ -1,0 +1,6 @@
+king
+-b
+{DATA}/dups.bed
+--unrelated
+--degree
+2

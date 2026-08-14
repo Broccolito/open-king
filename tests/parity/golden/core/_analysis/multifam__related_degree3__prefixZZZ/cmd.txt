@@ -1,0 +1,1 @@
+king -b {DATA}/multifam.bed --related --degree 3 --prefix ZZZ_

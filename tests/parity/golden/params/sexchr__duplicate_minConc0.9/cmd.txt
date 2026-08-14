@@ -1,0 +1,1 @@
+king -b {DATA}/sexchr.bed --duplicate --minConc 0.9

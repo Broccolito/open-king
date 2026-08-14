@@ -1,0 +1,6 @@
+king
+-b
+{DATA}/trio.bed
+--unrelated
+--degree
+2

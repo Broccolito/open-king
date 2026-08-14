@@ -1,0 +1,1 @@
+{KING} -b {DATA}/monomorphic.bed --related --degree 2 --ibdseg

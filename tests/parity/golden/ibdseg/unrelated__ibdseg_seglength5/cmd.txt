@@ -1,0 +1,1 @@
+{KING} -b {DATA}/unrelated.bed --ibdseg --seglength 5

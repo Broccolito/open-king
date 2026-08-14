@@ -467,12 +467,12 @@ def write_fam(path, people):
                     p.sex, p.pheno))
 
 
-def write_bim(path, snps, snpinfo):
+def write_bim(path, snps, alleles):
     with open(path, "w") as fh:
         for j, (chrom, bp, cm) in enumerate(snps):
-            info = snpinfo[j]
+            a1, a2 = alleles[j]
             fh.write("%d rs%d_%d %.6f %d %s %s\n" % (
-                chrom, chrom, bp, cm, bp, info["a1"], info["a2"]))
+                chrom, chrom, bp, cm, bp, a1, a2))
 
 
 def simulate(spec, seed, outdir, emit_freq=False):
@@ -492,7 +492,6 @@ def simulate(spec, seed, outdir, emit_freq=False):
 
     base = os.path.join(outdir, spec.name)
     write_fam(base + ".fam", people)
-    write_bim(base + ".bim", snps, snpinfo)
 
     hap_a = [0] * n_all
     hap_b = [0] * n_all
@@ -501,6 +500,7 @@ def simulate(spec, seed, outdir, emit_freq=False):
     geno = [0] * n_all
     n_bytes = (n_emit + 3) // 4
     obs = []
+    alleles = []
 
     with open(base + ".bed", "wb") as fh:
         fh.write(BED_MAGIC)
@@ -620,7 +620,24 @@ def simulate(spec, seed, outdir, emit_freq=False):
                 if g != MISSING:
                     called += 1
                     a1n += g
-            obs.append((a1n, 2 * called))
+            nch = 2 * called
+            orig_a1n = a1n
+
+            # PLINK --make-bed leaves A1 as the observed minor allele, and KING
+            # hard-refuses input where too many A1 alleles are major.  Sampling
+            # noise in small pedigrees flips some SNPs past 0.5, so re-orient
+            # them exactly as --make-bed would: swap the .bim allele columns and
+            # mirror the genotype dosages.
+            if nch and 2 * a1n > nch:
+                row = [MISSING if g == MISSING else 2 - g for g in row]
+                a1n = nch - a1n
+                a1, a2 = info["a2"], info["a1"]
+                swapped = True
+            else:
+                a1, a2 = info["a1"], info["a2"]
+                swapped = False
+            alleles.append((a1, a2))
+            obs.append((orig_a1n, a1n, nch, swapped))
 
             packed = bytearray(n_bytes)
             k = 0
@@ -633,16 +650,19 @@ def simulate(spec, seed, outdir, emit_freq=False):
                 packed[byte_i] = v
             fh.write(packed)
 
+    write_bim(base + ".bim", snps, alleles)
+
     if emit_freq:
         with open(base + ".expected_freq.tsv", "w") as fh:
-            fh.write("SNP\tA1\tA2\tSIM_A1_FREQ\tOBS_A1_FREQ\tNCHROBS\n")
+            fh.write("SNP\tA1\tA2\tSWAPPED\tSIM_A1_FREQ\tOBS_SIM_A1_FREQ\t"
+                     "OBS_FINAL_A1_FREQ\tNCHROBS\n")
             for j in range(n_snps):
                 chrom, bp, _cm = snps[j]
-                a1n, nch = obs[j]
-                info = snpinfo[j]
-                sim = info["freqs"][0]
-                fh.write("rs%d_%d\t%s\t%s\t%.6f\t%.6f\t%d\n" % (
-                    chrom, bp, info["a1"], info["a2"], sim,
+                orig_a1n, a1n, nch, swapped = obs[j]
+                fh.write("rs%d_%d\t%s\t%s\t%d\t%.6f\t%.6f\t%.6f\t%d\n" % (
+                    chrom, bp, alleles[j][0], alleles[j][1], int(swapped),
+                    snpinfo[j]["freqs"][0],
+                    (orig_a1n / nch) if nch else 0.0,
                     (a1n / nch) if nch else 0.0, nch))
 
     return snps, n_snps, n_emit
@@ -681,7 +701,6 @@ def build_threegen():
     ped.add("TG_C2", fid, father=p1, mother=s1, sex=2)
     ped.add("TG_C3", fid, father=s2, mother=p2, sex=1)
     ped.add("TG_C4", fid, father=s2, mother=p2, sex=2)
-    ped.add("TG_C5", fid, father=p3, mother=ped.add("TG_S3", fid, sex=2), sex=1)
     return Spec("threegen", ped, AUTOSOMES, 20000,
                 notes=("Three generations. Contains PO, FS, half sibs (2nd), "
                        "grandparent-grandchild (2nd), avuncular (2nd), "
@@ -792,9 +811,9 @@ def build_unrelated():
 
 def build_admixed():
     ped = Ped()
-    for k in range(14):
+    for k in range(11):
         ped.add("A1_%02d" % (k + 1), "AP1_%02d" % (k + 1), sex=1 + (k % 2), pop=0)
-    for k in range(14):
+    for k in range(11):
         ped.add("A2_%02d" % (k + 1), "AP2_%02d" % (k + 1), sex=1 + (k % 2), pop=1)
     for k, alpha in enumerate((0.10, 0.25, 0.40, 0.50, 0.60, 0.90)):
         ped.add("ADM_%d" % (k + 1), "ADM%d" % (k + 1), sex=1 + (k % 2), alpha=alpha)

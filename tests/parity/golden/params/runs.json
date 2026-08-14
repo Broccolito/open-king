@@ -1,0 +1,3028 @@
+[
+ {
+  "dir": "admixed__duplicate",
+  "dataset": "admixed",
+  "cmd": "king -b {DATA}/admixed.bed --duplicate",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "admixed__duplicate_minConc0.9",
+  "dataset": "admixed",
+  "cmd": "king -b {DATA}/admixed.bed --duplicate --minConc 0.9",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "admixed__kinship",
+  "dataset": "admixed",
+  "cmd": "king -b {DATA}/admixed.bed --kinship",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 1062,
+    "sha256": "4204be446c91d796767530065b3339ba63678d4cafa59db80341d76139e7f3e4"
+   },
+   "king.kin0": {
+    "bytes": 39111,
+    "sha256": "230c49d8eaeac0d2fbf60f6ef75c0643669de81277160b2e5093198bc8d6b81c"
+   }
+  }
+ },
+ {
+  "dir": "admixed__kinship_altbim",
+  "dataset": "admixed",
+  "cmd": "king -b {DATA}/admixed.bed --kinship --bim {ALT}/admixed.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 1062,
+    "sha256": "4204be446c91d796767530065b3339ba63678d4cafa59db80341d76139e7f3e4"
+   },
+   "king.kin0": {
+    "bytes": 39111,
+    "sha256": "230c49d8eaeac0d2fbf60f6ef75c0643669de81277160b2e5093198bc8d6b81c"
+   }
+  }
+ },
+ {
+  "dir": "admixed__kinship_altfam",
+  "dataset": "admixed",
+  "cmd": "king -b {DATA}/admixed.bed --kinship --fam {ALT}/admixed.altfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 37875,
+    "sha256": "2f91018f3d1d30a9f5288c7ac1c89a5c17b4baa371e137ce4c25ec7907b1c63a"
+   }
+  }
+ },
+ {
+  "dir": "admixed__kinship_altfam_altbim",
+  "dataset": "admixed",
+  "cmd": "king -b {DATA}/admixed.bed --kinship --fam {ALT}/admixed.altfam.fam --bim {ALT}/admixed.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 37875,
+    "sha256": "2f91018f3d1d30a9f5288c7ac1c89a5c17b4baa371e137ce4c25ec7907b1c63a"
+   }
+  }
+ },
+ {
+  "dir": "admixed__kinship_cpus1",
+  "dataset": "admixed",
+  "cmd": "king -b {DATA}/admixed.bed --kinship --cpus 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 1062,
+    "sha256": "4204be446c91d796767530065b3339ba63678d4cafa59db80341d76139e7f3e4"
+   },
+   "king.kin0": {
+    "bytes": 39111,
+    "sha256": "230c49d8eaeac0d2fbf60f6ef75c0643669de81277160b2e5093198bc8d6b81c"
+   }
+  }
+ },
+ {
+  "dir": "admixed__kinship_cpus4",
+  "dataset": "admixed",
+  "cmd": "king -b {DATA}/admixed.bed --kinship --cpus 4",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 1062,
+    "sha256": "4204be446c91d796767530065b3339ba63678d4cafa59db80341d76139e7f3e4"
+   },
+   "king.kin0": {
+    "bytes": 39111,
+    "sha256": "230c49d8eaeac0d2fbf60f6ef75c0643669de81277160b2e5093198bc8d6b81c"
+   }
+  }
+ },
+ {
+  "dir": "admixed__kinship_degree1",
+  "dataset": "admixed",
+  "cmd": "king -b {DATA}/admixed.bed --kinship --degree 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 1062,
+    "sha256": "4204be446c91d796767530065b3339ba63678d4cafa59db80341d76139e7f3e4"
+   },
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "admixed__kinship_degree2",
+  "dataset": "admixed",
+  "cmd": "king -b {DATA}/admixed.bed --kinship --degree 2",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 1062,
+    "sha256": "4204be446c91d796767530065b3339ba63678d4cafa59db80341d76139e7f3e4"
+   },
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "admixed__kinship_degree3",
+  "dataset": "admixed",
+  "cmd": "king -b {DATA}/admixed.bed --kinship --degree 3",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 1062,
+    "sha256": "4204be446c91d796767530065b3339ba63678d4cafa59db80341d76139e7f3e4"
+   },
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "admixed__kinship_prefix_custom",
+  "dataset": "admixed",
+  "cmd": "king -b {DATA}/admixed.bed --kinship --prefix custom",
+  "exit": 0,
+  "files": {
+   "custom.kin": {
+    "bytes": 1062,
+    "sha256": "4204be446c91d796767530065b3339ba63678d4cafa59db80341d76139e7f3e4"
+   },
+   "custom.kin0": {
+    "bytes": 39111,
+    "sha256": "230c49d8eaeac0d2fbf60f6ef75c0643669de81277160b2e5093198bc8d6b81c"
+   }
+  }
+ },
+ {
+  "dir": "admixed__kinship_sexchr23",
+  "dataset": "admixed",
+  "cmd": "king -b {DATA}/admixed.bed --kinship --sexchr 23",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 1062,
+    "sha256": "4204be446c91d796767530065b3339ba63678d4cafa59db80341d76139e7f3e4"
+   },
+   "king.kin0": {
+    "bytes": 39111,
+    "sha256": "230c49d8eaeac0d2fbf60f6ef75c0643669de81277160b2e5093198bc8d6b81c"
+   }
+  }
+ },
+ {
+  "dir": "bigish__duplicate",
+  "dataset": "bigish",
+  "cmd": "king -b {DATA}/bigish.bed --duplicate",
+  "exit": 0,
+  "files": {}
+ },
+ {
+  "dir": "bigish__duplicate_minConc0.9",
+  "dataset": "bigish",
+  "cmd": "king -b {DATA}/bigish.bed --duplicate --minConc 0.9",
+  "exit": 0,
+  "files": {}
+ },
+ {
+  "dir": "bigish__kinship",
+  "dataset": "bigish",
+  "cmd": "king -b {DATA}/bigish.bed --kinship",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 35035,
+    "sha256": "849680431b8776dbdee3e71bbd166da4102f5bf5839c0f0170d4f21393d9e4e3"
+   },
+   "king.kin0": {
+    "bytes": 1000337,
+    "sha256": "bfab97966052ab1b90a18a1551ee4b4245c19a17efb0d268007a5179b3f88d79"
+   }
+  }
+ },
+ {
+  "dir": "bigish__kinship_altbim",
+  "dataset": "bigish",
+  "cmd": "king -b {DATA}/bigish.bed --kinship --bim {ALT}/bigish.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 35035,
+    "sha256": "849680431b8776dbdee3e71bbd166da4102f5bf5839c0f0170d4f21393d9e4e3"
+   },
+   "king.kin0": {
+    "bytes": 1000337,
+    "sha256": "bfab97966052ab1b90a18a1551ee4b4245c19a17efb0d268007a5179b3f88d79"
+   }
+  }
+ },
+ {
+  "dir": "bigish__kinship_altfam",
+  "dataset": "bigish",
+  "cmd": "king -b {DATA}/bigish.bed --kinship --fam {ALT}/bigish.altfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 1043542,
+    "sha256": "764cbd843d7ae34eb9636bc2e032d3feb8b0224491a8bd54dd124cf40f7b10e7"
+   }
+  }
+ },
+ {
+  "dir": "bigish__kinship_altfam_altbim",
+  "dataset": "bigish",
+  "cmd": "king -b {DATA}/bigish.bed --kinship --fam {ALT}/bigish.altfam.fam --bim {ALT}/bigish.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 1043542,
+    "sha256": "764cbd843d7ae34eb9636bc2e032d3feb8b0224491a8bd54dd124cf40f7b10e7"
+   }
+  }
+ },
+ {
+  "dir": "bigish__kinship_cpus1",
+  "dataset": "bigish",
+  "cmd": "king -b {DATA}/bigish.bed --kinship --cpus 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 35035,
+    "sha256": "849680431b8776dbdee3e71bbd166da4102f5bf5839c0f0170d4f21393d9e4e3"
+   },
+   "king.kin0": {
+    "bytes": 1000337,
+    "sha256": "bfab97966052ab1b90a18a1551ee4b4245c19a17efb0d268007a5179b3f88d79"
+   }
+  }
+ },
+ {
+  "dir": "bigish__kinship_cpus16",
+  "dataset": "bigish",
+  "cmd": "king -b {DATA}/bigish.bed --kinship --cpus 16",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 35035,
+    "sha256": "849680431b8776dbdee3e71bbd166da4102f5bf5839c0f0170d4f21393d9e4e3"
+   },
+   "king.kin0": {
+    "bytes": 1000337,
+    "sha256": "bfab97966052ab1b90a18a1551ee4b4245c19a17efb0d268007a5179b3f88d79"
+   }
+  }
+ },
+ {
+  "dir": "bigish__kinship_cpus4",
+  "dataset": "bigish",
+  "cmd": "king -b {DATA}/bigish.bed --kinship --cpus 4",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 35035,
+    "sha256": "849680431b8776dbdee3e71bbd166da4102f5bf5839c0f0170d4f21393d9e4e3"
+   },
+   "king.kin0": {
+    "bytes": 1000337,
+    "sha256": "bfab97966052ab1b90a18a1551ee4b4245c19a17efb0d268007a5179b3f88d79"
+   }
+  }
+ },
+ {
+  "dir": "bigish__kinship_cpus8",
+  "dataset": "bigish",
+  "cmd": "king -b {DATA}/bigish.bed --kinship --cpus 8",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 35035,
+    "sha256": "849680431b8776dbdee3e71bbd166da4102f5bf5839c0f0170d4f21393d9e4e3"
+   },
+   "king.kin0": {
+    "bytes": 1000337,
+    "sha256": "bfab97966052ab1b90a18a1551ee4b4245c19a17efb0d268007a5179b3f88d79"
+   }
+  }
+ },
+ {
+  "dir": "bigish__kinship_degree1",
+  "dataset": "bigish",
+  "cmd": "king -b {DATA}/bigish.bed --kinship --degree 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 35035,
+    "sha256": "849680431b8776dbdee3e71bbd166da4102f5bf5839c0f0170d4f21393d9e4e3"
+   },
+   "king.kin0": {
+    "bytes": 191,
+    "sha256": "8de8d4600408184ffecce7a7c3f32ed5d054465a27fb07977aab6a69761333bd"
+   }
+  }
+ },
+ {
+  "dir": "bigish__kinship_degree2",
+  "dataset": "bigish",
+  "cmd": "king -b {DATA}/bigish.bed --kinship --degree 2",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 35035,
+    "sha256": "849680431b8776dbdee3e71bbd166da4102f5bf5839c0f0170d4f21393d9e4e3"
+   },
+   "king.kin0": {
+    "bytes": 1241,
+    "sha256": "b115209aade82a9a94a633fa9f3e2575ea4f3cb865fc0067bf0e8633b4372d42"
+   }
+  }
+ },
+ {
+  "dir": "bigish__kinship_degree3",
+  "dataset": "bigish",
+  "cmd": "king -b {DATA}/bigish.bed --kinship --degree 3",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 35035,
+    "sha256": "849680431b8776dbdee3e71bbd166da4102f5bf5839c0f0170d4f21393d9e4e3"
+   },
+   "king.kin0": {
+    "bytes": 3026,
+    "sha256": "8c39cd679708f58e5ebb613b97208a0d420dd5829759dea679d98df4851f8190"
+   }
+  }
+ },
+ {
+  "dir": "bigish__kinship_prefix_custom",
+  "dataset": "bigish",
+  "cmd": "king -b {DATA}/bigish.bed --kinship --prefix custom",
+  "exit": 0,
+  "files": {
+   "custom.kin": {
+    "bytes": 35035,
+    "sha256": "849680431b8776dbdee3e71bbd166da4102f5bf5839c0f0170d4f21393d9e4e3"
+   },
+   "custom.kin0": {
+    "bytes": 1000337,
+    "sha256": "bfab97966052ab1b90a18a1551ee4b4245c19a17efb0d268007a5179b3f88d79"
+   }
+  }
+ },
+ {
+  "dir": "bigish__kinship_sexchr23",
+  "dataset": "bigish",
+  "cmd": "king -b {DATA}/bigish.bed --kinship --sexchr 23",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 35035,
+    "sha256": "849680431b8776dbdee3e71bbd166da4102f5bf5839c0f0170d4f21393d9e4e3"
+   },
+   "king.kin0": {
+    "bytes": 1000337,
+    "sha256": "bfab97966052ab1b90a18a1551ee4b4245c19a17efb0d268007a5179b3f88d79"
+   }
+  }
+ },
+ {
+  "dir": "dups__duplicate",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --duplicate",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 194,
+    "sha256": "5c6b7991f20be14d05c337751c446f4b75a34b7facdbab7d8b390ace797ca389"
+   }
+  }
+ },
+ {
+  "dir": "dups__duplicate_cpus1",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --duplicate --cpus 1",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 194,
+    "sha256": "5c6b7991f20be14d05c337751c446f4b75a34b7facdbab7d8b390ace797ca389"
+   }
+  }
+ },
+ {
+  "dir": "dups__duplicate_cpus4",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --duplicate --cpus 4",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 194,
+    "sha256": "5c6b7991f20be14d05c337751c446f4b75a34b7facdbab7d8b390ace797ca389"
+   }
+  }
+ },
+ {
+  "dir": "dups__duplicate_minConc0",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --duplicate --minConc 0",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 2962,
+    "sha256": "8099218359a6f22a694501564e04b8c1fa7c4354625e939672c5b2a65ff0b3ed"
+   }
+  }
+ },
+ {
+  "dir": "dups__duplicate_minConc0.5",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --duplicate --minConc 0.5",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 194,
+    "sha256": "5c6b7991f20be14d05c337751c446f4b75a34b7facdbab7d8b390ace797ca389"
+   }
+  }
+ },
+ {
+  "dir": "dups__duplicate_minConc0.9",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --duplicate --minConc 0.9",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 194,
+    "sha256": "5c6b7991f20be14d05c337751c446f4b75a34b7facdbab7d8b390ace797ca389"
+   }
+  }
+ },
+ {
+  "dir": "dups__duplicate_minConc0.99",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --duplicate --minConc 0.99",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 194,
+    "sha256": "5c6b7991f20be14d05c337751c446f4b75a34b7facdbab7d8b390ace797ca389"
+   }
+  }
+ },
+ {
+  "dir": "dups__duplicate_minConc1",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --duplicate --minConc 1",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "dups__kinship",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --kinship",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 167,
+    "sha256": "ac5bb5f6bd4aad29c5d053b269cd7e8c6d5f82b6e9aa1d280063f60aa6e433de"
+   },
+   "king.kin0": {
+    "bytes": 2120,
+    "sha256": "e64ace7f2530222932538bbeaca13bc12de5f0dbeef54097178e93233fbaef93"
+   }
+  }
+ },
+ {
+  "dir": "dups__kinship_altbim",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --kinship --bim {ALT}/dups.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 167,
+    "sha256": "ac5bb5f6bd4aad29c5d053b269cd7e8c6d5f82b6e9aa1d280063f60aa6e433de"
+   },
+   "king.kin0": {
+    "bytes": 2120,
+    "sha256": "e64ace7f2530222932538bbeaca13bc12de5f0dbeef54097178e93233fbaef93"
+   }
+  }
+ },
+ {
+  "dir": "dups__kinship_altfam",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --kinship --fam {ALT}/dups.altfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 2101,
+    "sha256": "d872a3a978b0e1ea84a0e5baedb184c7a9f43fc406ce7714b4857dcace746b83"
+   }
+  }
+ },
+ {
+  "dir": "dups__kinship_altfam_altbim",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --kinship --fam {ALT}/dups.altfam.fam --bim {ALT}/dups.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 2101,
+    "sha256": "d872a3a978b0e1ea84a0e5baedb184c7a9f43fc406ce7714b4857dcace746b83"
+   }
+  }
+ },
+ {
+  "dir": "dups__kinship_cpus1",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --kinship --cpus 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 167,
+    "sha256": "ac5bb5f6bd4aad29c5d053b269cd7e8c6d5f82b6e9aa1d280063f60aa6e433de"
+   },
+   "king.kin0": {
+    "bytes": 2120,
+    "sha256": "e64ace7f2530222932538bbeaca13bc12de5f0dbeef54097178e93233fbaef93"
+   }
+  }
+ },
+ {
+  "dir": "dups__kinship_cpus4",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --kinship --cpus 4",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 167,
+    "sha256": "ac5bb5f6bd4aad29c5d053b269cd7e8c6d5f82b6e9aa1d280063f60aa6e433de"
+   },
+   "king.kin0": {
+    "bytes": 2120,
+    "sha256": "e64ace7f2530222932538bbeaca13bc12de5f0dbeef54097178e93233fbaef93"
+   }
+  }
+ },
+ {
+  "dir": "dups__kinship_degree1",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --kinship --degree 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 167,
+    "sha256": "ac5bb5f6bd4aad29c5d053b269cd7e8c6d5f82b6e9aa1d280063f60aa6e433de"
+   },
+   "king.kin0": {
+    "bytes": 98,
+    "sha256": "20a3d5fa1b3563f3cda80cc89986ca545701915f23e34b474f746373580443c6"
+   }
+  }
+ },
+ {
+  "dir": "dups__kinship_degree2",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --kinship --degree 2",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 167,
+    "sha256": "ac5bb5f6bd4aad29c5d053b269cd7e8c6d5f82b6e9aa1d280063f60aa6e433de"
+   },
+   "king.kin0": {
+    "bytes": 98,
+    "sha256": "20a3d5fa1b3563f3cda80cc89986ca545701915f23e34b474f746373580443c6"
+   }
+  }
+ },
+ {
+  "dir": "dups__kinship_degree3",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --kinship --degree 3",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 167,
+    "sha256": "ac5bb5f6bd4aad29c5d053b269cd7e8c6d5f82b6e9aa1d280063f60aa6e433de"
+   },
+   "king.kin0": {
+    "bytes": 98,
+    "sha256": "20a3d5fa1b3563f3cda80cc89986ca545701915f23e34b474f746373580443c6"
+   }
+  }
+ },
+ {
+  "dir": "dups__kinship_prefix_custom",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --kinship --prefix custom",
+  "exit": 0,
+  "files": {
+   "custom.kin": {
+    "bytes": 167,
+    "sha256": "ac5bb5f6bd4aad29c5d053b269cd7e8c6d5f82b6e9aa1d280063f60aa6e433de"
+   },
+   "custom.kin0": {
+    "bytes": 2120,
+    "sha256": "e64ace7f2530222932538bbeaca13bc12de5f0dbeef54097178e93233fbaef93"
+   }
+  }
+ },
+ {
+  "dir": "dups__kinship_sexchr23",
+  "dataset": "dups",
+  "cmd": "king -b {DATA}/dups.bed --kinship --sexchr 23",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 167,
+    "sha256": "ac5bb5f6bd4aad29c5d053b269cd7e8c6d5f82b6e9aa1d280063f60aa6e433de"
+   },
+   "king.kin0": {
+    "bytes": 2120,
+    "sha256": "e64ace7f2530222932538bbeaca13bc12de5f0dbeef54097178e93233fbaef93"
+   }
+  }
+ },
+ {
+  "dir": "missing__duplicate",
+  "dataset": "missing",
+  "cmd": "king -b {DATA}/missing.bed --duplicate",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "missing__duplicate_minConc0.9",
+  "dataset": "missing",
+  "cmd": "king -b {DATA}/missing.bed --duplicate --minConc 0.9",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "missing__kinship",
+  "dataset": "missing",
+  "cmd": "king -b {DATA}/missing.bed --kinship",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "missing__kinship_altbim",
+  "dataset": "missing",
+  "cmd": "king -b {DATA}/missing.bed --kinship --bim {ALT}/missing.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "missing__kinship_altfam",
+  "dataset": "missing",
+  "cmd": "king -b {DATA}/missing.bed --kinship --fam {ALT}/missing.altfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 695,
+    "sha256": "fd95d136bff7b114ac5e20df6f5e926808c64f87845e1124ca011bf1db5eff1e"
+   }
+  }
+ },
+ {
+  "dir": "missing__kinship_altfam_altbim",
+  "dataset": "missing",
+  "cmd": "king -b {DATA}/missing.bed --kinship --fam {ALT}/missing.altfam.fam --bim {ALT}/missing.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 695,
+    "sha256": "fd95d136bff7b114ac5e20df6f5e926808c64f87845e1124ca011bf1db5eff1e"
+   }
+  }
+ },
+ {
+  "dir": "missing__kinship_cpus1",
+  "dataset": "missing",
+  "cmd": "king -b {DATA}/missing.bed --kinship --cpus 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "missing__kinship_cpus4",
+  "dataset": "missing",
+  "cmd": "king -b {DATA}/missing.bed --kinship --cpus 4",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "missing__kinship_degree1",
+  "dataset": "missing",
+  "cmd": "king -b {DATA}/missing.bed --kinship --degree 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "missing__kinship_degree2",
+  "dataset": "missing",
+  "cmd": "king -b {DATA}/missing.bed --kinship --degree 2",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "missing__kinship_degree3",
+  "dataset": "missing",
+  "cmd": "king -b {DATA}/missing.bed --kinship --degree 3",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "missing__kinship_prefix_custom",
+  "dataset": "missing",
+  "cmd": "king -b {DATA}/missing.bed --kinship --prefix custom",
+  "exit": 0,
+  "files": {
+   "custom.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "missing__kinship_sexchr23",
+  "dataset": "missing",
+  "cmd": "king -b {DATA}/missing.bed --kinship --sexchr 23",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "monomorphic__duplicate",
+  "dataset": "monomorphic",
+  "cmd": "king -b {DATA}/monomorphic.bed --duplicate",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "monomorphic__duplicate_minConc0.9",
+  "dataset": "monomorphic",
+  "cmd": "king -b {DATA}/monomorphic.bed --duplicate --minConc 0.9",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "monomorphic__kinship",
+  "dataset": "monomorphic",
+  "cmd": "king -b {DATA}/monomorphic.bed --kinship",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 883,
+    "sha256": "7effb126ede6dbfc3df1a452479b7e8f068bb27fc0753a3ad6c61a0e3f2c451e"
+   },
+   "king.kin0": {
+    "bytes": 2487,
+    "sha256": "4a2fb7c9a7d4c493d994decf84ad4339a88b644245c05a48ea118652f36452b9"
+   }
+  }
+ },
+ {
+  "dir": "monomorphic__kinship_altbim",
+  "dataset": "monomorphic",
+  "cmd": "king -b {DATA}/monomorphic.bed --kinship --bim {ALT}/monomorphic.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 883,
+    "sha256": "7effb126ede6dbfc3df1a452479b7e8f068bb27fc0753a3ad6c61a0e3f2c451e"
+   },
+   "king.kin0": {
+    "bytes": 2487,
+    "sha256": "4a2fb7c9a7d4c493d994decf84ad4339a88b644245c05a48ea118652f36452b9"
+   }
+  }
+ },
+ {
+  "dir": "monomorphic__kinship_altfam",
+  "dataset": "monomorphic",
+  "cmd": "king -b {DATA}/monomorphic.bed --kinship --fam {ALT}/monomorphic.altfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 3135,
+    "sha256": "142227040166849cb8edacaef64597bb9e1e5d279c0c7075b8630491a4ae85e3"
+   }
+  }
+ },
+ {
+  "dir": "monomorphic__kinship_altfam_altbim",
+  "dataset": "monomorphic",
+  "cmd": "king -b {DATA}/monomorphic.bed --kinship --fam {ALT}/monomorphic.altfam.fam --bim {ALT}/monomorphic.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 3135,
+    "sha256": "142227040166849cb8edacaef64597bb9e1e5d279c0c7075b8630491a4ae85e3"
+   }
+  }
+ },
+ {
+  "dir": "monomorphic__kinship_cpus1",
+  "dataset": "monomorphic",
+  "cmd": "king -b {DATA}/monomorphic.bed --kinship --cpus 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 883,
+    "sha256": "7effb126ede6dbfc3df1a452479b7e8f068bb27fc0753a3ad6c61a0e3f2c451e"
+   },
+   "king.kin0": {
+    "bytes": 2487,
+    "sha256": "4a2fb7c9a7d4c493d994decf84ad4339a88b644245c05a48ea118652f36452b9"
+   }
+  }
+ },
+ {
+  "dir": "monomorphic__kinship_cpus4",
+  "dataset": "monomorphic",
+  "cmd": "king -b {DATA}/monomorphic.bed --kinship --cpus 4",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 883,
+    "sha256": "7effb126ede6dbfc3df1a452479b7e8f068bb27fc0753a3ad6c61a0e3f2c451e"
+   },
+   "king.kin0": {
+    "bytes": 2487,
+    "sha256": "4a2fb7c9a7d4c493d994decf84ad4339a88b644245c05a48ea118652f36452b9"
+   }
+  }
+ },
+ {
+  "dir": "monomorphic__kinship_degree1",
+  "dataset": "monomorphic",
+  "cmd": "king -b {DATA}/monomorphic.bed --kinship --degree 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 883,
+    "sha256": "7effb126ede6dbfc3df1a452479b7e8f068bb27fc0753a3ad6c61a0e3f2c451e"
+   },
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "monomorphic__kinship_degree2",
+  "dataset": "monomorphic",
+  "cmd": "king -b {DATA}/monomorphic.bed --kinship --degree 2",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 883,
+    "sha256": "7effb126ede6dbfc3df1a452479b7e8f068bb27fc0753a3ad6c61a0e3f2c451e"
+   },
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "monomorphic__kinship_degree3",
+  "dataset": "monomorphic",
+  "cmd": "king -b {DATA}/monomorphic.bed --kinship --degree 3",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 883,
+    "sha256": "7effb126ede6dbfc3df1a452479b7e8f068bb27fc0753a3ad6c61a0e3f2c451e"
+   },
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "monomorphic__kinship_prefix_custom",
+  "dataset": "monomorphic",
+  "cmd": "king -b {DATA}/monomorphic.bed --kinship --prefix custom",
+  "exit": 0,
+  "files": {
+   "custom.kin": {
+    "bytes": 883,
+    "sha256": "7effb126ede6dbfc3df1a452479b7e8f068bb27fc0753a3ad6c61a0e3f2c451e"
+   },
+   "custom.kin0": {
+    "bytes": 2487,
+    "sha256": "4a2fb7c9a7d4c493d994decf84ad4339a88b644245c05a48ea118652f36452b9"
+   }
+  }
+ },
+ {
+  "dir": "monomorphic__kinship_sexchr23",
+  "dataset": "monomorphic",
+  "cmd": "king -b {DATA}/monomorphic.bed --kinship --sexchr 23",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 883,
+    "sha256": "7effb126ede6dbfc3df1a452479b7e8f068bb27fc0753a3ad6c61a0e3f2c451e"
+   },
+   "king.kin0": {
+    "bytes": 2487,
+    "sha256": "4a2fb7c9a7d4c493d994decf84ad4339a88b644245c05a48ea118652f36452b9"
+   }
+  }
+ },
+ {
+  "dir": "multifam__bysample",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --bysample",
+  "exit": 0,
+  "files": {
+   "kingallsegs.txt": {
+    "bytes": 1050,
+    "sha256": "71d520c7fdf4ab3ca8f0c7540e6ba317d59332ad2138f4ae993f105ddbf8a37c"
+   },
+   "kingbySample.txt": {
+    "bytes": 1504,
+    "sha256": "01b14d9f082d10ce9b8bdf92ceca00d55eb31294739d610ad16a7d5bd1ff31c5"
+   }
+  }
+ },
+ {
+  "dir": "multifam__bysample_prefix_custom",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --bysample --prefix custom",
+  "exit": 0,
+  "files": {
+   "customallsegs.txt": {
+    "bytes": 1050,
+    "sha256": "71d520c7fdf4ab3ca8f0c7540e6ba317d59332ad2138f4ae993f105ddbf8a37c"
+   },
+   "custombySample.txt": {
+    "bytes": 1504,
+    "sha256": "01b14d9f082d10ce9b8bdf92ceca00d55eb31294739d610ad16a7d5bd1ff31c5"
+   }
+  }
+ },
+ {
+  "dir": "multifam__duplicate",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --duplicate",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "multifam__duplicate_minConc0.9",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --duplicate --minConc 0.9",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "multifam__kinship",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2304,
+    "sha256": "58fb48ebc8f76596e270207f1f5c5cd2e09b589dbde8f9203b84371f3696f0ec"
+   },
+   "king.kin0": {
+    "bytes": 7038,
+    "sha256": "d06acc4518c7ff4de92d745d8a21d5bcc2b8eadf3f7a69ca0683559a023dd6fb"
+   }
+  }
+ },
+ {
+  "dir": "multifam__kinship_altbim",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship --bim {ALT}/multifam.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2304,
+    "sha256": "58fb48ebc8f76596e270207f1f5c5cd2e09b589dbde8f9203b84371f3696f0ec"
+   },
+   "king.kin0": {
+    "bytes": 7038,
+    "sha256": "d06acc4518c7ff4de92d745d8a21d5bcc2b8eadf3f7a69ca0683559a023dd6fb"
+   }
+  }
+ },
+ {
+  "dir": "multifam__kinship_altfam",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship --fam {ALT}/multifam.altfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 8718,
+    "sha256": "cfe307143b746af2c509e9d6591466b35b88c6a07ec554e8c9f1df5c47776d04"
+   }
+  }
+ },
+ {
+  "dir": "multifam__kinship_altfam_altbim",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship --fam {ALT}/multifam.altfam.fam --bim {ALT}/multifam.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 8718,
+    "sha256": "cfe307143b746af2c509e9d6591466b35b88c6a07ec554e8c9f1df5c47776d04"
+   }
+  }
+ },
+ {
+  "dir": "multifam__kinship_badbim",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship --bim {ALT}/multifam.badbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2304,
+    "sha256": "834ba6d28c8fb5c9451b5a4c900cfa5304a9707d88c704492fdfe7a6e6916e57"
+   },
+   "king.kin0": {
+    "bytes": 7038,
+    "sha256": "f861babea422ac453796a82254f06c35af41d0859d7ec8c4287ce56143f7cdc8"
+   }
+  }
+ },
+ {
+  "dir": "multifam__kinship_badfam",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship --fam {ALT}/multifam.badfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 7831,
+    "sha256": "4e17fe569bc6f9b9d24c8e252fa7fa77aef83a84b714d3992f89c77330c9acb3"
+   }
+  }
+ },
+ {
+  "dir": "multifam__kinship_bigbim",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship --bim {ALT}/multifam.bigbim.bim",
+  "exit": 1,
+  "files": {}
+ },
+ {
+  "dir": "multifam__kinship_bigfam",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship --fam {ALT}/multifam.bigfam.fam",
+  "exit": 1,
+  "files": {}
+ },
+ {
+  "dir": "multifam__kinship_cpus1",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship --cpus 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2304,
+    "sha256": "58fb48ebc8f76596e270207f1f5c5cd2e09b589dbde8f9203b84371f3696f0ec"
+   },
+   "king.kin0": {
+    "bytes": 7038,
+    "sha256": "d06acc4518c7ff4de92d745d8a21d5bcc2b8eadf3f7a69ca0683559a023dd6fb"
+   }
+  }
+ },
+ {
+  "dir": "multifam__kinship_cpus2",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship --cpus 2",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2304,
+    "sha256": "58fb48ebc8f76596e270207f1f5c5cd2e09b589dbde8f9203b84371f3696f0ec"
+   },
+   "king.kin0": {
+    "bytes": 7038,
+    "sha256": "d06acc4518c7ff4de92d745d8a21d5bcc2b8eadf3f7a69ca0683559a023dd6fb"
+   }
+  }
+ },
+ {
+  "dir": "multifam__kinship_cpus4",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship --cpus 4",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2304,
+    "sha256": "58fb48ebc8f76596e270207f1f5c5cd2e09b589dbde8f9203b84371f3696f0ec"
+   },
+   "king.kin0": {
+    "bytes": 7038,
+    "sha256": "d06acc4518c7ff4de92d745d8a21d5bcc2b8eadf3f7a69ca0683559a023dd6fb"
+   }
+  }
+ },
+ {
+  "dir": "multifam__kinship_degree1",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship --degree 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2304,
+    "sha256": "58fb48ebc8f76596e270207f1f5c5cd2e09b589dbde8f9203b84371f3696f0ec"
+   },
+   "king.kin0": {
+    "bytes": 409,
+    "sha256": "13b215d974a400a2438c5e6fa33aa051569af38c8f71a23155c7b23f55530566"
+   }
+  }
+ },
+ {
+  "dir": "multifam__kinship_degree2",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship --degree 2",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2304,
+    "sha256": "58fb48ebc8f76596e270207f1f5c5cd2e09b589dbde8f9203b84371f3696f0ec"
+   },
+   "king.kin0": {
+    "bytes": 1520,
+    "sha256": "54e4e4efa6d0503533e9f37c31625460b6c3e6f27c789f3193a3295677c4244b"
+   }
+  }
+ },
+ {
+  "dir": "multifam__kinship_degree3",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship --degree 3",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2304,
+    "sha256": "58fb48ebc8f76596e270207f1f5c5cd2e09b589dbde8f9203b84371f3696f0ec"
+   },
+   "king.kin0": {
+    "bytes": 2451,
+    "sha256": "9fdeeb0b1a9ec9972031f43333f1558b45140eb9d3a723cd9998123a9fbe9ddb"
+   }
+  }
+ },
+ {
+  "dir": "multifam__kinship_degree4",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship --degree 4",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2304,
+    "sha256": "58fb48ebc8f76596e270207f1f5c5cd2e09b589dbde8f9203b84371f3696f0ec"
+   },
+   "king.kin0": {
+    "bytes": 2968,
+    "sha256": "a991af73e9cb5643e3954635b12f80a64c265e6590234dcce17a7e44aa00bb06"
+   }
+  }
+ },
+ {
+  "dir": "multifam__kinship_prefix_custom",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship --prefix custom",
+  "exit": 0,
+  "files": {
+   "custom.kin": {
+    "bytes": 2304,
+    "sha256": "58fb48ebc8f76596e270207f1f5c5cd2e09b589dbde8f9203b84371f3696f0ec"
+   },
+   "custom.kin0": {
+    "bytes": 7038,
+    "sha256": "d06acc4518c7ff4de92d745d8a21d5bcc2b8eadf3f7a69ca0683559a023dd6fb"
+   }
+  }
+ },
+ {
+  "dir": "multifam__kinship_sexchr23",
+  "dataset": "multifam",
+  "cmd": "king -b {DATA}/multifam.bed --kinship --sexchr 23",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2304,
+    "sha256": "58fb48ebc8f76596e270207f1f5c5cd2e09b589dbde8f9203b84371f3696f0ec"
+   },
+   "king.kin0": {
+    "bytes": 7038,
+    "sha256": "d06acc4518c7ff4de92d745d8a21d5bcc2b8eadf3f7a69ca0683559a023dd6fb"
+   }
+  }
+ },
+ {
+  "dir": "nuclear__duplicate",
+  "dataset": "nuclear",
+  "cmd": "king -b {DATA}/nuclear.bed --duplicate",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "nuclear__duplicate_minConc0.9",
+  "dataset": "nuclear",
+  "cmd": "king -b {DATA}/nuclear.bed --duplicate --minConc 0.9",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "nuclear__kinship",
+  "dataset": "nuclear",
+  "cmd": "king -b {DATA}/nuclear.bed --kinship",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "nuclear__kinship_altbim",
+  "dataset": "nuclear",
+  "cmd": "king -b {DATA}/nuclear.bed --kinship --bim {ALT}/nuclear.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "nuclear__kinship_altfam",
+  "dataset": "nuclear",
+  "cmd": "king -b {DATA}/nuclear.bed --kinship --fam {ALT}/nuclear.altfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 710,
+    "sha256": "68facc138a17e869ae12460393a33a802f041fc144a0b79efd72a42925d11420"
+   }
+  }
+ },
+ {
+  "dir": "nuclear__kinship_altfam_altbim",
+  "dataset": "nuclear",
+  "cmd": "king -b {DATA}/nuclear.bed --kinship --fam {ALT}/nuclear.altfam.fam --bim {ALT}/nuclear.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 710,
+    "sha256": "68facc138a17e869ae12460393a33a802f041fc144a0b79efd72a42925d11420"
+   }
+  }
+ },
+ {
+  "dir": "nuclear__kinship_cpus1",
+  "dataset": "nuclear",
+  "cmd": "king -b {DATA}/nuclear.bed --kinship --cpus 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "nuclear__kinship_cpus4",
+  "dataset": "nuclear",
+  "cmd": "king -b {DATA}/nuclear.bed --kinship --cpus 4",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "nuclear__kinship_degree1",
+  "dataset": "nuclear",
+  "cmd": "king -b {DATA}/nuclear.bed --kinship --degree 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "nuclear__kinship_degree2",
+  "dataset": "nuclear",
+  "cmd": "king -b {DATA}/nuclear.bed --kinship --degree 2",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "nuclear__kinship_degree3",
+  "dataset": "nuclear",
+  "cmd": "king -b {DATA}/nuclear.bed --kinship --degree 3",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "nuclear__kinship_prefix_custom",
+  "dataset": "nuclear",
+  "cmd": "king -b {DATA}/nuclear.bed --kinship --prefix custom",
+  "exit": 0,
+  "files": {
+   "custom.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "nuclear__kinship_sexchr23",
+  "dataset": "nuclear",
+  "cmd": "king -b {DATA}/nuclear.bed --kinship --sexchr 23",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "pair__duplicate",
+  "dataset": "pair",
+  "cmd": "king -b {DATA}/pair.bed --duplicate",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "pair__duplicate_minConc0.9",
+  "dataset": "pair",
+  "cmd": "king -b {DATA}/pair.bed --duplicate --minConc 0.9",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "pair__kinship",
+  "dataset": "pair",
+  "cmd": "king -b {DATA}/pair.bed --kinship",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 92,
+    "sha256": "213abff3c954f11c38e5e7e9d617ddd7e0b0de4d8766183313e98481c8b8a648"
+   }
+  }
+ },
+ {
+  "dir": "pair__kinship_altbim",
+  "dataset": "pair",
+  "cmd": "king -b {DATA}/pair.bed --kinship --bim {ALT}/pair.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 92,
+    "sha256": "213abff3c954f11c38e5e7e9d617ddd7e0b0de4d8766183313e98481c8b8a648"
+   }
+  }
+ },
+ {
+  "dir": "pair__kinship_altfam",
+  "dataset": "pair",
+  "cmd": "king -b {DATA}/pair.bed --kinship --fam {ALT}/pair.altfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 88,
+    "sha256": "197e3550f63155cbeb3b367a3b9d093498aa030a765aee5313bedc64a244fa3e"
+   }
+  }
+ },
+ {
+  "dir": "pair__kinship_altfam_altbim",
+  "dataset": "pair",
+  "cmd": "king -b {DATA}/pair.bed --kinship --fam {ALT}/pair.altfam.fam --bim {ALT}/pair.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 88,
+    "sha256": "197e3550f63155cbeb3b367a3b9d093498aa030a765aee5313bedc64a244fa3e"
+   }
+  }
+ },
+ {
+  "dir": "pair__kinship_badfam",
+  "dataset": "pair",
+  "cmd": "king -b {DATA}/pair.bed --kinship --fam {ALT}/pair.badfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "pair__kinship_bigfam",
+  "dataset": "pair",
+  "cmd": "king -b {DATA}/pair.bed --kinship --fam {ALT}/pair.bigfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 180,
+    "sha256": "52ae9870a33c04520444d61e35e0c105da09886b70dbc662034a1e2e44567c91"
+   }
+  }
+ },
+ {
+  "dir": "pair__kinship_cpus1",
+  "dataset": "pair",
+  "cmd": "king -b {DATA}/pair.bed --kinship --cpus 1",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 92,
+    "sha256": "213abff3c954f11c38e5e7e9d617ddd7e0b0de4d8766183313e98481c8b8a648"
+   }
+  }
+ },
+ {
+  "dir": "pair__kinship_cpus4",
+  "dataset": "pair",
+  "cmd": "king -b {DATA}/pair.bed --kinship --cpus 4",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 92,
+    "sha256": "213abff3c954f11c38e5e7e9d617ddd7e0b0de4d8766183313e98481c8b8a648"
+   }
+  }
+ },
+ {
+  "dir": "pair__kinship_degree1",
+  "dataset": "pair",
+  "cmd": "king -b {DATA}/pair.bed --kinship --degree 1",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 92,
+    "sha256": "213abff3c954f11c38e5e7e9d617ddd7e0b0de4d8766183313e98481c8b8a648"
+   }
+  }
+ },
+ {
+  "dir": "pair__kinship_degree2",
+  "dataset": "pair",
+  "cmd": "king -b {DATA}/pair.bed --kinship --degree 2",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 92,
+    "sha256": "213abff3c954f11c38e5e7e9d617ddd7e0b0de4d8766183313e98481c8b8a648"
+   }
+  }
+ },
+ {
+  "dir": "pair__kinship_degree3",
+  "dataset": "pair",
+  "cmd": "king -b {DATA}/pair.bed --kinship --degree 3",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 92,
+    "sha256": "213abff3c954f11c38e5e7e9d617ddd7e0b0de4d8766183313e98481c8b8a648"
+   }
+  }
+ },
+ {
+  "dir": "pair__kinship_prefix_custom",
+  "dataset": "pair",
+  "cmd": "king -b {DATA}/pair.bed --kinship --prefix custom",
+  "exit": 0,
+  "files": {
+   "custom.kin0": {
+    "bytes": 92,
+    "sha256": "213abff3c954f11c38e5e7e9d617ddd7e0b0de4d8766183313e98481c8b8a648"
+   }
+  }
+ },
+ {
+  "dir": "pair__kinship_sexchr23",
+  "dataset": "pair",
+  "cmd": "king -b {DATA}/pair.bed --kinship --sexchr 23",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 92,
+    "sha256": "213abff3c954f11c38e5e7e9d617ddd7e0b0de4d8766183313e98481c8b8a648"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__duplicate",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --duplicate",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__duplicate_cpus1",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --duplicate --cpus 1",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__duplicate_cpus1_minConc0.9",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --duplicate --cpus 1 --minConc 0.9",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__duplicate_minConc0.9",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --duplicate --minConc 0.9",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "c1d698bd6ead307f65b4c615e824c5b7898c9b578b9187b92b7e3434f457d464"
+   },
+   "king.kin0": {
+    "bytes": 1427,
+    "sha256": "4485b45ae8c17a0e6296e632a7ec6c0bbd835cb555363b7db6c720680a9c6b74"
+   },
+   "kingX.kin": {
+    "bytes": 812,
+    "sha256": "a9e22a3ba57f161ace4dbbfc1ae63c6d4be26dad9c869f890cfe0a4a112e2de0"
+   },
+   "kingX.kin0": {
+    "bytes": 662,
+    "sha256": "00fe83fb1b1b40fbe760e58fab3c49eaa18f9dbef7823addfe51bc636b44e68c"
+   }
+  },
+  "diff_exclude": [
+   "kingX.kin0"
+  ],
+  "note": "race-corrupted by KING's multi-threaded X writer; see NONDETERMINISTIC.txt section D"
+ },
+ {
+  "dir": "sexchr__kinship_altbim",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --bim {ALT}/sexchr.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "ca2ad1950a5b9539a765f0ab7e015c14f2b1f47c5f4c69550ffefd5c1e490f1d"
+   },
+   "king.kin0": {
+    "bytes": 1434,
+    "sha256": "5d4c04051995fc8d1de2dd9a282e74b86298646bf629de7195dcfe5573f15816"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_altfam",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --fam {ALT}/sexchr.altfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 2127,
+    "sha256": "b0011c4a48ae9ac949545db57c32936de3c2bf13dd38012d391ab22dce14424c"
+   },
+   "kingX.kin": {
+    "bytes": 45,
+    "sha256": "6ae392faaf1c11fcc3fdc1b44b8f0a853d765279a4da5c486761ab2e25cdd769"
+   },
+   "kingX.kin0": {
+    "bytes": 46,
+    "sha256": "e356ad6c68a346e439b3d6919d0857033a284b4f3ee0a7c9a124781b3d2ea412"
+   }
+  },
+  "diff_exclude": [
+   "kingX.kin0"
+  ],
+  "note": "race-corrupted by KING's multi-threaded X writer; see NONDETERMINISTIC.txt section D"
+ },
+ {
+  "dir": "sexchr__kinship_altfam_altbim",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --fam {ALT}/sexchr.altfam.fam --bim {ALT}/sexchr.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 2137,
+    "sha256": "98bc5aeab182b275a287ba1b2eb331be2d43522585d996ddb0185df676aa7451"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_cpus1",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --cpus 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "c1d698bd6ead307f65b4c615e824c5b7898c9b578b9187b92b7e3434f457d464"
+   },
+   "king.kin0": {
+    "bytes": 1427,
+    "sha256": "4485b45ae8c17a0e6296e632a7ec6c0bbd835cb555363b7db6c720680a9c6b74"
+   },
+   "kingX.kin": {
+    "bytes": 812,
+    "sha256": "a9e22a3ba57f161ace4dbbfc1ae63c6d4be26dad9c869f890cfe0a4a112e2de0"
+   },
+   "kingX.kin0": {
+    "bytes": 662,
+    "sha256": "00fe83fb1b1b40fbe760e58fab3c49eaa18f9dbef7823addfe51bc636b44e68c"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_cpus1_altbim",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --cpus 1 --bim {ALT}/sexchr.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "ca2ad1950a5b9539a765f0ab7e015c14f2b1f47c5f4c69550ffefd5c1e490f1d"
+   },
+   "king.kin0": {
+    "bytes": 1434,
+    "sha256": "5d4c04051995fc8d1de2dd9a282e74b86298646bf629de7195dcfe5573f15816"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_cpus1_altfam",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --cpus 1 --fam {ALT}/sexchr.altfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 2127,
+    "sha256": "b0011c4a48ae9ac949545db57c32936de3c2bf13dd38012d391ab22dce14424c"
+   },
+   "kingX.kin": {
+    "bytes": 45,
+    "sha256": "6ae392faaf1c11fcc3fdc1b44b8f0a853d765279a4da5c486761ab2e25cdd769"
+   },
+   "kingX.kin0": {
+    "bytes": 46,
+    "sha256": "e356ad6c68a346e439b3d6919d0857033a284b4f3ee0a7c9a124781b3d2ea412"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_cpus1_degree1",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --cpus 1 --degree 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "c1d698bd6ead307f65b4c615e824c5b7898c9b578b9187b92b7e3434f457d464"
+   },
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_cpus1_degree2",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --cpus 1 --degree 2",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "c1d698bd6ead307f65b4c615e824c5b7898c9b578b9187b92b7e3434f457d464"
+   },
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_cpus1_degree3",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --cpus 1 --degree 3",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "c1d698bd6ead307f65b4c615e824c5b7898c9b578b9187b92b7e3434f457d464"
+   },
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_cpus1_prefix_custom",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --cpus 1 --prefix custom",
+  "exit": 0,
+  "files": {
+   "custom.kin": {
+    "bytes": 909,
+    "sha256": "c1d698bd6ead307f65b4c615e824c5b7898c9b578b9187b92b7e3434f457d464"
+   },
+   "custom.kin0": {
+    "bytes": 1427,
+    "sha256": "4485b45ae8c17a0e6296e632a7ec6c0bbd835cb555363b7db6c720680a9c6b74"
+   },
+   "customX.kin": {
+    "bytes": 812,
+    "sha256": "a9e22a3ba57f161ace4dbbfc1ae63c6d4be26dad9c869f890cfe0a4a112e2de0"
+   },
+   "customX.kin0": {
+    "bytes": 662,
+    "sha256": "00fe83fb1b1b40fbe760e58fab3c49eaa18f9dbef7823addfe51bc636b44e68c"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_cpus1_sexchr2",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --cpus 1 --sexchr 2",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 913,
+    "sha256": "49f47a975de0a58b5442217c5267cd8026e359ea3723fa871a5e4a1f7126fed3"
+   },
+   "king.kin0": {
+    "bytes": 1428,
+    "sha256": "6f40870efa77083c07513ffa1d3bea3868055d76a13a624726b53d0f5b30bc31"
+   },
+   "kingX.kin": {
+    "bytes": 810,
+    "sha256": "237702a984f49642a6444d12ed285a9abef139e2fdd61b06b6d85dff8c2152e4"
+   },
+   "kingX.kin0": {
+    "bytes": 657,
+    "sha256": "6080fdc50d99011f186aafaad27fe322a8cb8d9d759916f8389d5581f6fa0b94"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_cpus1_sexchr23",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --cpus 1 --sexchr 23",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "c1d698bd6ead307f65b4c615e824c5b7898c9b578b9187b92b7e3434f457d464"
+   },
+   "king.kin0": {
+    "bytes": 1427,
+    "sha256": "4485b45ae8c17a0e6296e632a7ec6c0bbd835cb555363b7db6c720680a9c6b74"
+   },
+   "kingX.kin": {
+    "bytes": 812,
+    "sha256": "a9e22a3ba57f161ace4dbbfc1ae63c6d4be26dad9c869f890cfe0a4a112e2de0"
+   },
+   "kingX.kin0": {
+    "bytes": 662,
+    "sha256": "00fe83fb1b1b40fbe760e58fab3c49eaa18f9dbef7823addfe51bc636b44e68c"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_cpus1_sexchr24",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --cpus 1 --sexchr 24",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "a36181aaa4cc8fd1f40b74a260c855313a6cd687b2165d58b349420c0424e682"
+   },
+   "king.kin0": {
+    "bytes": 1434,
+    "sha256": "9d005677064d6a8b647c1a24ea82be6f8dc4dba2e905911e62a181ad123d3119"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_cpus1_sexchr25",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --cpus 1 --sexchr 25",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "835b886a7e4fd0ac36b27b97264e628b5959a7ebcc1fe5f9c3dc2ccd29b53ddf"
+   },
+   "king.kin0": {
+    "bytes": 1433,
+    "sha256": "78a2486beb29735c03db55e5411fbf597b391049c86ad6d82c0f285af921daca"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_cpus4",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --cpus 4",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "c1d698bd6ead307f65b4c615e824c5b7898c9b578b9187b92b7e3434f457d464"
+   },
+   "king.kin0": {
+    "bytes": 1427,
+    "sha256": "4485b45ae8c17a0e6296e632a7ec6c0bbd835cb555363b7db6c720680a9c6b74"
+   },
+   "kingX.kin": {
+    "bytes": 812,
+    "sha256": "a9e22a3ba57f161ace4dbbfc1ae63c6d4be26dad9c869f890cfe0a4a112e2de0"
+   },
+   "kingX.kin0": {
+    "bytes": 662,
+    "sha256": "00fe83fb1b1b40fbe760e58fab3c49eaa18f9dbef7823addfe51bc636b44e68c"
+   }
+  },
+  "diff_exclude": [
+   "kingX.kin0"
+  ],
+  "note": "race-corrupted by KING's multi-threaded X writer; see NONDETERMINISTIC.txt section D"
+ },
+ {
+  "dir": "sexchr__kinship_degree1",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --degree 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "c1d698bd6ead307f65b4c615e824c5b7898c9b578b9187b92b7e3434f457d464"
+   },
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_degree2",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --degree 2",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "c1d698bd6ead307f65b4c615e824c5b7898c9b578b9187b92b7e3434f457d464"
+   },
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_degree3",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --degree 3",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "c1d698bd6ead307f65b4c615e824c5b7898c9b578b9187b92b7e3434f457d464"
+   },
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_prefix_custom",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --prefix custom",
+  "exit": 0,
+  "files": {
+   "custom.kin": {
+    "bytes": 909,
+    "sha256": "c1d698bd6ead307f65b4c615e824c5b7898c9b578b9187b92b7e3434f457d464"
+   },
+   "custom.kin0": {
+    "bytes": 1427,
+    "sha256": "4485b45ae8c17a0e6296e632a7ec6c0bbd835cb555363b7db6c720680a9c6b74"
+   },
+   "customX.kin": {
+    "bytes": 812,
+    "sha256": "a9e22a3ba57f161ace4dbbfc1ae63c6d4be26dad9c869f890cfe0a4a112e2de0"
+   },
+   "customX.kin0": {
+    "bytes": 662,
+    "sha256": "00fe83fb1b1b40fbe760e58fab3c49eaa18f9dbef7823addfe51bc636b44e68c"
+   }
+  },
+  "diff_exclude": [
+   "customX.kin0"
+  ],
+  "note": "race-corrupted by KING's multi-threaded X writer; see NONDETERMINISTIC.txt section D"
+ },
+ {
+  "dir": "sexchr__kinship_sexchr1",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --sexchr 1",
+  "exit": 1,
+  "files": {}
+ },
+ {
+  "dir": "sexchr__kinship_sexchr23",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --sexchr 23",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "c1d698bd6ead307f65b4c615e824c5b7898c9b578b9187b92b7e3434f457d464"
+   },
+   "king.kin0": {
+    "bytes": 1427,
+    "sha256": "4485b45ae8c17a0e6296e632a7ec6c0bbd835cb555363b7db6c720680a9c6b74"
+   },
+   "kingX.kin": {
+    "bytes": 812,
+    "sha256": "a9e22a3ba57f161ace4dbbfc1ae63c6d4be26dad9c869f890cfe0a4a112e2de0"
+   },
+   "kingX.kin0": {
+    "bytes": 662,
+    "sha256": "00fe83fb1b1b40fbe760e58fab3c49eaa18f9dbef7823addfe51bc636b44e68c"
+   }
+  },
+  "diff_exclude": [
+   "kingX.kin0"
+  ],
+  "note": "race-corrupted by KING's multi-threaded X writer; see NONDETERMINISTIC.txt section D"
+ },
+ {
+  "dir": "sexchr__kinship_sexchr24",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --sexchr 24",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "a36181aaa4cc8fd1f40b74a260c855313a6cd687b2165d58b349420c0424e682"
+   },
+   "king.kin0": {
+    "bytes": 1434,
+    "sha256": "9d005677064d6a8b647c1a24ea82be6f8dc4dba2e905911e62a181ad123d3119"
+   }
+  }
+ },
+ {
+  "dir": "sexchr__kinship_sexchr25",
+  "dataset": "sexchr",
+  "cmd": "king -b {DATA}/sexchr.bed --kinship --sexchr 25",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 909,
+    "sha256": "835b886a7e4fd0ac36b27b97264e628b5959a7ebcc1fe5f9c3dc2ccd29b53ddf"
+   },
+   "king.kin0": {
+    "bytes": 1433,
+    "sha256": "78a2486beb29735c03db55e5411fbf597b391049c86ad6d82c0f285af921daca"
+   }
+  }
+ },
+ {
+  "dir": "singleton__duplicate",
+  "dataset": "singleton",
+  "cmd": "king -b {DATA}/singleton.bed --duplicate",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "singleton__duplicate_minConc0.9",
+  "dataset": "singleton",
+  "cmd": "king -b {DATA}/singleton.bed --duplicate --minConc 0.9",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "singleton__kinship",
+  "dataset": "singleton",
+  "cmd": "king -b {DATA}/singleton.bed --kinship",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "singleton__kinship_altbim",
+  "dataset": "singleton",
+  "cmd": "king -b {DATA}/singleton.bed --kinship --bim {ALT}/singleton.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "singleton__kinship_altfam",
+  "dataset": "singleton",
+  "cmd": "king -b {DATA}/singleton.bed --kinship --fam {ALT}/singleton.altfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "singleton__kinship_altfam_altbim",
+  "dataset": "singleton",
+  "cmd": "king -b {DATA}/singleton.bed --kinship --fam {ALT}/singleton.altfam.fam --bim {ALT}/singleton.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "singleton__kinship_badbim",
+  "dataset": "singleton",
+  "cmd": "king -b {DATA}/singleton.bed --kinship --bim {ALT}/singleton.badbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "singleton__kinship_bigbim",
+  "dataset": "singleton",
+  "cmd": "king -b {DATA}/singleton.bed --kinship --bim {ALT}/singleton.bigbim.bim",
+  "exit": 1,
+  "files": {}
+ },
+ {
+  "dir": "singleton__kinship_bigfam",
+  "dataset": "singleton",
+  "cmd": "king -b {DATA}/singleton.bed --kinship --fam {ALT}/singleton.bigfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 90,
+    "sha256": "442570dee98c6be10bb772b007b816b65abb769a130ce3472513ee30b45445b2"
+   }
+  }
+ },
+ {
+  "dir": "singleton__kinship_cpus1",
+  "dataset": "singleton",
+  "cmd": "king -b {DATA}/singleton.bed --kinship --cpus 1",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "singleton__kinship_cpus4",
+  "dataset": "singleton",
+  "cmd": "king -b {DATA}/singleton.bed --kinship --cpus 4",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "singleton__kinship_degree1",
+  "dataset": "singleton",
+  "cmd": "king -b {DATA}/singleton.bed --kinship --degree 1",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "singleton__kinship_degree2",
+  "dataset": "singleton",
+  "cmd": "king -b {DATA}/singleton.bed --kinship --degree 2",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "singleton__kinship_degree3",
+  "dataset": "singleton",
+  "cmd": "king -b {DATA}/singleton.bed --kinship --degree 3",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "singleton__kinship_prefix_custom",
+  "dataset": "singleton",
+  "cmd": "king -b {DATA}/singleton.bed --kinship --prefix custom",
+  "exit": 0,
+  "files": {
+   "custom.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "singleton__kinship_sexchr23",
+  "dataset": "singleton",
+  "cmd": "king -b {DATA}/singleton.bed --kinship --sexchr 23",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "threegen__duplicate",
+  "dataset": "threegen",
+  "cmd": "king -b {DATA}/threegen.bed --duplicate",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "threegen__duplicate_minConc0.9",
+  "dataset": "threegen",
+  "cmd": "king -b {DATA}/threegen.bed --duplicate --minConc 0.9",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "threegen__kinship",
+  "dataset": "threegen",
+  "cmd": "king -b {DATA}/threegen.bed --kinship",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "threegen__kinship_altbim",
+  "dataset": "threegen",
+  "cmd": "king -b {DATA}/threegen.bed --kinship --bim {ALT}/threegen.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "threegen__kinship_altfam",
+  "dataset": "threegen",
+  "cmd": "king -b {DATA}/threegen.bed --kinship --fam {ALT}/threegen.altfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 3216,
+    "sha256": "0933d4808b52871413158a33b26f0e727008a6435d2058776cc9f42a0d7b1ce0"
+   }
+  }
+ },
+ {
+  "dir": "threegen__kinship_altfam_altbim",
+  "dataset": "threegen",
+  "cmd": "king -b {DATA}/threegen.bed --kinship --fam {ALT}/threegen.altfam.fam --bim {ALT}/threegen.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 3216,
+    "sha256": "0933d4808b52871413158a33b26f0e727008a6435d2058776cc9f42a0d7b1ce0"
+   }
+  }
+ },
+ {
+  "dir": "threegen__kinship_cpus1",
+  "dataset": "threegen",
+  "cmd": "king -b {DATA}/threegen.bed --kinship --cpus 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "threegen__kinship_cpus4",
+  "dataset": "threegen",
+  "cmd": "king -b {DATA}/threegen.bed --kinship --cpus 4",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "threegen__kinship_degree1",
+  "dataset": "threegen",
+  "cmd": "king -b {DATA}/threegen.bed --kinship --degree 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "threegen__kinship_degree2",
+  "dataset": "threegen",
+  "cmd": "king -b {DATA}/threegen.bed --kinship --degree 2",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "threegen__kinship_degree3",
+  "dataset": "threegen",
+  "cmd": "king -b {DATA}/threegen.bed --kinship --degree 3",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "threegen__kinship_prefix_custom",
+  "dataset": "threegen",
+  "cmd": "king -b {DATA}/threegen.bed --kinship --prefix custom",
+  "exit": 0,
+  "files": {
+   "custom.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "threegen__kinship_sexchr23",
+  "dataset": "threegen",
+  "cmd": "king -b {DATA}/threegen.bed --kinship --sexchr 23",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "trio__bysample",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --bysample",
+  "exit": 0,
+  "files": {
+   "kingallsegs.txt": {
+    "bytes": 219,
+    "sha256": "ea91efcf7b83478c98e4a8b96e8630fd2ef0ba83ec2d12d3b59fd2bc0fc0bd79"
+   },
+   "kingbySample.txt": {
+    "bytes": 298,
+    "sha256": "7fddcabfc3635ac491be7ab5997d49ac9a6d16acb87aa5ecaa0ad128ff456174"
+   }
+  }
+ },
+ {
+  "dir": "trio__bysample_prefix_custom",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --bysample --prefix custom",
+  "exit": 0,
+  "files": {
+   "customallsegs.txt": {
+    "bytes": 219,
+    "sha256": "ea91efcf7b83478c98e4a8b96e8630fd2ef0ba83ec2d12d3b59fd2bc0fc0bd79"
+   },
+   "custombySample.txt": {
+    "bytes": 298,
+    "sha256": "7fddcabfc3635ac491be7ab5997d49ac9a6d16acb87aa5ecaa0ad128ff456174"
+   }
+  }
+ },
+ {
+  "dir": "trio__duplicate",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --duplicate",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "trio__duplicate_minConc0",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --duplicate --minConc 0",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 246,
+    "sha256": "0d27f0a0d93707ddf60a836099c3c29d599b264cb1248132cf282b84334a4579"
+   }
+  }
+ },
+ {
+  "dir": "trio__duplicate_minConc0.9",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --duplicate --minConc 0.9",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "trio__duplicate_minConc1",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --duplicate --minConc 1",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship_altbim",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --bim {ALT}/trio.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship_altfam",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --fam {ALT}/trio.altfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 172,
+    "sha256": "61236c349ab34fd65442d2ff7505249be5151adc9545440c3c9a66025ad0803a"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship_altfam_altbim",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --fam {ALT}/trio.altfam.fam --bim {ALT}/trio.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 172,
+    "sha256": "61236c349ab34fd65442d2ff7505249be5151adc9545440c3c9a66025ad0803a"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship_badbim",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --bim {ALT}/trio.badbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship_badfam",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --fam {ALT}/trio.badfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 86,
+    "sha256": "965232c366330ca560798039ab18026ae8e38afae7be73ce4c9015ec85507424"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship_bigbim",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --bim {ALT}/trio.bigbim.bim",
+  "exit": 1,
+  "files": {}
+ },
+ {
+  "dir": "trio__kinship_bigfam",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --fam {ALT}/trio.bigfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 308,
+    "sha256": "90560ee62ea67f316d20702eeb4a8d56c9a5692a3b5e7d5c4fcf29b061ca1e68"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship_bimnotfound",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --bim {ALT}/trio.no_such_file.bim",
+  "exit": 1,
+  "files": {}
+ },
+ {
+  "dir": "trio__kinship_cpus0",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --cpus 0",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship_cpus1",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --cpus 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship_cpus4",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --cpus 4",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship_degree1",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --degree 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship_degree2",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --degree 2",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship_degree3",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --degree 3",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship_famnotfound",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --fam {ALT}/trio.no_such_file.fam",
+  "exit": 1,
+  "files": {}
+ },
+ {
+  "dir": "trio__kinship_prefix_custom",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --prefix custom",
+  "exit": 0,
+  "files": {
+   "custom.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship_prefix_dotted",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --prefix cus.tom",
+  "exit": 0,
+  "files": {
+   "cus.tom.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship_prefix_subdir",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --prefix sub/pre",
+  "exit": 1,
+  "files": {}
+ },
+ {
+  "dir": "trio__kinship_prefix_traildot",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --prefix custom.",
+  "exit": 0,
+  "files": {
+   "custom..kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "trio__kinship_sexchr23",
+  "dataset": "trio",
+  "cmd": "king -b {DATA}/trio.bed --kinship --sexchr 23",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ },
+ {
+  "dir": "unrelated__duplicate",
+  "dataset": "unrelated",
+  "cmd": "king -b {DATA}/unrelated.bed --duplicate",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "unrelated__duplicate_minConc0.9",
+  "dataset": "unrelated",
+  "cmd": "king -b {DATA}/unrelated.bed --duplicate --minConc 0.9",
+  "exit": 0,
+  "files": {
+   "king.con": {
+    "bytes": 65,
+    "sha256": "2730a28e7afb0d702e8e7f72124688f985f00bb69872eb496555094bcf8bc41e"
+   }
+  }
+ },
+ {
+  "dir": "unrelated__kinship",
+  "dataset": "unrelated",
+  "cmd": "king -b {DATA}/unrelated.bed --kinship",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2548,
+    "sha256": "c7baeb795f232fcf2ab430908f9200e3a4a0d28465aa3857c8c440964c8efaac"
+   },
+   "king.kin0": {
+    "bytes": 18436,
+    "sha256": "5e55eef5aecb8b41f15b5d951bbef9b06b9cfd3528bd504e57a751ff8a640aaa"
+   }
+  }
+ },
+ {
+  "dir": "unrelated__kinship_altbim",
+  "dataset": "unrelated",
+  "cmd": "king -b {DATA}/unrelated.bed --kinship --bim {ALT}/unrelated.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2548,
+    "sha256": "c7baeb795f232fcf2ab430908f9200e3a4a0d28465aa3857c8c440964c8efaac"
+   },
+   "king.kin0": {
+    "bytes": 18436,
+    "sha256": "5e55eef5aecb8b41f15b5d951bbef9b06b9cfd3528bd504e57a751ff8a640aaa"
+   }
+  }
+ },
+ {
+  "dir": "unrelated__kinship_altfam",
+  "dataset": "unrelated",
+  "cmd": "king -b {DATA}/unrelated.bed --kinship --fam {ALT}/unrelated.altfam.fam",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 19649,
+    "sha256": "a754834693dbd258066c75416093c85894f87d43491e586bb6b938c97844318f"
+   }
+  }
+ },
+ {
+  "dir": "unrelated__kinship_altfam_altbim",
+  "dataset": "unrelated",
+  "cmd": "king -b {DATA}/unrelated.bed --kinship --fam {ALT}/unrelated.altfam.fam --bim {ALT}/unrelated.altbim.bim",
+  "exit": 0,
+  "files": {
+   "king.kin0": {
+    "bytes": 19649,
+    "sha256": "a754834693dbd258066c75416093c85894f87d43491e586bb6b938c97844318f"
+   }
+  }
+ },
+ {
+  "dir": "unrelated__kinship_cpus1",
+  "dataset": "unrelated",
+  "cmd": "king -b {DATA}/unrelated.bed --kinship --cpus 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2548,
+    "sha256": "c7baeb795f232fcf2ab430908f9200e3a4a0d28465aa3857c8c440964c8efaac"
+   },
+   "king.kin0": {
+    "bytes": 18436,
+    "sha256": "5e55eef5aecb8b41f15b5d951bbef9b06b9cfd3528bd504e57a751ff8a640aaa"
+   }
+  }
+ },
+ {
+  "dir": "unrelated__kinship_cpus2",
+  "dataset": "unrelated",
+  "cmd": "king -b {DATA}/unrelated.bed --kinship --cpus 2",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2548,
+    "sha256": "c7baeb795f232fcf2ab430908f9200e3a4a0d28465aa3857c8c440964c8efaac"
+   },
+   "king.kin0": {
+    "bytes": 18436,
+    "sha256": "5e55eef5aecb8b41f15b5d951bbef9b06b9cfd3528bd504e57a751ff8a640aaa"
+   }
+  }
+ },
+ {
+  "dir": "unrelated__kinship_cpus4",
+  "dataset": "unrelated",
+  "cmd": "king -b {DATA}/unrelated.bed --kinship --cpus 4",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2548,
+    "sha256": "c7baeb795f232fcf2ab430908f9200e3a4a0d28465aa3857c8c440964c8efaac"
+   },
+   "king.kin0": {
+    "bytes": 18436,
+    "sha256": "5e55eef5aecb8b41f15b5d951bbef9b06b9cfd3528bd504e57a751ff8a640aaa"
+   }
+  }
+ },
+ {
+  "dir": "unrelated__kinship_degree1",
+  "dataset": "unrelated",
+  "cmd": "king -b {DATA}/unrelated.bed --kinship --degree 1",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2548,
+    "sha256": "c7baeb795f232fcf2ab430908f9200e3a4a0d28465aa3857c8c440964c8efaac"
+   },
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "unrelated__kinship_degree2",
+  "dataset": "unrelated",
+  "cmd": "king -b {DATA}/unrelated.bed --kinship --degree 2",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2548,
+    "sha256": "c7baeb795f232fcf2ab430908f9200e3a4a0d28465aa3857c8c440964c8efaac"
+   },
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "unrelated__kinship_degree3",
+  "dataset": "unrelated",
+  "cmd": "king -b {DATA}/unrelated.bed --kinship --degree 3",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2548,
+    "sha256": "c7baeb795f232fcf2ab430908f9200e3a4a0d28465aa3857c8c440964c8efaac"
+   },
+   "king.kin0": {
+    "bytes": 44,
+    "sha256": "98ac9bc63ff4ec02eba20ad8260effb0eba5558d95fde3e5f4c257dfd26f340d"
+   }
+  }
+ },
+ {
+  "dir": "unrelated__kinship_prefix_custom",
+  "dataset": "unrelated",
+  "cmd": "king -b {DATA}/unrelated.bed --kinship --prefix custom",
+  "exit": 0,
+  "files": {
+   "custom.kin": {
+    "bytes": 2548,
+    "sha256": "c7baeb795f232fcf2ab430908f9200e3a4a0d28465aa3857c8c440964c8efaac"
+   },
+   "custom.kin0": {
+    "bytes": 18436,
+    "sha256": "5e55eef5aecb8b41f15b5d951bbef9b06b9cfd3528bd504e57a751ff8a640aaa"
+   }
+  }
+ },
+ {
+  "dir": "unrelated__kinship_sexchr23",
+  "dataset": "unrelated",
+  "cmd": "king -b {DATA}/unrelated.bed --kinship --sexchr 23",
+  "exit": 0,
+  "files": {
+   "king.kin": {
+    "bytes": 2548,
+    "sha256": "c7baeb795f232fcf2ab430908f9200e3a4a0d28465aa3857c8c440964c8efaac"
+   },
+   "king.kin0": {
+    "bytes": 18436,
+    "sha256": "5e55eef5aecb8b41f15b5d951bbef9b06b9cfd3528bd504e57a751ff8a640aaa"
+   }
+  }
+ }
+]

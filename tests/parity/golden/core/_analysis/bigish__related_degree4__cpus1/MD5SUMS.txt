@@ -1,0 +1,2 @@
+MD5 (king.kin) = 76b317047f69e8c4aa7c036665eb57f9
+MD5 (king.kin0) = 421da802bbf8d6c2dee2283572eb1ec2

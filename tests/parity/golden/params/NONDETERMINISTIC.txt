@@ -1,0 +1,144 @@
+NONDETERMINISTIC / ENVIRONMENT-DEPENDENT OUTPUT — reference KING 2.3.2
+======================================================================
+Captured by the "params" flag group (--prefix / --cpus / --minConc / --sexchr /
+--fam / --bim / --degree).  The captured files under params/*/ are raw: nothing
+was edited.  A diff harness MUST normalize the patterns below before comparing
+our Rust output to the golden stdout.txt.
+
+Everything here concerns stdout.txt ONLY, with ONE brutal exception (section D)
+that also affects a data file.
+
+Legend:  <TS>  wall-clock timestamp, C asctime() form "Thu Aug 13 18:04:39 2026"
+         <N>   integer
+         <P>   absolute filesystem path
+
+
+A. WALL-CLOCK TIMESTAMPS  (always differ; normalize to a constant)
+------------------------------------------------------------------
+Regex-replace `(starts at|ends at) .*$` -> `\1 <TS>` on these line shapes:
+
+    KING starts at <TS>
+    KING ends at <TS>
+    Relationship inference across families starts at <TS>
+    Computing pairwise genotype concordance starts at <TS>
+    QC-by-sample starts at <TS>
+    QC-by-sample ends at <TS>
+    Stage 2 (with all SNPs) inference ends at <TS>
+
+TRAP: the matching "ends at" line for the two "inference/concordance" stages is
+NOT emitted on its own line.  KING writes progress percentages with no trailing
+newline, so the terminator arrives as, literally:
+
+    0%1%2%<41 spaces>ends at <TS>
+
+i.e. the percentages, a long run of spaces, and "ends at" all share one physical
+line.  A line-anchored `^ *ends at` rule will MISS it.  Match `ends at .*$`
+anywhere in the line, and strip the leading percentage run separately (section C).
+Observed leading-space runs are 41 and 42 columns depending on the stage — do not
+hard-code the width.
+
+
+B. CPU-COUNT LINES  (depend on --cpus, and on the host when --cpus is absent)
+----------------------------------------------------------------------------
+    <N> CPU cores are used.          <- kinship / relatedness stage
+      <N> CPU cores are used...      <- --duplicate stage (2-space indent, "...")
+
+With no --cpus flag, <N> is the host's core count (8 on the capture machine), so
+this line is MACHINE-dependent, not merely nondeterministic.  With an explicit
+--cpus <N> it is stable and equals <N>.  Note --cpus 0 is accepted silently and
+falls back to the host default (see INDEX.md).
+Normalize to `<N> CPU cores are used` unless the run pins --cpus.
+
+
+C. PROGRESS PERCENTAGE RUNS  (deterministic per CPU count, differ across counts)
+--------------------------------------------------------------------------------
+Two separate progress emitters exist:
+
+  1. .bed loading:  `0%6%13%19%...94%` — interleaved with the two lines
+     "  PLINK binary genotypes loaded." / "  KING format genotype data
+     successfully converted." in an order that is NOT source order, because the
+     percentages are unbuffered writes and the messages are line-buffered.
+     Depends on SNP count only; stable for a given dataset.
+
+  2. between-family inference: `0%1%2%...` — the number of percentage tokens
+     scales INVERSELY with thread count.  Same dataset, bigish:
+         --cpus 1 -> 0%1%2%...27%   (28 tokens, several on separate lines)
+         --cpus 4 -> 0%1%2%         (3 tokens)
+         --cpus 8 -> 0%1%2%         (3 tokens)
+     This is a pure reporting artifact — the numeric results are identical
+     (verified byte-for-byte, see INDEX.md).
+
+Strip all `[0-9]+%` runs before diffing.  Do not try to reproduce them.
+
+
+D. *** kingX.kin0 IS RACE-CORRUPTED WHENEVER --cpus > 1 ***
+-----------------------------------------------------------
+This is a real data race in KING 2.3.2, not a formatting artifact, and it
+corrupts a DATA file, not just stdout.
+
+Evidence (dataset `sexchr`, 20 consecutive runs per setting, sha256 of kingX.kin0):
+
+    --cpus 1  : 20/20 identical                      <- deterministic
+    --cpus 2  : 20 distinct outputs, 1/20 correct
+    --cpus 3  : 20 distinct outputs, 0/20 correct
+    --cpus 4  : 19 distinct outputs, 0/20 correct
+    --cpus 8  : 20 distinct outputs, 0/20 correct
+    --cpus 16 : 16 distinct outputs, 4/20 correct
+
+File size wandered between 138 and 664 bytes (correct size: 662).  Multiple
+threads append to the same FILE* with no lock, so records interleave mid-field.
+Actual captured corruption from sexchr__kinship_cpus4/kingX.kin0:
+
+    SEX	S_DA	SU4	S_UF	MF	150000	0.348	0.0633	0.0105     <- ID truncated, N_SNP fused
+    SEX	S_DAU2	SU3	S_UM	FM	15	0.365	0	0.1727	-0.0351   <- extra field spliced in
+    SEX	S_DAU2	SU4	S_UF	FF	1500.365	0.1627	0.0547     <- fields merged
+
+CONSEQUENCE FOR THE HARNESS:
+  * The X between-family file from any run WITHOUT `--cpus 1` must be EXCLUDED
+    from byte-diff.  Note --prefix renames it, so match on the suffix `X.kin0`,
+    not the literal name `kingX.kin0`.  Exactly 5 captured dirs are affected
+    (they are flagged with "diff_exclude" in runs.json):
+
+        sexchr__kinship                 kingX.kin0
+        sexchr__kinship_altfam          kingX.kin0
+        sexchr__kinship_cpus4           kingX.kin0
+        sexchr__kinship_sexchr23        kingX.kin0
+        sexchr__kinship_prefix_custom   customX.kin0
+
+    They are kept only as evidence of the bug.
+  * The AUTHORITATIVE X goldens are the `sexchr__kinship_cpus1*` dirs.
+  * Our Rust implementation should match the --cpus 1 output.  Do NOT try to
+    reproduce the race.
+
+NOT affected (verified stable): king.kin, king.kin0 and kingX.kin.
+king.kin0 was hashed over 10 runs on the 200-sample `bigish` set at default
+threading — 10/10 identical.  The autosomal writer is safe; only the
+X between-family writer races.
+
+
+E. MACHINE-DEPENDENT ABSOLUTE PATHS  (not nondeterministic, but not portable)
+-----------------------------------------------------------------------------
+These lines embed the capture machine's absolute paths:
+
+                       Binary File : <P> (-bname)
+                                     --fam [<P>],  --bim [<P>]
+    Read in PLINK fam file <P>...
+    Read in PLINK bim file <P>...
+    Read in PLINK bed file <P>...
+    Pedigree file <P> cannot be opened      (FATAL, --fam missing)
+    Map file <P> cannot be opened           (FATAL, --bim missing)
+
+WORSE: the parameter-echo block is word-wrapped to a fixed column width, so the
+LENGTH of the path changes how many physical lines the block occupies and where
+"--bim []", "--phefile []" etc. fall.  Compare that block structurally or skip
+it entirely; do not diff it verbatim against a different checkout path.
+
+
+F. STABLE THINGS THAT LOOK UNSTABLE  (do NOT normalize these)
+--------------------------------------------------------------
+  * `--noscreen [-1717986816]` in the parameter echo.  This is KING printing an
+    uninitialized/sentinel default.  It looks like garbage memory but it is
+    CONSTANT — observed identical across every run in the corpus.  Reproduce it
+    verbatim.
+  * The out-of-order interleaving described in C.1 is reproducible for a given
+    dataset; it is a buffering artifact, not a race.

@@ -1,0 +1,1 @@
+king -b {DATA}/trio.bed --kinship --bim {ALT}/trio.bigbim.bim

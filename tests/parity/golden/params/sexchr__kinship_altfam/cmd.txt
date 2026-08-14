@@ -1,0 +1,1 @@
+king -b {DATA}/sexchr.bed --kinship --fam {ALT}/sexchr.altfam.fam

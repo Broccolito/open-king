@@ -1,0 +1,1 @@
+king -b {DATA}/bigish.bed --related --degree 4 --cpus 4

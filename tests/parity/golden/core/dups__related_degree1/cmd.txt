@@ -1,0 +1,1 @@
+king -b {DATA}/dups.bed --related --degree 1

@@ -1,0 +1,2 @@
+PFAM1	PR_A
+PFAM2	PR_B

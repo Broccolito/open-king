@@ -1,0 +1,1 @@
+king -b {DATA}/threegen.bed --kinship --fam {ALT}/threegen.altfam.fam --bim {ALT}/threegen.altbim.bim

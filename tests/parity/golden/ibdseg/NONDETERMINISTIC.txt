@@ -1,0 +1,71 @@
+# Nondeterministic / environment-dependent output lines
+# Flag group: --ibdseg, --ibdseg --degree 2, --ibdseg --seglength 5,
+#             --ibdseg --seglength 10, --related --degree 2 --ibdseg
+# Reference binary: KING 2.3.2 (macOS arm64)
+# Captured on a 16-core machine; KING self-selected 8 threads.
+#
+# Every pattern below appears ONLY in stdout.txt. All *output files*
+# (king.seg, kingX.seg, kingallsegs.txt, kingsplitped.txt, king.kin,
+# king.kin0) were byte-identical across 5 repeat runs and across
+# --cpus 1/2/4/8/16. stderr.txt was empty (0 bytes) for all 65 runs.
+
+## 1. Wall-clock timestamps  (format: "Www Mmm [D]D HH:MM:SS YYYY", C asctime)
+# Normalize by replacing the timestamp text after "at " with a fixed token.
+^KING starts at .*$
+^KING ends at .*$
+^IBD segment analysis starts at .*$
+^Relationship inference across families starts at .*$
+^ +ends at .*$
+^ +Screening ends at .*$
+^ +Inference ends at .*$
+# Regex for the timestamp itself:
+#   (Mon|Tue|Wed|Thu|Fri|Sat|Sun) [A-Z][a-z]{2} [ 0-9]?[0-9] [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]{4}
+# NOTE: the "ends at" lines are right-aligned with leading spaces and, on
+# large datasets, are PREFIXED on the same physical line by the progress
+# bar of pattern 3 below (no newline is emitted before them).
+
+## 2. CPU-core count  (depends on the host machine, or on --cpus)
+^[0-9]+ CPU cores are used for autosome inference\.\.\.$
+^[0-9]+ CPU cores are used\.$
+^[0-9]+ CPU cores are used\.\.\.$
+# Observed "8" on a 16-core host with no --cpus; equals the --cpus value
+# when the flag is given.
+
+## 3. Progress bar emitted during the IBD-segment / relationship pass
+# Only appears for datasets large enough that the pass is chunked
+# (in this corpus: bigish, 200 samples). Its LENGTH is a function of the
+# thread count, not of wall clock: 8 threads -> "0%...10%", 4 threads ->
+# "0%...21%", 1 thread -> "0%...90%". Stable across repeat runs at a fixed
+# thread count, but NOT portable across machines.
+^0%1%2%3%(4%5%6%...)*.*$
+# Matches the merged physical line:  0%1%...N%<spaces>ends at <timestamp>
+
+## 4. Genotype-load progress bar (all datasets, deterministic here but
+# tied to the internal chunking of the .bed read; treat as normalizable)
+^0%6%13%19%25%31%38%44%50%56%63%69%75%81%88%  PLINK binary genotypes loaded\.$
+^94%  KING format genotype data successfully converted\.$
+# The percentage sequence varies with SNP count (e.g. sexchr prints
+# "...75%  KING format genotype data successfully converted."). The
+# percentages themselves are deterministic per dataset; the leading
+# "94%"/"75%" fragment glued to the next message is a missing-newline
+# artifact, not nondeterminism.
+
+## 5. Absolute input paths echoed back
+# Deterministic, but they embed the capture machine's directory layout.
+# The diff harness must rewrite them to {DATA} exactly as cmd.txt does.
+^ *Binary File : .*\.bed \(-bname\)$
+^Read in PLINK (fam|bim|bed) file .*\.\.\.$
+
+## 6. Uninitialized-memory artifact in the banner (CONSTANT here, but flagged)
+#   "--noscreen [-1717986816]"
+# -1717986816 == 0x99999800-ish garbage; KING prints an uninitialized default
+# for --noscreen. It was byte-identical in all 65 runs on this host, but a
+# reimplementation should not be expected to reproduce the specific integer.
+^ +Inference Parameter : --degree.*--noscreen \[-?[0-9]+\],$
+
+## NOT nondeterministic (verified, do not normalize):
+#  - "Total length of N chromosomal segments usable ... is X Mb."
+#  - "Autosome genotypes stored in N words for each of M individuals."
+#  - "Minimum segment length is set as N bp"      (only with --seglength)
+#  - the entire "Relationship summary" table
+#  - every numeric column of every output file

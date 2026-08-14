@@ -1,0 +1,1 @@
+king -b {DATA}/trio.bed --kinship --degree 3

@@ -1,0 +1,6 @@
+king
+-b
+{DATA}/multifam.bed
+--unrelated
+--degree
+2

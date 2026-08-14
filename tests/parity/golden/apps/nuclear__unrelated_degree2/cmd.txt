@@ -1,0 +1,6 @@
+king
+-b
+{DATA}/nuclear.bed
+--unrelated
+--degree
+2
