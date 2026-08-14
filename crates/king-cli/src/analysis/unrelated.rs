@@ -54,16 +54,12 @@
 //! * members are visited in ascending order of their **number of relatives inside the
 //!   family**, which is what makes a three-generation family emit its least-connected
 //!   founder first;
-//! * members with equal counts are visited in a scrambled order that is a pure function
-//!   of the family size when *every* member ties — measured for sizes 2…70 against
-//!   families of mutually unrelated founders, and reproduced identically by two families
-//!   of the same size in one dataset and by families of the same size in datasets of
-//!   different totals.
+//! * members with equal counts come out in an order that is *not* a tie-break on rank: it
+//!   is the residue of an unstable sort, and it depends on the whole count array rather
+//!   than on each tied run in isolation.
 //!
-//! [`TIE_ORDER`] is that measurement. It is an empirical table, not a derivation: the
-//! generating rule is a sort of the relative-count array whose exact algorithm remains
-//! unresolved, and probe fixtures with two distinct counts show the scramble is not
-//! confined to each tied run. See the note on [`visit_order`].
+//! [`sort_by_count_descending`] is that sort, identified rather than tabulated. See its
+//! documentation for the algorithm and for the experiments that fixed every parameter.
 //!
 //! # How to interrogate the order directly
 //!
@@ -71,7 +67,7 @@
 //! before anyone re-derives any of the above by hand:
 //!
 //! * a family of mutually unrelated members keeps everybody, so the emitted list **is**
-//!   the visit order — build one family per size and read the table straight off;
+//!   the visit order — build one family per size and read the permutation straight off;
 //! * a run of members that all share one count can be totally ordered even when the
 //!   greedy drops most of them: realise the run as a perfect matching (each member
 //!   related to exactly one other, so every member's count is 1 whatever the pairing is),
@@ -79,30 +75,16 @@
 //!   *a* with *b* and the survivor of that pair names which of the two is visited first.
 //!
 //! Both work on filesets whose relatedness comes from the `.fam` alone, so the genotypes
-//! can be independent random draws: a group of *m* declared half-sibs is a clique of *m*,
+//! can be independent random draws: a group of *m* declared full sibs is a clique of *m*,
 //! and a lone founder is an isolated vertex, which is enough to realise any count array
 //! that is a disjoint union of cliques.
-//!
-//! # What that rules out
-//!
-//! The order is a tie-break inside a sort, not anything data- or environment-dependent:
-//! it is unchanged by `--cpus 1/2/4/8/16`, by the genotypes, and by the rest of the
-//! dataset. But it is not a sort anyone has yet named. Checked against the measured table
-//! for *n* = 2…20 and rejected: libc++'s `std::sort`, `stable_sort`, `make_heap` +
-//! `sort_heap`, `partial_sort`, `priority_queue` and `qsort` (the reference is a macOS
-//! arm64 binary linked against libc++), and some three thousand parameterised
-//! quicksort/heapsort variants over pivot choice, partition scheme, insertion cut-off and
-//! recursion order. The one structural regularity found: for even *n* ≥ 10 the first half
-//! of `TIE_ORDER(n)` is `TIE_ORDER(n/2)` applied to the array
-//! `[n/2-1, n/2-2, …, 2, n-1, n]` — verified at *n* = 10, 12, 14, 16, 32 and 64, and
-//! false at *n* = 6 and 8.
 
 use std::io::Write;
 
 use king_core::{counts, kinship, Scope};
 use king_io::Sample;
 
-use crate::analysis::{band, king_id_cmp, out_path};
+use crate::analysis::{band, king_id_cmp, out_path, with_phantom_parents};
 use crate::cli::{Opt, Options};
 use crate::console;
 use crate::load::Loaded;
@@ -121,134 +103,138 @@ const EDGE: f64 = band::FOURTH;
 /// edge, `2^-2.5`, matching the console's `Clustering up to 1st-degree relatives`.
 const CLUSTER_EDGE: f64 = band::FIRST;
 
-/// IBS0 proportion below which a 1st-degree pair is called parent–offspring rather than
-/// full siblings, for the screening summary alone.
-///
-/// The reference derives this from the data and never writes it to a file; the value it
-/// prints on ordinary data is 0.0055 (`docs/BEHAVIOR.md` §Q2). Nothing in the corpus
-/// discriminates: every 1st-degree cross-family pair the screening reports is a
-/// full-sibling pair with an IBS0 proportion two orders of magnitude above this.
-const PO_IBS0_CUTOFF: f64 = 0.0055;
-
 // ---------------------------------------------------------------------------
-// The tie order
+// The visit order
 // ---------------------------------------------------------------------------
 
-/// The order the reference visits the members of an all-tied family of size *n*, as
-/// 1-based ranks under the ID comparator.
+/// Subfile length above which the reference's sort takes its median-of-three pivot.
 ///
-/// Measured directly: a family of *n* mutually unrelated founders keeps all *n*, so the
-/// emitted file *is* the visit order. Sizes 2…70 were swept against the reference with
-/// every run verified to remove nobody. Two independent checks say the table is a
-/// property of *n* alone — a dataset holding two 10-member families emits the same
-/// permutation twice, and padding the dataset from 10 to 30 samples leaves a 10-member
-/// family's permutation unchanged.
-///
-/// Indexed by `n - 2`; sizes above `TIE_ORDER.len() + 1` fall back to rank order.
-const TIE_ORDER: &[&[u8]] = &[
-    &[1, 2],
-    &[1, 3, 2],
-    &[1, 2, 4, 3],
-    &[1, 2, 5, 4, 3],
-    &[2, 3, 1, 6, 5, 4],
-    &[2, 3, 1, 7, 6, 4, 5],
-    &[3, 2, 4, 1, 8, 7, 5, 6],
-    &[3, 2, 9, 4, 5, 1, 7, 8, 6],
-    &[4, 3, 10, 9, 2, 5, 1, 8, 6, 7],
-    &[4, 3, 11, 5, 2, 6, 1, 9, 10, 7, 8],
-    &[4, 3, 5, 12, 11, 2, 6, 1, 10, 7, 8, 9],
-    &[4, 3, 5, 13, 6, 2, 7, 11, 10, 1, 12, 8, 9],
-    &[5, 4, 6, 14, 13, 3, 2, 7, 12, 11, 1, 8, 9, 10],
-    &[5, 4, 6, 15, 7, 3, 2, 8, 13, 12, 1, 14, 9, 11, 10],
-    &[5, 6, 4, 7, 16, 15, 3, 2, 8, 14, 13, 1, 9, 10, 12, 11],
-    &[5, 6, 4, 7, 17, 8, 3, 2, 9, 14, 15, 13, 1, 16, 10, 12, 11],
-    &[
-        6, 7, 18, 5, 4, 8, 2, 17, 3, 9, 15, 16, 14, 1, 10, 11, 13, 12,
-    ],
-    &[
-        6, 7, 19, 5, 4, 8, 2, 9, 3, 10, 16, 17, 18, 15, 14, 1, 12, 11, 13,
-    ],
-    &[
-        6, 7, 20, 19, 8, 5, 9, 2, 4, 3, 10, 17, 18, 11, 16, 15, 1, 13, 12, 14,
-    ],
-    &[
-        6, 7, 21, 10, 8, 5, 9, 2, 4, 3, 11, 17, 18, 20, 12, 19, 16, 1, 13, 15, 14,
-    ],
-    &[
-        7, 8, 22, 6, 9, 5, 10, 2, 21, 4, 3, 11, 18, 19, 12, 13, 20, 17, 1, 14, 16, 15,
-    ],
-    &[
-        7, 8, 23, 6, 9, 5, 10, 2, 11, 4, 3, 12, 19, 20, 22, 18, 21, 17, 1, 14, 13, 16, 15,
-    ],
-    &[
-        8, 9, 7, 24, 23, 10, 6, 11, 2, 5, 4, 3, 12, 20, 21, 13, 19, 22, 18, 1, 15, 14, 17, 16,
-    ],
-    &[
-        8, 9, 7, 25, 12, 10, 6, 11, 2, 5, 4, 3, 13, 21, 22, 20, 24, 14, 23, 19, 1, 15, 18, 17, 16,
-    ],
-    &[
-        9, 10, 8, 26, 7, 11, 6, 2, 3, 12, 25, 5, 4, 13, 22, 23, 21, 14, 15, 24, 20, 1, 16, 19, 18,
-        17,
-    ],
-    &[
-        9, 10, 8, 27, 7, 11, 6, 2, 3, 12, 13, 5, 4, 14, 23, 24, 22, 26, 21, 25, 20, 16, 17, 1, 15,
-        19, 18,
-    ],
-    &[
-        9, 10, 8, 28, 27, 11, 12, 7, 2, 3, 13, 6, 5, 4, 14, 24, 25, 23, 15, 22, 26, 21, 17, 18, 1,
-        16, 20, 19,
-    ],
-    &[
-        9, 10, 8, 29, 14, 11, 12, 7, 2, 3, 13, 6, 5, 4, 15, 24, 25, 23, 28, 16, 26, 27, 22, 17, 18,
-        1, 21, 20, 19,
-    ],
-    &[
-        10, 11, 9, 30, 8, 12, 13, 7, 2, 3, 14, 29, 6, 4, 5, 15, 25, 26, 24, 16, 17, 27, 28, 23, 18,
-        19, 1, 22, 21, 20,
-    ],
-];
+/// The condition is `r - l > 7` on the inclusive range, i.e. median-of-three from nine
+/// elements up and the plain last-element partition at eight and below. Both halves are
+/// forced: a family of *n* mutually unrelated members keeps everybody, so its emitted
+/// list *is* the visit order, and replaying sizes 2…70 against the reference singles this
+/// cut-point out — `> 6` already disagrees at *n* = 8, `> 8` at *n* = 9, and every other
+/// value in 3…11 disagrees somewhere in 2…30.
+const MEDIAN_OF_THREE_CUTOFF: isize = 7;
 
 /// The order in which a family's members are offered to the greedy.
 ///
-/// Ascending relative count, and within one count the [`TIE_ORDER`] permutation of that
-/// run. The second half is the honest weak point: the table was measured on families
-/// where *every* member ties, and probe fixtures carrying two distinct counts show the
-/// reference's scramble depends on the whole array rather than on each run in isolation
-/// — a family of four isolated members followed by six paired ones emits the isolated
-/// four as ranks 4, 3, 1, 2, which no per-run table produces. Applying the table per run
-/// nevertheless reproduces every `*__unrelated` capture in the golden corpus except the
-/// three merged clusters of `bigish`, where a two-member tie at ranks 4 and 10 of an
-/// eleven-member cluster comes out in the opposite order.
-///
-/// The two obvious repairs are both **wrong**, measured rather than argued, so neither is
-/// worth trying again. Writing a count array as its per-rank counts and the visit order
-/// as ranks:
-///
-/// | count array (n = 8, 10) | reference order | this function | `TIE_ORDER(n)` re-sorted |
-/// | --- | --- | --- | --- |
-/// | `0 0 0 0 1 1 1 1 1 1` | `4 3 1 2` ‖ `9 10 5 8 6 7` | `1 2 4 3` ‖ … | `4 3 2 1` ‖ `10 9 5 8 6 7` |
-/// | `0 0 0 0 1 1 1 1` | `3 2 4 1` ‖ `8 7 5 6` | `1 2 4 3` ‖ `5 6 8 7` | `3 2 4 1` ‖ `8 7 5 6` |
-/// | `1 1 1 1 0 0 0 0` | `5 6 8 7` ‖ `1 2 4 3` | `5 6 8 7` ‖ `1 2 4 3` | `8 7 5 6` ‖ `3 2 4 1` |
-///
-/// so pre-permuting by `TIE_ORDER(n)` and stably sorting by count (the last column) is
-/// exact where this function is wrong and wrong where it is exact. Neither model fixes
-/// `bigish`: its merged clusters are `[9, 9, 9, 8, 3, 9, 9, 9, 9, 8, 4]`, both models put
-/// rank 4 ahead of rank 10 in the two-member tie at count 8, and the reference visits 10
-/// first. The dependence really is on *n* — the same two ranks tied inside a ten-member
-/// family come out 4 then 10.
+/// The reference sorts the members by relative count **descending** and then walks the
+/// sorted array **backwards**, which is why the visit order is by ascending count and why
+/// its tie residue is the residue of an unstable sort rather than a tie-break on rank.
+/// [`sort_by_count_descending`] is that sort.
 fn visit_order(degree: &[usize]) -> Vec<usize> {
-    let mut counts: Vec<usize> = degree.to_vec();
-    counts.sort_unstable();
-    counts.dedup();
-    let mut out = Vec::with_capacity(degree.len());
-    for d in counts {
-        let run: Vec<usize> = (0..degree.len()).filter(|&i| degree[i] == d).collect();
-        match TIE_ORDER.get(run.len().wrapping_sub(2)) {
-            Some(perm) => out.extend(perm.iter().map(|&p| run[usize::from(p) - 1])),
-            None => out.extend(run),
+    let mut order: Vec<usize> = (0..degree.len()).collect();
+    sort_by_count_descending(&mut order, degree);
+    order.reverse();
+    order
+}
+
+/// `a` precedes `b` under the reference's ordering: a *larger* count sorts first.
+fn precedes(degree: &[usize], a: usize, b: usize) -> bool {
+    degree[a] > degree[b]
+}
+
+/// Sedgewick's median-of-three quicksort, which is the sort the reference uses.
+///
+/// ```text
+/// quicksort(l, r):
+///     if r <= l: return
+///     if r - l > 7:                       # median of three, into the r-1 slot
+///         exch(a[(l+r)/2], a[r-1])
+///         compexch(a[l], a[r-1]); compexch(a[l], a[r]); compexch(a[r-1], a[r])
+///         (pl, pr) = (l+1, r-1)           # a[l] and a[r] are now sentinels
+///     else:
+///         (pl, pr) = (l, r)               # plain last-element pivot
+///     v = a[pr]; i = pl-1; j = pr
+///     loop:
+///         while a[++i] < v: ;
+///         while v < a[--j]: if j == pl: break
+///         if i >= j: break
+///         exch(a[i], a[j])
+///     exch(a[i], a[pr])
+///     quicksort(l, i-1); quicksort(i+1, r)
+/// ```
+///
+/// # How it was established
+///
+/// Nothing here is a table. Equal keys make every `<` false, so the algorithm collapses to
+/// one fixed permutation per size, and a family of mutually unrelated members exposes that
+/// permutation directly. Working backwards from the measured permutations for *n* = 2…30:
+///
+/// * assuming a quicksort and inverting the recursion recovers, for every *n* from 9 to
+///   20, a partition step that is **exactly** this one — twelve independent *n*-element
+///   agreements, and in each case it is also the fewest-swaps partition consistent with
+///   the data;
+/// * the same inversion fails at *n* ≤ 8, which is what says there is a cut-off; searching
+///   17 280 parameterised two-pointer partitions for one matching all seven measured
+///   permutations at *n* = 2…8 returns the plain last-element partition above, uniquely;
+/// * the two branches together reproduce all 29 measured permutations, and then
+///   **extrapolate**: *n* = 31, 35, 40, 55 and 70 were predicted before being measured and
+///   all five matched. (The table this replaced stopped at 31 and fell back to rank order.)
+///
+/// # What the real-data probes fix
+///
+/// Equal keys cannot see the median-of-three or the `j == pl` guard, so those were checked
+/// against filesets whose counts differ. Two families of *a* and *b* children joined by a
+/// full-sib link between the fathers give the count array
+/// `[a+b+2]*a, a+b+1, a, [a+b+2]*b, a+b+1, b` — `bigish`'s merged clusters are the
+/// `a = 3, b = 4` case. All 49 shapes for *a*, *b* ∈ 1…7 were run against the reference:
+/// this function reproduces every one, and dropping the median-of-three breaks 30 of them.
+/// A second, structurally unrelated sweep — 45 random families of up to 26 members built
+/// as random disjoint cliques, so the count multiset and its rank layout are arbitrary —
+/// also matches on all 45.
+///
+/// The `j == pl` guard never fires in any of those 94 probes; it is Sedgewick's own bound
+/// on the descending scan and is kept because without it the scan can run off the array on
+/// input the corpus does not contain.
+fn sort_by_count_descending(order: &mut [usize], degree: &[usize]) {
+    fn rec(a: &mut [usize], degree: &[usize], l: isize, r: isize) {
+        if r <= l {
+            return;
         }
+        let (pl, pr) = if r - l > MEDIAN_OF_THREE_CUTOFF {
+            let (lo, hi) = (l as usize, r as usize);
+            a.swap((lo + hi) / 2, hi - 1);
+            if precedes(degree, a[hi - 1], a[lo]) {
+                a.swap(lo, hi - 1);
+            }
+            if precedes(degree, a[hi], a[lo]) {
+                a.swap(lo, hi);
+            }
+            if precedes(degree, a[hi], a[hi - 1]) {
+                a.swap(hi - 1, hi);
+            }
+            (l + 1, r - 1)
+        } else {
+            (l, r)
+        };
+        let v = a[pr as usize];
+        let (mut i, mut j) = (pl - 1, pr);
+        loop {
+            i += 1;
+            while precedes(degree, a[i as usize], v) {
+                i += 1;
+            }
+            j -= 1;
+            while precedes(degree, v, a[j as usize]) {
+                if j == pl {
+                    break;
+                }
+                j -= 1;
+            }
+            if i >= j {
+                break;
+            }
+            a.swap(i as usize, j as usize);
+        }
+        a.swap(i as usize, pr as usize);
+        rec(a, degree, l, i - 1);
+        rec(a, degree, i + 1, r);
     }
-    out
+
+    let last = order.len() as isize - 1;
+    rec(order, degree, 0, last);
 }
 
 // ---------------------------------------------------------------------------
@@ -261,7 +247,15 @@ fn visit_order(degree: &[usize]) -> Vec<usize> {
 /// `A_F` and `A_M`, who live in `FAM1`, and the reference treats `C_F` as a founder of
 /// `FAM3` whose parents merely happen to share their names. It materialises them as new,
 /// ungenotyped members of `FAM3` — which is what makes it report the IDs as not unique.
+///
+/// Those materialised parents are **relatives**, not just names, which is why the matrix
+/// is built over [`with_phantom_parents`] and then cut back to the genotyped rows: two
+/// rows of one family naming the same absent parents are declared full sibs, and the
+/// reference drops one of them. No corpus fileset has such a pair — the rule was measured
+/// on a two-row fixture run against the reference, where it keeps one of the two.
 fn pedigree_kinship(samples: &[Sample]) -> Vec<Vec<f64>> {
+    let genotyped = samples.len();
+    let samples = &with_phantom_parents(samples)[..];
     let n = samples.len();
     let locate = |fid: &str, iid: &str| {
         samples
@@ -320,6 +314,10 @@ fn pedigree_kinship(samples: &[Sample]) -> Vec<Vec<f64>> {
             }
         }
         phi[i][i] = 0.5 * (1.0 + fa.zip(mo).map_or(0.0, |(f, m)| phi[f][m]));
+    }
+    phi.truncate(genotyped);
+    for row in &mut phi {
+        row.truncate(genotyped);
     }
     phi
 }
@@ -536,7 +534,8 @@ pub fn clustering_prologue(opts: &Options, loaded: &Loaded, out: &mut dyn Write)
         if merged.is_empty() {
             let _ = out.write_all(b"No families were found to be connected.\n");
         } else {
-            let _ = out.write_all(screening_summary(loaded, opts.int(Opt::Degree)).as_bytes());
+            let _ =
+                out.write_all(screening_summary(opts, loaded, opts.int(Opt::Degree)).as_bytes());
             let _ = out.write_all(connected_families(&merged).as_bytes());
         }
     }
@@ -718,37 +717,58 @@ fn not_unique(iid: &str) -> String {
 /// something.
 ///
 /// A narrower table than `.kin`'s: one `Inference` row, no `Pedigree` row and no `OTHER`
-/// column, because the screening only ever reports 1st-degree-or-closer pairs — `bigish`
-/// shows three full-sibling pairs and zeros everywhere else even though it carries plenty
-/// of more distant cross-family relatives.
-fn screening_summary(loaded: &Loaded, degree: i32) -> String {
+/// column. It is the **same screening `--related` runs**, so the two rules that pass are
+/// taken from there rather than re-derived:
+///
+/// * **which pairs are reported** is a disjunction — kinship at or above `2^-(d+1.5)`
+///   *or* `PropIBD` above `2^-(d+0.5)`. `bigish --unrelated --degree 2` is exactly the
+///   case that separates the two halves: the reference counts 23 second-degree pairs
+///   where the kinship cut alone finds 21, the two extra ones sitting at 0.0882 and
+///   0.0870, just under `2^-3.5`, and reaching the band on their segment sharing;
+/// * **which column a pair lands in** is its segment `InfType`, not its kinship band.
+///   Those same two pairs go in `2nd`, which their kinship (below `2^-3.5`) would not do,
+///   and the `4th` column stays zero throughout because `4th` and `UN` are `OTHER` here.
+///
+/// `bigish` is the only corpus fileset whose families merge, so it is the only one that
+/// prints this table at all; both of its captures — bare and `--degree 2` — are
+/// byte-identical under these rules.
+fn screening_summary(opts: &Options, loaded: &Loaded, degree: i32) -> String {
     let samples = &loaded.fileset.samples;
     let n = samples.len();
-    // `--degree` widens what the screening *reports* without widening what it merges:
-    // `bigish --unrelated --degree 2` adds 23 second-degree pairs to the table and still
-    // connects exactly the three family pairs a bare `--unrelated` connects.
-    let reported = band::MZ / f64::from(1u32 << degree.max(1));
+    let d = f64::from(degree.max(1));
+    let kin_cut = 2f64.powf(-(d + 1.5));
+    let prop_cut = 2f64.powf(-(d + 0.5));
+    let engine = super::related::Engine::autosomes(
+        &loaded.fileset.variants,
+        &loaded.fileset.kept,
+        i64::from(opts.int(Opt::Sexchr)),
+        super::ibdseg::seglength_bp(opts),
+    );
+    let genotypes = &loaded.fileset.genotypes;
+
     let mut cells = [0u64; 6];
     for i in 0..n {
         for j in i + 1..n {
             if samples[i].fid == samples[j].fid {
                 continue;
             }
-            let counts = counts::pair_counts(&loaded.fileset.genotypes, i, j);
-            let phi = kinship::kinship(&counts, Scope::BetweenFamily);
-            if phi < reported {
+            let counts = counts::pair_counts(genotypes, i, j);
+            if counts.n_snp == 0 {
                 continue;
             }
-            let cell = if phi >= band::MZ {
-                0
-            } else if phi >= band::FIRST {
-                usize::from(kinship::ibs0_prop(&counts) >= PO_IBS0_CUTOFF) + 1
-            } else if phi >= band::SECOND {
-                3
-            } else if phi >= band::THIRD {
-                4
-            } else {
-                5
+            let phi = kinship::kinship(&counts, Scope::BetweenFamily);
+            let ibd = engine.pair(genotypes, i, j);
+            if !(phi >= kin_cut || ibd.prop_ibd > prop_cut) {
+                continue;
+            }
+            let cell = match ibd.inf_type(kinship::het_concordance(&counts)) {
+                "Dup/MZ" => 0,
+                "PO" => 1,
+                "FS" => 2,
+                "2nd" => 3,
+                "3rd" => 4,
+                // `4th` and `UN` are the table's `OTHER`: neither printed nor totalled.
+                _ => continue,
             };
             cells[cell] += 1;
         }
@@ -793,21 +813,47 @@ mod tests {
     }
 
     #[test]
-    fn tie_order_is_a_permutation_for_every_measured_size() {
-        for (k, perm) in TIE_ORDER.iter().enumerate() {
-            let n = k + 2;
-            assert_eq!(perm.len(), n, "size {n}");
-            let mut seen: Vec<u8> = perm.to_vec();
-            seen.sort_unstable();
-            assert_eq!(seen, (1..=n as u8).collect::<Vec<_>>(), "size {n}");
+    fn the_visit_order_is_always_a_permutation() {
+        for n in 0..80usize {
+            for degree in [vec![0; n], (0..n).map(|i| i % 5).collect()] {
+                let mut seen = visit_order(&degree);
+                assert_eq!(seen.len(), n, "size {n}");
+                seen.sort_unstable();
+                assert_eq!(seen, (0..n).collect::<Vec<_>>(), "size {n}");
+            }
         }
     }
 
-    /// The `unrelated` capture: ten mutually unrelated members of one FID, all kept.
+    /// The order really is by ascending count; only its tie residue is subtle.
     #[test]
-    fn all_tied_family_uses_the_measured_order() {
-        let order = visit_order(&[0; 10]);
-        assert_eq!(order, [3, 2, 9, 8, 1, 4, 0, 7, 5, 6]);
+    fn the_visit_order_is_sorted_by_count() {
+        let degree: Vec<usize> = (0..40).map(|i| (i * 7) % 6).collect();
+        let counts: Vec<usize> = visit_order(&degree).iter().map(|&i| degree[i]).collect();
+        assert!(counts.windows(2).all(|w| w[0] <= w[1]), "{counts:?}");
+    }
+
+    /// The `unrelated` capture: ten mutually unrelated members of one FID, all kept, so
+    /// the emitted file *is* the visit order. Measured against the reference.
+    #[test]
+    fn all_tied_family_matches_the_reference() {
+        // 1-based ranks 4 3 10 9 2 5 1 8 6 7, as the reference emits them.
+        assert_eq!(visit_order(&[0; 10]), [3, 2, 9, 8, 1, 4, 0, 7, 5, 6]);
+        // Two more sizes from the same sweep, one either side of the median-of-three
+        // cut-off at nine.
+        assert_eq!(visit_order(&[0; 8]), [2, 1, 3, 0, 7, 6, 4, 5]);
+        assert_eq!(visit_order(&[0; 9]), [2, 1, 8, 3, 4, 0, 6, 7, 5]);
+    }
+
+    /// `bigish`'s merged clusters: eleven members, and the count-8 tie at ranks 4 and 10
+    /// comes out 10 first — the case a per-run tie-break table gets backwards.
+    #[test]
+    fn a_merged_cluster_visits_the_later_of_the_tied_pair_first() {
+        let degree = [9, 9, 9, 8, 3, 9, 9, 9, 9, 8, 4];
+        let order = visit_order(&degree);
+        assert_eq!(order[0], 4, "rank 5, the only member with three relatives");
+        assert_eq!(order[1], 10, "rank 11, the only member with four");
+        assert_eq!(order[2], 9, "rank 10 before rank 4 in the count-8 tie");
+        assert_eq!(order[3], 3);
     }
 
     /// `threegen`: the least-connected founder first, then the two spouses that married
@@ -853,11 +899,27 @@ mod tests {
             sample("FAM3", "C_F", "A_F", "A_M"),
         ];
         let phi = pedigree_kinship(&samples);
+        assert_eq!(phi.len(), 3, "the matrix is cut back to the genotyped rows");
         assert_eq!(phi[0][2], 0.0);
         assert_eq!(
             id_uniqueness(&samples),
             "  Individual IDs are not unique (e.g., A_F), and family IDs will be used as well.\n"
         );
+    }
+
+    /// A parent the `.fam` never lists is still a person: two rows of one family naming
+    /// the same absent parents are full sibs, and the reference keeps only one of them.
+    #[test]
+    fn rows_sharing_an_absent_parent_are_relatives() {
+        let samples = [
+            sample("F", "M01", "PP", "QQ"),
+            sample("F", "M02", "PP", "QQ"),
+            sample("F", "M03", "0", "0"),
+        ];
+        let phi = pedigree_kinship(&samples);
+        assert!((phi[0][1] - 0.25).abs() < 1e-12, "declared full sibs");
+        assert!(phi[0][1] > EDGE);
+        assert_eq!(phi[0][2], 0.0);
     }
 
     /// `bigish`'s `KING1`: two families renamed, the IID carried through unchanged.

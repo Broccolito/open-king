@@ -6,9 +6,9 @@
 //! row, including the two datasets whose kept-chromosome set is not monotone in SNP
 //! count — and the `Total length of …` console figure on all 13.
 //!
-//! [`Segments::ibd2`] no longer carries a caller of its own. It delegates to
-//! [`king_core::ibdseg`], the engine `--ibdseg` and `--related` use, and only *measures*
-//! the calls differently — see its doc comment.
+//! [`Segments::ibd2`] carries no caller of its own: it delegates to
+//! [`king_core::ibdseg::Scan::ibd2_words`] and only measures and totals what comes back —
+//! see its doc comment and `docs/research/15-ibs-ibd2-rules.md`.
 
 use std::fmt::Write as _;
 
@@ -44,6 +44,14 @@ const MIN_WORDS: usize = 5;
 /// Below it the reference prints `Segments too short.` and drops `MaxIBD2`/`Pr_IBD2`
 /// from both `.ibs` and `.ibs0`. Bracketed by a span sweep to `(99 990 000, 100 000 000]`.
 const INFORMATIVE_BP: i64 = 100_000_000;
+
+/// Shortest IBD2 call that lets a pair's `Pr_IBD2` be non-zero.
+///
+/// Bracketed to `(9 999 423, 10 000 187]` by sweeping the marker spacing under a fixed
+/// three-word call: below it the pair prints `Pr_IBD2 0.0000` while still printing the
+/// call's length in `MaxIBD2`. It gates the pair, not the call — see
+/// [`Segments::ibd2`].
+const LONG_SEGMENT_BP: i64 = 10_000_000;
 
 /// Smallest kinship for which a pair's IBD2 columns are computed at all.
 ///
@@ -159,30 +167,31 @@ impl Segments {
     /// IBD2 sharing for one pair: the longest IBD2 segment in base pairs and the
     /// proportion of `D` called IBD2.
     ///
-    /// # One caller, two rulers
+    /// # The caller lives in `king_core`
     ///
-    /// The calls are [`king_core::ibdseg::Scan::ibd2`]'s — the very segments `--ibdseg`
-    /// sums into `IBD2Seg`. All that differs is how they are **measured**: `.seg` measures
-    /// a call to the usable segment's own ends, while `--ibs` measures it **word-aligned**,
-    /// from `64u` through `64e + 63` over the same words.
+    /// The calls come from [`king_core::ibdseg::Scan::ibd2_words`], which owns every rule
+    /// and states the fixture behind each one. This function only measures them and
+    /// applies the two rules that belong to the `--ibs` writer rather than to the scan:
     ///
-    /// For a long time that looked like two callers, because the two columns disagree in
-    /// the reference's own output — on `nuclear`, `N_C1`/`N_C2` is `Pr_IBD2 0.2173` in
-    /// `king.ibs` and `IBD2Seg 0.2626` in `king.seg`, `.ibs` smaller every time. The
-    /// `dups` MZ pair rules that reading out: the reference prints `IBD2Seg 1.0000` **and**
-    /// `Pr_IBD2 0.8984` for it, and no *caller* can be simultaneously exhaustive and
-    /// tighter. The word-aligned total over that fileset's usable segments is
-    /// 357 701 908 bp, and 357 701 908 / 398 163 465 — the same denominator `D` — is
-    /// 0.8984 to the last digit. The ruler is the whole difference.
+    /// * **The ruler.** A call is measured word-aligned, `64 * lo` through
+    ///   `64 * hi + 63`, over the denominator [`Segments::total_length`]. That is what
+    ///   makes `dups`' MZ pair print `Pr_IBD2 0.8984` where `.seg` prints `IBD2Seg
+    ///   1.0000`: 357 701 908 word-aligned base pairs over the same `D` of 398 163 465.
+    /// * **The 10 Mb long-segment rule, which gates the *pair*, not the call.** If no
+    ///   call reaches [`LONG_SEGMENT_BP`], `Pr_IBD2` is `0.0000` however much shorter
+    ///   sharing there is; if one does, *every* call counts towards the total, the short
+    ///   ones included. Both halves are fixture-measured: a lone 9 999 423 bp call prints
+    ///   `MaxIBD2 9999423.000` with `Pr_IBD2 0.0000` and one of 10 000 187 bp prints
+    ///   `0.0498`, while adding a 19.15 Mb call beside a 9.55 Mb one makes the total
+    ///   28.7 Mb — the pair of them (`docs/research/15-ibs-ibd2-rules.md` §4).
+    ///
+    /// `MaxIBD2` is never gated: it reports the longest call whatever its length.
     ///
     /// # The rest, unchanged
     ///
-    /// * **The denominator is `D`**, [`Segments::total_length`], not the genome span and
-    ///   not a marker count: the marker-count form misprints every value.
-    /// * **The gate is [`IBD2_KINSHIP_GATE`]**, and un-gated pairs print `-9`/`-9` in
-    ///   `.ibs0` but `0.000`/`0.0000` in `.ibs`.
-    /// * `--seglength` never reaches here: `--ibs` has no such option, and the calls are
-    ///   taken unfiltered (`min_bp = 0`).
+    /// * **The kinship gate is [`IBD2_KINSHIP_GATE`]**, and un-gated pairs print `-9`/`-9`
+    ///   in `.ibs0` but `0.000`/`0.0000` in `.ibs`.
+    /// * `--seglength` never reaches here: `--ibs` has no such option.
     pub fn ibd2(&self, g: &Genotypes, i: usize, j: usize) -> Ibd2 {
         let mut max_bp = 0i64;
         let mut called_bp = 0i64;
@@ -195,24 +204,9 @@ impl Segments {
             if usable.words() == 0 {
                 continue;
             }
-            let (w0, w1) = (usable.first_word(), usable.last_word());
-            let mut prev_word: Option<usize> = None;
-            for c in ibdseg::Scan::new(g, i, j, usable).ibd2(&self.positions, 0) {
-                // `Called` carries the `.seg` ruler; recover the words it was cut from.
-                // A call reaching the usable segment's own first/last marker started on
-                // `w0` / ended on `w1`; every other endpoint lies inside the word it
-                // names, so integer division recovers that word exactly.
-                let e = (c.hi / SNPS_PER_WORD).min(w1);
-                let mut u = (c.lo / SNPS_PER_WORD).max(w0);
-                if let Some(p) = prev_word {
-                    u = u.max(p + 1);
-                }
-                if u > e {
-                    continue;
-                }
-                prev_word = Some(e);
-                let len = self.positions[SNPS_PER_WORD * e + SNPS_PER_WORD - 1]
-                    - self.positions[SNPS_PER_WORD * u];
+            for c in ibdseg::Scan::new(g, i, j, usable).ibd2_words() {
+                let len = self.positions[SNPS_PER_WORD * c.hi + SNPS_PER_WORD - 1]
+                    - self.positions[SNPS_PER_WORD * c.lo];
                 max_bp = max_bp.max(len);
                 called_bp += len;
             }
@@ -220,7 +214,7 @@ impl Segments {
         let total = self.total_length();
         Ibd2 {
             max_bp: max_bp as f64,
-            proportion: if total == 0 {
+            proportion: if total == 0 || max_bp < LONG_SEGMENT_BP {
                 0.0
             } else {
                 called_bp as f64 / total as f64
@@ -403,22 +397,6 @@ mod tests {
         assert!(!usable(&variants, &kept, 23).informative());
     }
 
-    /// A pair with no genotype at all calls nothing, and the columns are zero rather
-    /// than `nan` — the `.ibs` writer prints these verbatim for a pair under the gate.
-    #[test]
-    fn an_empty_pair_reports_no_ibd2() {
-        let (variants, kept) = map(&[("1", 1_000_000, 2001)]);
-        let segs = usable(&variants, &kept, 23);
-        let words = variants.len().div_ceil(SNPS_PER_WORD);
-        let g = Genotypes {
-            plane0: vec![vec![0u64; words]; 2],
-            plane1: vec![vec![0u64; words]; 2],
-            n_samples: 2,
-            n_variants: variants.len(),
-        };
-        assert_eq!(segs.ibd2(&g, 0, 1), Ibd2::default());
-    }
-
     /// Two samples homozygous for the same allele everywhere are IBD2 across the board,
     /// and `--ibs` measures that on the word grid: `64·w0` through `64·w1 + 63`, not the
     /// usable segment's own first and last marker.
@@ -446,5 +424,36 @@ mod tests {
         // word grid inside them.
         assert!(got.proportion < 1.0);
         assert_eq!(got.proportion, want as f64 / segs.total_length() as f64);
+    }
+
+    /// `Pr_IBD2` is gated on the pair having one call of at least [`LONG_SEGMENT_BP`],
+    /// and `MaxIBD2` is not gated at all. A 200-marker map at 50 kb spacing carries a
+    /// single usable segment barely 10 Mb wide, so a fully-IBD2 pair over it reports its
+    /// length and a proportion of zero.
+    #[test]
+    fn a_call_under_ten_megabases_prints_a_length_but_no_proportion() {
+        let mut variants = Vec::new();
+        for k in 0..320 {
+            variants.push(Variant {
+                chrom: "1".into(),
+                id: format!("rs{k}"),
+                cm: 0.0,
+                bp: 1_000_000 + 30_000 * k,
+                a1: "A".into(),
+                a2: "G".into(),
+            });
+        }
+        let kept: Vec<usize> = (0..variants.len()).collect();
+        let segs = usable(&variants, &kept, 23);
+        let words = variants.len().div_ceil(SNPS_PER_WORD);
+        let g = Genotypes {
+            plane0: vec![vec![u64::MAX; words]; 2],
+            plane1: vec![vec![u64::MAX; words]; 2],
+            n_samples: 2,
+            n_variants: variants.len(),
+        };
+        let got = segs.ibd2(&g, 0, 1);
+        assert!(got.max_bp > 0.0 && got.max_bp < LONG_SEGMENT_BP as f64);
+        assert_eq!(got.proportion, 0.0);
     }
 }

@@ -279,7 +279,12 @@ fn flushed_prefix(text: &str) -> &str {
 /// pair built at `Kinship 0.1250` against `Phi 0.2500` (ratio exactly `1/2`) prints
 /// `0.5`, and one at `Kinship 0.5000` (ratio exactly `2`) also prints `0.5`, so both
 /// ends of the warning band are closed; `0.1249` prints `1`.
-fn error_flag(kinship: f64, phi: f64) -> f64 {
+///
+/// **Shared with `--related`**, which feeds it the segment kinship `PropIBD / 2` for the
+/// `2nd`/`3rd`/`4th` rows of its own `Error` column and decides the rest by label — see
+/// [`crate::analysis::related::error_flag`]. The two columns still disagree on nine
+/// corpus rows, but only because the two estimates do.
+pub(crate) fn error_flag(kinship: f64, phi: f64) -> f64 {
     const SQRT2: f64 = std::f64::consts::SQRT_2;
     if phi > 0.0 {
         let r = kinship / phi;

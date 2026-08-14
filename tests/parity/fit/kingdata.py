@@ -177,7 +177,11 @@ def inf_type(pi1, pi2, prop):
         return "Dup/MZ"
     if pi1 + pi2 > 0.96 or (pi1 + pi2 > 0.9 and pi2 < 0.08):
         return "PO"
+    # Two FS clauses, not one — the second is `docs/research/12-segment-aggregates.md` §2,
+    # and without it `nuclear N_C3/N_C4` and `missing M_C1/M_C2` label `2nd`.
     if prop > 0.3535533905932738 and pi2 >= 0.08:
+        return "FS"
+    if prop > 0.32 and pi2 > 0.15:
         return "FS"
     if prop > 0.1767766952966369:
         return "2nd"

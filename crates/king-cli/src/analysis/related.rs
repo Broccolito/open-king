@@ -69,8 +69,8 @@ use king_core::{counts, kinship as est, PairCounts, Scope};
 use king_io::{Genotypes, Sample, Variant};
 
 use crate::analysis::{
-    band, between_family_pairs, cpu_count, f, family_blocks, g, out_path, with_phantom_parents,
-    xkinship, Class,
+    band, between_family_pairs, cpu_count, f, family_blocks, g, kinship, out_path,
+    with_phantom_parents, xkinship, Class,
 };
 use crate::cli::{Opt, Options};
 use crate::console::{self, RelationshipCounts};
@@ -194,9 +194,52 @@ pub struct PairIbd {
     pub max_ibd2: f64,
 }
 
+/// Heterozygote concordance above which `--related` is willing to call a pair `Dup/MZ`.
+///
+/// **`0.8`, and it is not `--minConc`.** See [`PairIbd::inf_type`].
+const DUP_HET_CONCORDANCE: f64 = 0.8;
+
 impl PairIbd {
-    /// The `InfType` label, from the unrounded proportions.
-    pub fn inf_type(&self) -> &'static str {
+    /// The `InfType` label as `.kin`/`.kin0` print it: the segment table of
+    /// [`king_core::ibdseg::inf_type`] with its `Dup/MZ` clause additionally gated on the
+    /// pair's **heterozygote concordance**.
+    ///
+    /// `.seg` and `.kin` disagree, and this is the whole of the disagreement. Run
+    /// `--ibdseg` and `--related` over the same fileset and a pair at
+    /// `IBD1Seg 0.0182 / IBD2Seg 0.8128 / PropIBD 0.8219` comes out `Dup/MZ` in `.seg`
+    /// and `FS` in `.kin`: `IBD2Seg > 0.7` fires in both, but `.kin` also requires
+    /// `HetConc > 0.8` and falls through to the `FS` clause without it.
+    ///
+    /// Established on a 72-pair ladder sweeping the IBD2 fraction through the boundary
+    /// (`tests/parity/probes/mkpairs.py`, targets `(0.0, 0.760…0.828)` × four offsets):
+    /// the highest non-`Dup/MZ` row is `HetConc 0.7986` and the lowest `Dup/MZ` row is
+    /// `0.8004`, while `Kinship` is *non-monotone* across the same boundary (`0.4082`
+    /// prints `FS`, `0.4086` prints `Dup/MZ`), which rules the kinship estimate out as
+    /// the gate. `--minConc 0.7` and `--minConc 0.9` leave every label unchanged, so the
+    /// `0.8` is hard-coded rather than the duplicate pass's option. Whether the
+    /// comparison is `>` or `>=` is unobservable — `HetConc` is a ratio of counts that
+    /// lands on `0.8` only by coincidence — and `>` is assumed, as everywhere else in
+    /// the table.
+    ///
+    /// Checked over 6 371 rows — every `InfType`-carrying `.kin` and `.kin0` in the
+    /// golden corpus plus 2 123 purpose-built probe rows — with **0** mismatches, against
+    /// 181 for the ungated `.seg` rule. The corpus alone cannot see it: its only pairs
+    /// over `IBD2Seg 0.7` are true duplicates, which clear `0.8` comfortably.
+    pub fn inf_type(&self, het_conc: f64) -> &'static str {
+        if self.ibd2_seg > 0.7 && het_conc <= DUP_HET_CONCORDANCE {
+            // The `Dup/MZ` clause is suppressed; the rest of the table decides. With
+            // `IBD2Seg > 0.7` it collapses: the `PO` clause's second disjunct needs
+            // `IBD2Seg < 0.08`, and `PropIBD >= IBD2Seg > 0.7 > 2^-1.5` makes the first
+            // `FS` clause fire on everything the `PO` one leaves. So the fall-through is
+            // `PO` above the `0.96` sum and `FS` below it — every probe row that reaches
+            // here is an `FS`; the `PO` branch follows from the clause order rather than
+            // from an observation.
+            return if self.ibd1_seg + self.ibd2_seg > 0.96 {
+                "PO"
+            } else {
+                "FS"
+            };
+        }
         ibdseg::inf_type(self.ibd1_seg, self.ibd2_seg, self.prop_ibd)
     }
 }
@@ -425,6 +468,8 @@ fn within_family_rows(loaded: &Loaded, engine: &Engine, blocks: &[Vec<usize>]) -
 fn write_kin(path: &str, rows: &[KinRow], single_family: bool) {
     let mut text = String::from(KIN_HEADER);
     for r in rows {
+        let het_conc = est::het_concordance(&r.counts);
+        let inferred = r.ibd.inf_type(het_conc);
         let _ = writeln!(
             text,
             "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
@@ -436,14 +481,14 @@ fn write_kin(path: &str, rows: &[KinRow], single_family: bool) {
             f(r.phi, 4),
             f(est::het_het_prop(&r.counts), 4),
             f(est::ibs0_prop(&r.counts), 4),
-            f(est::het_concordance(&r.counts), 4),
+            f(het_conc, 4),
             f(hom_ibs0(&r.counts), 4),
             f(r.kinship, 4),
             f(r.ibd.ibd1_seg, 4),
             f(r.ibd.ibd2_seg, 4),
             f(r.ibd.prop_ibd, 4),
-            r.ibd.inf_type(),
-            g(error_flag(r.pedigree_label(), r.ibd)),
+            inferred,
+            g(error_flag(r.pedigree_label(), r.phi, inferred, r.ibd)),
         );
     }
     let body = if single_family {
@@ -491,56 +536,82 @@ fn flushed_prefix(text: &str) -> &str {
 ///
 /// A pair with no A1 homozygote on either side has a zero denominator, and the reference
 /// prints the `nan` that follows — the same spelling `HomConc` already reaches.
+///
+/// # Known gap: exact four-decimal ties
+///
+/// The *counts* are right everywhere; the *rounding* of a ratio that lands exactly on a
+/// four-decimal tie is not, and the reference's tie-breaking is not reproduced by any
+/// evaluation order of this ratio. A fileset with hand-placed genotypes
+/// (`probes/pederr.py homibs0`) puts nine pairs on nine exact ties:
+///
+/// | `N_IBS0` / union | exact value | reference | `a/b` |
+/// | --- | --- | --- | --- |
+/// | 3 / 32 | 0.09375 | 0.0938 | 0.0938 |
+/// | 31 / 32 | 0.96875 | 0.9688 | 0.9688 |
+/// | 15 / 96 | 0.15625 | **0.1563** | 0.1562 |
+/// | 51 / 96 | 0.53125 | 0.5312 | 0.5312 |
+/// | 9 / 160 | 0.05625 | **0.0562** | 0.0563 |
+/// | 17 / 160 | 0.10625 | 0.1062 | 0.1062 |
+/// | 13 / 160 | 0.08125 | **0.0812** | 0.0813 |
+/// | 7 / 160 | 0.04375 | 0.0437 | 0.0437 |
+/// | 414 / 960 | 0.43125 | **0.4312** | 0.4313 |
+///
+/// `15/96` and `51/96` are both exactly representable doubles and both exact ties, and
+/// the reference rounds the first up and the second down — so whatever it prints is not
+/// the correctly-rounded value of `a/b` under any single tie rule, and its inputs must be
+/// perturbed by however it accumulates them. Nineteen algebraically equal forms were
+/// scored against the nine rows (`a/b`, `a/(hom_i + hom_j - both)`, `(a/N)/(b/N)`,
+/// `a*(1/b)`, `1 - (b-a)/b`, single-precision variants, …); the best scores 8 of 9 and
+/// none scores 9, so **none is adopted** — a form fitted to eight hand-made ties would be
+/// worse than an honest ratio. `a/b` is kept because it is the algebraically correct one.
+///
+/// Incidence: **0 of the 4 248** golden `.kin` rows and **2 of 1 189** rows of a random
+/// pedigree probe. Ties are rare because the union denominator is rarely a small multiple
+/// of a power of two.
 fn hom_ibs0(c: &PairCounts) -> f64 {
     f64::from(c.ibs0) / f64::from(c.hom_a1_union)
 }
 
-/// `Error`, the pedigree-versus-segment disagreement flag.
+/// The three `InfType` labels `Error` grades numerically rather than by name.
 ///
-/// **Not `--kinship`'s rule.** That one compares the kinship *estimate* against `Phi` on
-/// a multiplicative scale; this one compares the pedigree's relationship *label* against
-/// the segment-inferred one, and the two disagree on nine corpus rows.
-///
-/// The comparison is by label first — an exact match is `0` — then by degree: `0.5` when
-/// the two degrees differ by exactly one **and both are second degree or more distant**,
-/// `1` otherwise. So a pedigree `PO` inferred as `FS` is a full error even though both
-/// are first degree, while `2nd` against `3rd` is only a warning.
-///
-/// The `InfType` this compares against is *not* the one printed: clause A of the `FS`
-/// test drops its `IBD2Seg >= 0.08` requirement here. Validated over the 4 550
-/// `InfType`-carrying rows of the golden `.kin`/`.kin0` corpus with zero mismatches.
-fn error_flag(pedigree: &str, ibd: PairIbd) -> f64 {
-    let inferred = inf_type_for_error(ibd);
-    if pedigree == inferred {
-        return 0.0;
-    }
-    let (a, b) = (label_degree(pedigree), label_degree(inferred));
-    if a.abs_diff(b) == 1 && a >= 2 && b >= 2 {
-        0.5
-    } else {
-        1.0
-    }
-}
+/// Everything else — `Dup/MZ`, `PO`, `FS`, `UN` — is a class with a signature of its own,
+/// and `Error` scores it by exact agreement. See [`error_flag`].
+const GRADED_LABELS: [&str; 3] = ["2nd", "3rd", "4th"];
 
-/// [`king_core::ibdseg::inf_type`] with the `IBD2Seg >= 0.08` guard on the first `FS`
-/// clause removed — the variant the `Error` column compares against.
-fn inf_type_for_error(ibd: PairIbd) -> &'static str {
-    let (p1, p2, pi) = (ibd.ibd1_seg, ibd.ibd2_seg, ibd.prop_ibd);
-    if p2 > 0.7 {
-        "Dup/MZ"
-    } else if p1 + p2 > 0.96 || (p1 + p2 > 0.9 && p2 < 0.08) {
-        "PO"
-    } else if pi > band::MZ || (pi > 0.32 && p2 > 0.15) {
-        "FS"
-    } else if pi > band::FIRST {
-        "2nd"
-    } else if pi > band::SECOND {
-        "3rd"
-    } else if pi > band::THIRD {
-        "4th"
-    } else {
-        "UN"
+/// `Error`, the pedigree-versus-inference disagreement flag.
+///
+/// It is `--kinship`'s [`kinship::error_flag`] fed the **segment** kinship
+/// `PropIBD / 2` instead of the kinship estimate — but only for the middle degrees. The
+/// full rule, which is the one thing on this page that is neither documented nor
+/// guessable:
+///
+/// ```text
+/// InfType in {2nd, 3rd, 4th}  ->  kinship::error_flag(PropIBD / 2, Phi)
+/// otherwise                   ->  0 if InfType == the pedigree's own label, else 1
+/// ```
+///
+/// So `Dup/MZ`, `PO`, `FS` and `UN` are all-or-nothing — a declared `FS` inferred `PO`
+/// scores `1` however close `PropIBD / 2` lands to `0.25`, and a declared `FS` inferred
+/// `FS` scores `0` even at `PropIBD 0.8352`, where the ratio alone would say `0.5` — while
+/// `2nd`/`3rd`/`4th` are graded on the same multiplicative `sqrt(2)` / `2` bands
+/// `--kinship` uses. That is why two rows with the *same* pair of labels can score
+/// differently: `bigish` `B15_C2`/`B15_G_F` is a declared 2nd inferred `3rd` at
+/// `PropIBD 0.1756` and scores `0.5`, and a probe pair with the same labels at
+/// `PropIBD 0.1215` scores `1` — ratio `0.7024` against `0.4860`, either side of `0.5`.
+///
+/// The `Phi == 0` fall-back in `kinship::error_flag` is what makes a declared-unrelated
+/// pair inferred `4th` score `0.5`: `PropIBD / 2` then lands in `(2^-5.5, 2^-4.5]` by
+/// construction.
+///
+/// Fitted and checked over 5 813 rows — all 4 248 `InfType`-carrying rows of the golden
+/// `.kin` corpus plus 1 565 rows from six purpose-built pedigree probes crossing declared
+/// `PO`/`FS`/2nd/3rd/4th/unrelated with prescribed `(IBD1Seg, IBD2Seg)` right across the
+/// simplex — with **0** mismatches. The label-degree rule this replaced misses 11 of them.
+fn error_flag(pedigree: &str, phi: f64, inferred: &str, ibd: PairIbd) -> f64 {
+    if !GRADED_LABELS.contains(&inferred) {
+        return if inferred == pedigree { 0.0 } else { 1.0 };
     }
+    kinship::error_flag(ibd.prop_ibd / 2.0, phi)
 }
 
 /// The pedigree's relationship label, on the same alphabet `InfType` uses.
@@ -561,18 +632,6 @@ fn pedigree_label(phi: f64, z0: f64) -> &'static str {
         "4th"
     } else {
         "UN"
-    }
-}
-
-/// Degree of a relationship label; `Dup/MZ` is zero and `UN` is beyond every band.
-fn label_degree(label: &str) -> u32 {
-    match label {
-        "Dup/MZ" => 0,
-        "PO" | "FS" => 1,
-        "2nd" => 2,
-        "3rd" => 3,
-        "4th" => 4,
-        _ => 9,
     }
 }
 
@@ -605,7 +664,7 @@ fn summary(rows: &[KinRow]) -> Option<String> {
     let mut inference = RelationshipCounts::default();
     let mut any = false;
     for r in rows {
-        let inferred = label_class(r.ibd.inf_type());
+        let inferred = label_class(r.ibd.inf_type(est::het_concordance(&r.counts)));
         any |= r.pedigree.is_relative() || inferred.is_relative();
         bump(&mut pedigree, r.pedigree);
         bump(&mut inference, inferred);
@@ -712,8 +771,8 @@ fn between_family(
     // increments its own `4th` column — so a run whose only rows are fourth-degree
     // reports zero pairs while still writing them.
     let mut tally = RelationshipCounts::default();
-    for (_, _, _, _, ibd) in &rows {
-        let class = label_class(ibd.inf_type());
+    for (_, _, c, _, ibd) in &rows {
+        let class = label_class(ibd.inf_type(est::het_concordance(c)));
         if class != Class::Other {
             bump(&mut tally, class);
         }
@@ -785,12 +844,35 @@ fn effective_degree(opts: &Options) -> i32 {
 ///
 /// # Known gap
 ///
-/// The screening count is exact only while `m <= 32768`. Above it the reference screens
-/// on a subset of that size and this counts on the whole map, which reproduces `bigish`
-/// at degree 1 (18) but not at degree 2 (50 against the reference's 36). Which 32 768
-/// markers it picks is unresolved: the first, last, evenly spaced and
-/// highest-minor-allele-frequency subsets were each built and scored against the
-/// reference, and none reproduces both degrees.
+/// The screening count is exact only while `m <= 32768`; above it the reference screens
+/// on a subset of that size and this counts on the whole map. It reproduces `bigish` at
+/// degree 1 (18) but not at degree 2 (50 against the reference's 36) — the one stdout
+/// line in the corpus that `--related` still gets wrong.
+///
+/// **It is not a subset-choice problem.** `bigish` was truncated to a ladder of marker
+/// counts and run at both degrees; the reference always prints `with 32768 SNPs`, so the
+/// subset — whatever it is — is fixed in size while the map grows:
+///
+/// | `m` | reference (d1 / d2) | first 32 768 | evenly spaced | first / evenly spaced 512 words |
+/// | ---: | --- | --- | --- | --- |
+/// | 32 768 | 18 / **50** | 18 / 50 | 18 / 50 | 18 / 50 |
+/// | 33 280 | 18 / **50** | 18 / 50 | 18 / 50 | 18 / 50 |
+/// | 36 864 | 18 / **43** | 18 / 50 | 18 / 48 | 18 / 50, 17 / 47 |
+/// | 40 960 | 16 / **42** | 18 / 50 | 17 / 43 | 18 / 50, 17 / 47 |
+/// | 45 056 | 21 / **43** | 18 / 50 | 21 / 49 | 18 / 50, 21 / 49 |
+/// | 50 000 | 18 / **36** | 18 / 50 | 21 / 47 | 18 / 50, 20 / 46 |
+///
+/// Every candidate subset — first, last, evenly spaced and highest-MAF markers, and the
+/// same four over whole 64-marker words — **overshoots at degree 2 on every map longer
+/// than 33 280 while matching at degree 1**, and no subset undershoots anywhere. A rule
+/// of the form "estimate kinship on 32 768 of the markers, count the pairs over the
+/// cutoff" therefore cannot produce these numbers at all: the stage is *lossy*, dropping
+/// pairs a full-precision estimate keeps, and it drops more of them the more distant the
+/// cutoff. Reproducing it means reproducing the two-stage bound, not picking markers.
+///
+/// The consequence is contained: the count reaches stdout and nothing else. `.kin0`'s row
+/// set comes from the exhaustive re-estimate below and is byte-correct at every degree,
+/// including on the two `bigish` cases whose stdout this line spoils.
 fn detected_pairs(kinships: &[f64], n_samples: usize, degree: i32, screening: bool) -> usize {
     if screening && n_samples < SCREEN_MIN_SAMPLES {
         return 0;
@@ -815,9 +897,11 @@ fn screen_cutoff(degree: i32) -> f64 {
 /// boundary and no tail masking is needed; the general case masks anyway rather than
 /// leave a `Genotypes` that breaks its own clean-tail contract.
 ///
-/// **Which** markers is the open question. The reference calls them "a subset of
-/// informative SNPs" and this takes the map's own prefix, which reproduces `bigish` at
-/// degree 1 (18 detected) and not at degree 2 (50 against 36) — see [`detected_pairs`].
+/// The reference calls them "a subset of informative SNPs" and this takes the map's own
+/// prefix. That is not the gap: [`detected_pairs`] shows with a marker-count ladder that
+/// *no* choice of 32 768 markers reproduces the counts, because the stage prunes pairs a
+/// full-precision estimate keeps. The prefix is kept because it is the cheapest subset
+/// that matches at degree 1 on every map tried.
 fn screening_planes(g: &Genotypes, snps: usize) -> Option<Genotypes> {
     if snps >= g.n_variants {
         return None;
@@ -882,7 +966,7 @@ fn write_kin0(path: &str, samples: &[Sample], rows: &[Kin0Row]) {
             f(ibd.ibd1_seg, 4),
             f(ibd.ibd2_seg, 4),
             f(ibd.prop_ibd, 4),
-            ibd.inf_type(),
+            ibd.inf_type(est::het_concordance(c)),
         );
     }
     let _ = std::fs::write(Path::new(path), text.as_bytes());
@@ -1125,37 +1209,59 @@ mod tests {
         assert_eq!(effective_degree(&parse(&["--related", "--degree", "4"])), 4);
     }
 
-    /// Golden rows, one per label the corpus reaches.
+    /// Golden rows, one per label the corpus reaches. The corpus's only pairs over
+    /// `IBD2Seg 0.7` are true duplicates, so its concordances are all far above the gate.
     #[test]
     fn inf_type_matches_the_golden_columns() {
-        assert_eq!(ibd(0.0436, 0.9223).inf_type(), "Dup/MZ");
-        assert_eq!(ibd(1.0, 0.0).inf_type(), "PO");
-        assert_eq!(ibd(0.5328, 0.2569).inf_type(), "FS");
-        assert_eq!(ibd(0.5268, 0.0).inf_type(), "2nd");
-        assert_eq!(ibd(0.0, 0.0).inf_type(), "UN");
+        assert_eq!(ibd(0.0436, 0.9223).inf_type(0.94), "Dup/MZ");
+        assert_eq!(ibd(1.0, 0.0).inf_type(0.34), "PO");
+        assert_eq!(ibd(0.5328, 0.2569).inf_type(0.45), "FS");
+        assert_eq!(ibd(0.5268, 0.0).inf_type(0.30), "2nd");
+        assert_eq!(ibd(0.0, 0.0).inf_type(0.26), "UN");
+    }
+
+    /// The `HetConc > 0.8` gate on the `Dup/MZ` clause, at the bracket the ladder gives:
+    /// probe rows at `0.7986` and `0.8004` land on opposite sides with `IBD2Seg` in the
+    /// same place, which is why the gate cannot be the kinship estimate.
+    #[test]
+    fn the_dup_clause_needs_het_concordance_over_four_fifths() {
+        let row = ibd(0.0, 0.7822);
+        assert_eq!(row.inf_type(0.8004), "Dup/MZ");
+        assert_eq!(row.inf_type(0.7986), "FS");
+        // `.seg` has no such gate: the same numbers there are `Dup/MZ` either way.
+        assert_eq!(ibdseg::inf_type(0.0, 0.7822, 0.7822), "Dup/MZ");
+        // Below the segment clause the concordance is inert.
+        assert_eq!(ibd(0.5328, 0.2569).inf_type(0.99), "FS");
     }
 
     #[test]
-    fn error_compares_labels_then_degrees() {
+    fn error_grades_the_middle_degrees_and_matches_the_rest_by_name() {
         // dups: an undeclared MZ pair, pedigree UN against inferred Dup/MZ.
-        assert_eq!(error_flag("UN", ibd(0.0436, 0.9223)), 1.0);
+        assert_eq!(error_flag("UN", 0.0, "Dup/MZ", ibd(0.0436, 0.9223)), 1.0);
         // dups: a declared PO pair the segments agree with.
-        assert_eq!(error_flag("PO", ibd(1.0, 0.0)), 0.0);
+        assert_eq!(error_flag("PO", 0.25, "PO", ibd(1.0, 0.0)), 0.0);
         // multifam: declared founders, no sharing.
-        assert_eq!(error_flag("UN", ibd(0.0, 0.0)), 0.0);
-        // Adjacent distant degrees are a warning — a declared 2nd inferred 3rd...
-        assert_eq!(inf_type_for_error(ibd(0.30, 0.0)), "3rd");
-        assert_eq!(error_flag("2nd", ibd(0.30, 0.0)), 0.5);
-        // ...but the PO/FS split inside the first degree is a full error.
-        assert_eq!(error_flag("PO", ibd(0.53, 0.26)), 1.0);
+        assert_eq!(error_flag("UN", 0.0, "UN", ibd(0.0, 0.0)), 0.0);
+        // The PO/FS split inside the first degree is a full error however close the
+        // segment kinship lands to `Phi` — here it is 0.2625 against 0.25.
+        assert_eq!(error_flag("PO", 0.25, "FS", ibd(0.53, 0.26)), 1.0);
+        // ...and an agreeing name is a clean 0 even when the ratio alone says 0.5:
+        // probe `FS02`, PropIBD 0.8352 against Phi 0.25, ratio 1.67.
+        assert_eq!(error_flag("FS", 0.25, "FS", ibd(0.1448, 0.7628)), 0.0);
     }
 
+    /// Two rows with the *same* pair of labels and different scores — the observation
+    /// that rules a label-degree rule out. Both are a declared 2nd inferred `3rd`.
     #[test]
-    fn the_error_column_drops_the_ibd2_guard_on_the_first_fs_clause() {
-        // PropIBD over 2^-1.5 with almost no IBD2: printed as `2nd`, compared as `FS`.
-        let row = ibd(0.8962, 0.0);
-        assert_eq!(row.inf_type(), "2nd");
-        assert_eq!(inf_type_for_error(row), "FS");
+    fn the_middle_degrees_are_graded_on_the_kinship_ratio() {
+        // bigish B15_C2/B15_G_F: PropIBD 0.1756, ratio 0.7024, just under 1/sqrt(2).
+        assert_eq!(error_flag("2nd", 0.125, "3rd", ibd(0.3512, 0.0)), 0.5);
+        // probe HA07: PropIBD 0.1215, ratio 0.4860, just under 1/2.
+        assert_eq!(error_flag("2nd", 0.125, "3rd", ibd(0.2430, 0.0)), 1.0);
+        // A declared-unrelated pair inferred `4th` takes the `Phi == 0` fall-back, which
+        // puts PropIBD/2 in the fourth-degree band by construction: probe `un4` P000.
+        assert_eq!(error_flag("UN", 0.0, "4th", ibd(0.1374, 0.0)), 0.5);
+        assert_eq!(error_flag("UN", 0.0, "3rd", ibd(0.2557, 0.0)), 1.0);
     }
 
     #[test]
