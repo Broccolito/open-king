@@ -166,11 +166,40 @@ real and verified.
 
 ## Row ordering
 
-* `.kin0` — outer loop over samples in **`.fam` file order**, inner loop over
-  later-ordered samples in a different family, also in `.fam` order. Verified on the
-  `tiny` capture.
-* `.kin` — grouped by `FID`, and **within a family the rows are ordered by a
-  deterministic sort of the sample ID that is *independent of `.fam` order*.**
+There are **two different rules**, and the between-family one is not what it looks like
+on small inputs.
+
+### Between-family (`.kin0`, `.ibs0`) — square-tiled, not row-major
+
+Pairs are `i < j` over **`.fam` index order**, but they are emitted by a *block-tiled*
+loop, sorted by the key:
+
+```
+(i / B, j / B, i, j)        integer division
+```
+
+with a **different block size per file**: `B = 32` for `.kin0`, `B = 8` for `.ibs0`.
+
+Plain ascending `(i, j)` is **wrong**, and dangerously so: it coincides with the tiled
+order whenever `n <= B`, so it looks correct on small fixtures and silently diverges on
+real data. Verified against golden output by generating both candidate orderings and
+comparing to the emitted rows:
+
+| File | n | Rows | Uniquely matches |
+| --- | --- | --- | --- |
+| `dups` `.ibs0` | 10 | 43 | `B = 8` |
+| `unrelated` `.ibs0` | 30 | 390 | `B = 8` |
+| `bigish` `.ibs0` | 200 | 19,327 | `B = 8` |
+| `bigish` `.kin0` | 200 | 19,327 | `B = 32` |
+| `unrelated` `.kin0` | 30 | 390 | `B = 32`, 64 and plain all agree — `n <= 32`, so undiscriminating |
+
+That last row is exactly the trap: at `n = 30` every candidate agrees.
+
+### Within-family (`.kin`, `.ibs`) — natural sort on IID
+
+Grouped by `FID` in first-appearance order; **within a family the members are re-sorted by
+a natural (numeric-aware) sort of the IID, independent of `.fam` order**, and pairs are
+the `i < j` upper triangle of that sorted list.
 
 The `.kin` ordering was established with a discriminating experiment: the same `.bed`
 was analysed with the family's members listed in several different `.fam` orders, and the
@@ -186,6 +215,13 @@ emitted row order never changed.
 So the order is **natural sort** (numeric-aware): `a2 < a9 < a10` and `2 < 9 < 10`, which
 plain lexicographic ordering would get wrong (`a10 < a2 < a9`, `10 < 2 < 9`). Using
 `.fam` order — the obvious guess — is wrong, and using lexicographic order is also wrong.
+
+> **Contested and re-settled.** A second independent pass over the corpus concluded this
+> sort was *lexicographic*. It is not. That pass was under-powered: every sample ID in the
+> corpus (`T_F`, `MZ_1`, `U1`, …) sorts identically under both rules, so the corpus cannot
+> distinguish them. The discriminating case is a family whose IIDs are `2`, `9`, `10`:
+> lexicographic predicts `10, 2, 9`, numeric predicts `2, 9, 10`, and the reference emits
+> `(2,9) (2,10) (9,10)` — numeric. Reproduced under three different `.fam` orderings.
 
 Pairs are then emitted as the `i < j` upper triangle over that sorted order.
 
@@ -237,30 +273,58 @@ long:  ... HetConc Het2|1 Het1|2 HomConc Kinship MaxIBD2 Pr_IBD2
 
 ## Open questions
 
-These are unresolved and each is paired with the experiment that settles it.
+Questions 2–8 were attacked empirically; the experiments, raw output and resulting rules
+live in **[BEHAVIOR.md](BEHAVIOR.md)**. Status summary below.
 
 1. ~~**`.kin` within-family row order.**~~ **RESOLVED** — natural sort on sample ID,
    independent of `.fam` order. See [Row ordering](#row-ordering).
-2. **PO vs FS IBS0 threshold.** The binary's string table contains
-   `1st-degree relatives are treated as parent-offspring if IBS0 < %.4lf`, implying the
-   cutoff is computed from the data, not fixed.
-   *Experiment:* run `--related` on datasets with differing overall IBS0 rates and read
-   the printed threshold back off stdout; fit the rule.
-3. **SNP inclusion rules.** Whether monomorphic SNPs, SNPs with an allele coded `0`, or
-   SNPs above a missingness threshold are dropped before counting, and whether only
-   autosomes are used by default. The console prints
-   `Genotype data consist of N autosome SNPs`, which suggests non-autosomes are excluded
-   from the default relatedness path.
-   *Experiment:* the `monomorphic` and `sexchr` parity datasets; compare `N_SNP` against
-   the count we predict under each candidate rule.
-4. **`--cpus` determinism.** Whether thread count changes any printed digit (it should
-   not, since the kernel sums integers, but must be confirmed).
-   *Experiment:* diff `--cpus 1` against `--cpus 8` output on `bigish`.
-5. **`--degree` filtering semantics.** Whether `--degree n` filters `.kin0` rows only, or
-   also changes `.kin`, and whether the cutoff is applied to kinship or to inferred class.
-6. **Zero-padded numeric ID ordering.** `{007, 7, 70}` emits as `7`, `70`, `007`.
-   *Experiment:* sweep families of IDs mixing widths and leading zeros
-   (`0`, `00`, `01`, `1`, `10`, `0010`, `1a`, `a1`, `-1`, `1.0`, very long digit strings
-   that overflow 32-bit) and fit the comparator. Likely the ID is parsed to an integer
-   with non-parsing or overflowing values falling back to a string compare and sorting
-   after the numerics — confirm or refute.
+2. **PO vs FS IBS0 threshold.** **PARTIALLY RESOLVED** —
+   [BEHAVIOR.md § Q2](BEHAVIOR.md#q2--parentoffspring-vs-full-sibling-discrimination).
+   The message is `Cutoff value for IBS0 between FS and PO is set at %.4f`, printed by
+   `--build`/`--cluster`/`--unrelated` and only when IBD-segment analysis is unavailable;
+   when segments exist, PO/FS is decided by IBD2 sharing instead. The *application* is
+   established (1st-degree pair is PO iff its IBS0 proportion is below the cutoff, a pair
+   exactly on the printed value counting as PO). The *value* is still open: it is
+   deterministic in the data but was shown **not** to be fitted to the observed
+   1st-degree IBS0 distribution, nor a function of `N`, SNP count, sample order, relative
+   count, or any single allele-frequency summary tried. It sits in `[0.0035, 0.0060]`,
+   is `0.0055` on ordinary data, and never reaches an output file.
+3. **SNP inclusion rules.** **RESOLVED** —
+   [BEHAVIOR.md § Q3](BEHAVIOR.md#q3--snp-inclusion-rules). Every `.bim` record on
+   chromosome `1`–`22`, `25` or `XY` is used, in file order. Monomorphic SNPs, `0`
+   alleles, low call rate, low MAF, duplicate IDs and duplicate positions are **all**
+   retained; `23`/`X`, `24`/`Y`, `26`/`MT` are held aside; any other chromosome code is
+   dropped at map load. Missingness is pairwise only.
+4. **`--cpus` determinism.** **RESOLVED** —
+   [BEHAVIOR.md § Q4](BEHAVIOR.md#q4--cpus-determinism). Every output file is
+   byte-identical across `--cpus 1/2/4/8` on a 200 × 50 000 dataset; only stdout progress
+   percentages differ.
+5. **`--degree` filtering semantics.** **RESOLVED** —
+   [BEHAVIOR.md § Q5](BEHAVIOR.md#q5--degree-semantics). `--degree d` filters `.kin0`
+   only (never `.kin`, never `.ibs`/`.ibs0`), on the kinship **estimate**, keeping pairs
+   with `kinship >= 2^-(d+1.5)` compared against the exact double rather than the printed
+   `%.5lf`. `--degree 0` means unset. Negative degrees behave inconsistently between
+   `--kinship` and `--related` and remain unspecified.
+6. **Zero-padded numeric ID ordering.** **RESOLVED** —
+   [BEHAVIOR.md § Q6](BEHAVIOR.md#q6--the-sample-id-sort-comparator). No integer parse is
+   involved. Chunked comparison: digit runs by (length, then bytes), non-digits one
+   character at a time ASCII-uppercase-folded, a non-digit sorting before a digit, and a
+   shorter prefix first. The same comparator orders the FID blocks. IDs are
+   case-insensitively unique and an IID of `0` is rejected. Rust implementation given in
+   BEHAVIOR.md.
+7. **Output-file existence.** **RESOLVED** —
+   [BEHAVIOR.md § Q7](BEHAVIOR.md#q7--output-file-existence). Includes the correction that
+   the single-family `.kin` is not "empty" but *truncated to flushed 64 KiB chunks* — a
+   zero-byte file is just the small-data case of that bug.
+8. **`.ibs`/`.ibs0` column-set variation.** **RESOLVED** —
+   [BEHAVIOR.md § Q8](BEHAVIOR.md#q8--ibs--ibs0-column-set-variation). `MaxIBD2` and
+   `Pr_IBD2` appear on both files iff the total usable IBD-segment length is ≥ 100 Mb,
+   where a usable segment is a maximal run of SNPs with base-pair gaps ≤ 156 250.
+   `--related`'s `.kin0` gains its `IBD1Seg/IBD2Seg/PropIBD/InfType` block on the same
+   trigger.
+
+Newly opened by that work, and recorded in
+[BEHAVIOR.md § Side findings](BEHAVIOR.md#side-findings): the `.kin` `Error` column is
+**not** `%d` (it takes the value `0.5`), and the reference aborts with
+`Too many first alleles as the major allele` when too many `.bim` A1 alleles are the major
+allele.
