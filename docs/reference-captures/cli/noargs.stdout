@@ -1,0 +1,36 @@
+KING 2.3.2 - (c) 2010-2023 Wei-Min Chen
+
+The following parameters are in effect:
+                   Binary File :                 (-bname)
+
+Additional Options
+         Close Relative Inference : --related, --duplicate
+   Pairwise Relatedness Inference : --kinship, --ibdseg, --ibs, --makeGRM
+              Inference Parameter : --degree, --noscreen [-1717986816],
+                                    --seglength, --minConc [0.80]
+         Relationship Application : --unrelated, --cluster, --build
+                        QC Report : --bysample, --bySNP, --roh, --autoQC
+                     QC Parameter : --callrateN, --callrateM
+             Population Structure : --pca, --mds
+              Structure Parameter : --projection, --pcs
+          Quantitative Trait GWAS : --lmm
+                Binary Trait GWAS : --tdt, --gdt
+                Association Model : --trait [], --covariate [], --maxP
+     Association Method Parameter : --invnorm
+               Genetic Risk Score : --risk, --model [], --prevalence, --noflip
+              Computing Parameter : --cpus
+                   Optional Input : --fam [], --bim [], --phefile [],
+                                    --covfile [], --prunedsnp [],
+                                    --sexchr [23]
+                           Output : --rplot, --pngplot, --plink
+                 Output Parameter : --prefix [king], --rpath []
+
+
+FATAL ERROR - 
+Genotype files are required. e.g.,
+  king -b ex.bed --related
+
+Please check the reference paper Manichaikul et al. 2010 Bioinformatics,
+					Chen et al. 2024,
+          or the KING website at kingrelatedness.com
+

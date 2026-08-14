@@ -1,0 +1,4 @@
+fam1	f1kid1
+fam1	f1kid2
+fam2	f2dad
+fam2	f2kid1

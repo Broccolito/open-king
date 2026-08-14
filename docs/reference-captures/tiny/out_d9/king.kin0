@@ -1,0 +1,12 @@
+FID1	ID1	FID2	ID2	N_SNP	HetHet	IBS0	Kinship
+fam1	f1dad	fam2	f2dad	1960	0.1719	0.0143	0.2352
+fam1	f1dad	fam2	f2kid1	1964	0.1324	0.0321	0.1093
+fam1	f1dad	fam2	f2dup	1970	0.1543	0.0000	0.2517
+fam1	f1mom	fam2	f2mom	1782	0.1229	0.0561	0.0047
+fam1	f1mom	fam2	f2kid1	1941	0.1247	0.0562	0.0125
+fam1	f1mom	fam2	f2dup	1948	0.1561	0.0000	0.2569
+fam1	f1kid1	fam2	f2dad	1962	0.1325	0.0321	0.1054
+fam1	f1kid1	fam2	f2kid1	1964	0.1314	0.0438	0.0678
+fam1	f1kid1	fam2	f2dup	1970	0.3030	0.0000	0.5000
+fam1	f1kid2	fam2	f2dad	1936	0.1178	0.0279	0.1051
+fam1	f1kid2	fam2	f2dup	1943	0.1657	0.0124	0.2305
