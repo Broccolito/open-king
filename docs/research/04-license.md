@@ -1,375 +1,444 @@
-# KING 2.3.2 — licensing, source availability, third-party libraries, and clean-room process
+# KING 2.3.2 — Licensing, Source Distribution, Third-Party Libraries, and Clean-Room Process
 
-Recon note for the clean-room MIT reimplementation of KING's relatedness inference.
-Compiled 2026-08-13. Not legal advice; escalate to counsel before shipping if any doubt remains.
+**Recon date:** 2026-08-13
+**Target:** KING 2.3.2 (released 2023-09-08), Wei-Min Chen, University of Virginia
+**Reference binary inspected:** `/Users/wgu/Desktop/GeneQuire Project/GeneQuire/software/king/king` (Mach-O 64-bit arm64, 1,815,336 bytes)
+**Scope of this document:** legal posture only. Output formats are covered by the sibling recon docs.
 
-**Reference binary examined:** `/Users/wgu/Desktop/GeneQuire Project/GeneQuire/software/king/king`
-(Mach-O 64-bit executable arm64, 1,815,336 bytes, mtime 2026-06-17 18:30).
-
----
-
-## 0. Verdict in one paragraph
-
-KING's C++ source **is publicly downloadable** (`KINGcode.tar.gz` from the author's site) but it is
-**not open source**. There is no LICENSE/COPYING file anywhere in the distribution, the only
-published terms are a single sentence on the download page, and **63 of the 172 source files carry
-an inherited MERLIN header that explicitly forbids redistribution and forbids distributing modified
-versions**. No grant of derivative-work rights exists. Therefore: **do not read, download, or open
-KING's source code as part of this reimplementation.** Implement from (1) the 2010 Bioinformatics
-paper, (2) the kingrelatedness.com manual/tutorial pages, (3) observed behavior and embedded string
-constants of the local binary, and (4) genuinely open reimplementations — of which **Hail (MIT) is
-the only one whose code we may actually copy from**.
+> **Compliance note for this document.** No KING source code was downloaded, opened, or
+> read while producing this file. `KINGcode.tar.gz` was deliberately *not* fetched. The
+> `king/` subtree in `statgen/topmed_variant_calling` was identified but **not** opened
+> beyond its repository-level metadata (license badge + directory presence). Everything
+> below about KING's internals comes from (a) the public website, (b) the published paper,
+> (c) `strings`/`otool`/`nm` on the compiled binary — i.e. facts about observable behavior
+> and link-time dependencies, not source text.
 
 ---
 
-## 1. Is KING's source publicly distributed?
+## 1. TL;DR verdict
 
-Yes — as a plain tarball, with no version control, no issue tracker, and no license file.
-
-| Fact | Value |
-|---|---|
-| Current release | **KING 2.3.2**, released **September 8, 2023** |
-| Source archive (current) | `https://www.kingrelatedness.com/KINGcode.tar.gz` |
-| Source archive (versioned, from history page) | `KING2.3.2code.tar.gz`, `KING2.3.1code.tar.gz`, … |
-| Precompiled binaries | `Linux-king.tar.gz` (GNU/Linux x86-64), `Windows-king.zip`. **No macOS binary is published** — mac users are told to `brew install gcc` and build from source. |
-| Documented build line | `c++ -lm -lz -O2 -fopenmp -o king *.cpp` |
-| Author / copyright holder | **Wei-Min Chen** (Dept. of Genome Sciences / Public Health Sciences, University of Virginia) |
-| Binary copyright string | `KING 2.3.2 - (c) 2010-2023 Wei-Min Chen` |
-| Page last updated | "Last updated: September 8, 2023 by Wei-Min Chen" |
-| Download history | 30 releases listed, 1.0.0 (Oct 5, 2010) → 2.3.2 (Sept 8, 2023) |
-
-There is **no** GitHub repository operated by the author for the KING core. The `chenlab-uva`
-GitHub org (Chen's lab) publishes only satellite projects — `AncestryInference_KING` (R),
-`InteractivePlots` / `InteractiveRelatednessPlots` (R), `king_testing` (Python),
-`VirginiaKingWebserverDevelopment` (Perl) — none of which is the KING C++ core, and none of which
-shows a license on the org overview page.
+| Question | Answer |
+| --- | --- |
+| Is KING's C++ source publicly distributed? | **Yes** — `https://www.kingrelatedness.com/KINGcode.tar.gz` (and versioned `.../executables/KING2.3.2code.tar.gz`), plus a partial mirror inside `statgen/topmed_variant_calling`. |
+| Under a recognized OSI license? | **No clear one.** The website states a bespoke, non-OSI research-use restriction. Third parties (Bioconda) label it GPL-3.0-or-later. The two are mutually contradictory. |
+| Are derivative works / redistribution allowed? | **Ambiguous at best, prohibited at worst.** Website text forbids redistribution; a GPL-3 reading would *allow* derivatives but force GPL-3 copyleft on them. |
+| Can we relicense any of it MIT? | **No, under either reading.** |
+| Should we read the source for our reimplementation? | **NO. Do not fetch it, do not open it, do not have any agent open it.** |
+| Is a clean-room MIT reimplementation legitimate? | **Yes** — the *method* is published (Manichaikul et al. 2010) and mathematical methods are not copyrightable; the *output format* is factual interface data. Only the C++ expression is protected. |
 
 ---
 
-## 2. The license terms, verbatim
+## 2. Is the source publicly distributed, and under what license?
 
-### 2.1 The only published terms — kingrelatedness.com/Download.shtml
+### 2.1 Distribution — yes, three channels
 
-The entire license, quoted byte-for-byte from the raw HTML (line 125 of the fetched page):
+1. **Primary, from the author's website** (`https://www.kingrelatedness.com/Download.shtml`).
+   Verbatim from the page (HTML tags stripped, line 140-145 of the served document):
 
-> `Feel free to use KING for your research, but please do not redistribute AND make profits.`
+   > Source Code
+   > Here is the source code in C++: KINGcode.tar.gz.
+   > If your platform is not included here, you are welcome to download the source code and compile it in command line:
+   > `wget https://www.kingrelatedness.com/KINGcode.tar.gz`
+   > `tar -xzvf KINGcode.tar.gz`
+   > `c++ -lm -lz -O2 -fopenmp -o king *.cpp`
 
-That is it. There is no other terms-of-use, copyright, or license statement on the Download page,
-the homepage (`index.shtml`), the manual (`manual.shtml`), or the download-history page
-(`history.shtml`). The Download page's only other legal-adjacent content is a citation request:
+   The versioned URL used by packagers is `https://www.kingrelatedness.com/executables/KING2.3.2code.tar.gz`
+   (this is the `source.url` in the Bioconda recipe). The Download-History page (`history.shtml`)
+   carries per-version tarballs, e.g. `KING2.3.1code.tar.gz`.
 
-> Manichaikul A, Mychaleckyj JC, Rich SS, Daly K, Sale M, Chen WM (2010) Robust relationship
-> inference in genome-wide association studies. *Bioinformatics* 26(22):2867-2873
+   Note the build line: `*.cpp` in a single flat directory — i.e. the tarball is a flat blob of
+   KING's own translation units **plus** bundled third-party library translation units, all
+   statically compiled into one binary. There is no separate `libsrc/` build step and no
+   dynamic linkage to a system copy of the bundled library.
 
-**Correction to an existing project document.** `THIRD-PARTY-LICENSES` line 197-201 in this repo
-states that the download page "carries no licence, copyright or terms statement at all." That is no
-longer accurate (or was missed): the sentence above **is** on the page today, and it is a terms
-statement — a permissive-sounding but restrictive one. The finding's *conclusion* is unaffected
-(arguably strengthened: the one published sentence says "do not redistribute"), but the wording of
-that entry should be updated to quote it.
+2. **Precompiled binaries** — `Linux-king.tar.gz` (GNU/Linux x86-64), `Windows-king.zip`.
+   There is **no** official macOS binary on the download page; the page instead says:
 
-### 2.2 How to read that sentence
+   > For Mac users, if the executable is not working (with dyld errors), you may run "brew install gcc" first in order to run (or build) KING on your Mac.
 
-- **"Feel free to use KING for your research"** — a use grant, scoped to *research*. It does not
-  mention commercial use, clinical use, embedding in a product, or use by a company.
-- **"but please do not redistribute AND make profits"** — grammatically ambiguous. Two readings:
-  (a) conjunctive: *don't do both* (redistribute-for-profit is banned; non-profit redistribution is
-  tolerated); (b) each is independently discouraged. Ambiguity in a permission grant resolves
-  **against** the party relying on it — we would be relying on it, so we must assume the strict
-  reading. Either way it is a *request* ("please"), not a formal grant, and it conveys **no**
-  right to prepare or distribute derivative works.
-- No warranty disclaimer, no patent grant, no sublicense right, no attribution formula, no
-  choice of law. This is not a license in the OSI sense; it is a courtesy note.
+   Consistent with that, our reference arm64 binary links `/opt/homebrew/opt/libomp/lib/libomp.dylib`,
+   i.e. it was **locally compiled from `KINGcode.tar.gz` on a Homebrew Mac**, not downloaded
+   from the vendor. (Relevant to our redistribution question — see §6.4.)
 
-### 2.3 The per-file headers — the real blocker
+3. **Partial third-party mirror on GitHub.** `https://github.com/statgen/topmed_variant_calling`
+   (University of Michigan Center for Statistical Genetics) contains a top-level `king/`
+   directory holding KING C++ sources; its README's install steps include
+   `g++ -O3 -c *.cpp; g++ -O3 -o king *.o -lz; cd ..`. That repository declares
+   **Apache-2.0** at the repo level, which is almost certainly the CSG pipeline wrapper's
+   license and **not** an authoritative relicensing of KING by its copyright holder
+   (Wei-Min Chen is not a party to that repo). Treat this mirror as *tainted, do-not-read*
+   exactly like the vendor tarball. There is no official `kingrelatedness`/Wei-Min-Chen
+   GitHub organization or repository; searches surface only wrappers
+   (`CDNMBioinformatics/KING_Wrappers`, `chenlab-uva/AncestryInference_KING`) and
+   reimplementations (`populationgenomics/cuKING`).
 
-The source files carry per-file copyright headers. Two families exist.
+### 2.2 The license — the author's own words
 
-**(a) MERLIN / libsrc files (Goncalo Abecasis).** Fetched verbatim from the public mirror
-`statgen/topmed_variant_calling`, file `king/PedigreeGlobals.cpp`:
+The **only** license statement the author publishes is a single sentence on the Download page
+(verbatim, line 125 of the served HTML):
+
+> **"Feel free to use KING for your research, but please do not redistribute AND make profits."**
+
+Program banner, from the binary's string table (offset context in `king_strings.txt` line 1277):
+
+> `KING 2.3.2 - (c) 2010-2023 Wei-Min Chen`
+
+That is the entire published grant. Analysis:
+
+- **It is not an OSI-approved license** and not any recognized public license family.
+- **It is not a license text at all**, strictly speaking — it is a politely phrased request
+  ("please do not…"), with no definitions, no grant clause, no warranty disclaimer, no
+  termination clause, no patent grant.
+- **Grant scope:** "use KING for your research." That is a *use* permission for research.
+  It does not grant the copyright-relevant rights we would need: reproduction of source,
+  preparation of derivative works, or distribution.
+- **Restriction scope:** the conjunction is genuinely ambiguous. "do not redistribute AND
+  make profits" can be read (a) conjunctively — only *commercial* redistribution is
+  forbidden — or (b) as forbidding both redistribution and profiting. Courts construe
+  ambiguous licenses against the drafter, but a prudent engineering org assumes the
+  restrictive reading, especially for a bundled desktop product.
+- **No explicit derivative-works permission exists under any reading.** Silence is not a grant.
+- Neither `kingrelatedness.com/` (home), `manual.shtml`, nor `Download.shtml` contains a
+  LICENSE/COPYING link, a copyright footer beyond the banner, or third-party attribution.
+
+### 2.3 The contradicting third-party claim: GPL-3.0-or-later
+
+Bioconda's recipe for `king` (`recipes/king/meta.yaml`, source `KING2.3.2code.tar.gz`) declares:
+
+- `license: GPL-3.0-or-later`
+- `license_family: GPL3`
+
+That is a strong signal — Bioconda maintainers set that field by reading headers inside the
+tarball, and they would not invent GPL-3. Corroborating circumstantial evidence from the
+binary (see §3.1) is that KING statically bundles **Goncalo Abecasis's `libsrc` / libStatGen**
+code, which *is* GPL-3-or-later. If GPL-3 headers ride along on those bundled files and KING
+compiles them into the same executable (`c++ ... *.cpp`), then the distributed KING binary is,
+on its face, a work whose distribution is governed by GPL-3.
+
+**This creates a direct legal conflict, not a resolution:**
+
+- If KING's own files carry GPL-3 headers → derivatives are permitted **but must be GPL-3**.
+  We could not ship an MIT reimplementation derived from it. The website's
+  "do not redistribute" sentence would additionally be a **GPL-3 §10 violation**
+  (imposing a further restriction), making the license status internally inconsistent
+  and litigable.
+- If only the bundled Abecasis files are GPL-3 and KING's own files are all-rights-reserved →
+  KING as distributed is arguably an infringing combination, and *KING's own* code remains
+  proprietary. Still no MIT path.
+
+**Either way the answer is the same for us: no readable-and-relicensable path exists.**
+The ambiguity is itself a reason to stay out — a "we read it but only for X" defense is
+much weaker when the license status is contested.
+
+### 2.4 What we may and may not rely on
+
+| Source | Read it? | Why |
+| --- | --- | --- |
+| Manichaikul et al. 2010, *Bioinformatics* 26(22):2867-2873 (PMC3025716) | ✅ **Yes** | Published method. Mathematical methods and algorithms are uncopyrightable (17 U.S.C. §102(b)); the paper's *expression* may not be copied verbatim, but the estimator equations may be implemented freely. |
+| Chen et al. 2021 and Chen et al. 2024 (cited in the binary's own help text for `--ibdseg` / relatedness) | ✅ **Yes** | Same reasoning. |
+| kingrelatedness.com manual/tutorial pages | ✅ **Yes** | Public documentation of interface and output semantics. Do not copy prose verbatim into our docs. |
+| `strings`/`otool`/`nm`/behavioral runs of the shipped binary | ✅ **Yes** | Format strings, column labels, and error text are *facts about the interface*. Short functional labels ("HetHet", "PropIBD", "InfType", `%.4f` widths) are below the threshold of copyrightability (words/short phrases, `37 C.F.R. §202.1(a)`); the interface is the uncopyrightable "method of operation" under the *Lotus v. Borland* line, and *Google v. Oracle* (2021) makes reimplementing a declaring interface for interoperability strongly favored fair use. |
+| `KINGcode.tar.gz` / `KING2.3.*code.tar.gz` | ❌ **NO** | See §5. |
+| `statgen/topmed_variant_calling/king/**` | ❌ **NO** | Same code, mirrored. The repo's Apache-2.0 badge does not launder it. |
+| Any AI/LLM output that may have been trained on and could regurgitate KING source | ⚠️ **Guard** | See §5.3. |
+
+---
+
+## 3. Third-party libraries KING uses
+
+### 3.1 Statically bundled source (compiled into the binary from the tarball)
+
+**Goncalo Abecasis's `libsrc` / libStatGen (GPL-3.0-or-later).** The compiled binary's string
+table contains unmistakable libStatGen fingerprints (line numbers refer to
+`scratchpad/king_strings.txt`, produced by `strings -n 5 king`):
 
 ```
-//////////////////////////////////////////////////////////////////////
-// libsrc/PedigreeGlobals.cpp
-// (c) 2000-2007 Goncalo Abecasis
-//
-// This file is distributed as part of the MERLIN source code package
-// and may not be redistributed in any form, without prior written
-// permission from the author. Permission is granted for you to
-// modify this file for your own personal use, but modified versions
-// must retain this copyright notice and must not be distributed.
-//
-// Permission is granted for you to use this file to compile MERLIN.
-//
-// All computer programs have bugs. Use this file at your own risk.
-//
-// Tuesday December 18, 2007
-//
+   45  MathMatrix.h
+   47  MathVector.h
+ 1414  MathFloatVector.h
+ 1501  OptimizerConstraints.cpp
+ 1114  IntArray::InnerProduct - vectors have different dimensions
+ 1115  IntArrays              - Left[%d] * Right[%d]
+ 3497  StringArray: Null String Access
+ 3609  11StringArray                       (Itanium-ABI mangled type name)
+  519  FATAL ERROR -
+ 1405  Cholesky.Decompose: Matrix %s is not square
+ 1427  LU.Decompose: Matrix %s is not square
+ 1428  LU.Decompose: Matrix %s is singular
+ 1429  LU.Decompose: Matrix %s has zero pivot
+ 1433  Matrix.Add - Attempted to add incompatible matrices
+ 1435  Matrix.AddMultiple - Attempted to add incompatible matrices
+ 1437  Matrix.Multiply - Attempted to multiply incompatible matrices
+ 1474  No convergence in 30 SVD.Decomp iterations
+ 1410  FloatVector::AddMultiple - vectors are incompatible
+ 1477  Vector::AddMultiple - vectors are incompatible
 ```
 
-This repo's own prior audit (`THIRD-PARTY-LICENSES` lines 196-221) found **63 of the 172 files** in
-`KINGcode.tar.gz` carry this header.
+`MathMatrix`, `MathVector`, `StringArray`, `IntArray`, `Pedigree*`, `Cholesky`/`LU`/`SVD`
+decompositions and the `FATAL ERROR -` idiom are the University of Michigan CSG library used
+by MERLIN / PEDSTATS / libStatGen. libStatGen's `StringArray.h` carries the standard
+GPL-3-or-later header ("either version 3 of the License, or (at your option) any later
+version"). This is almost certainly *why* Bioconda tags the package GPL-3.0-or-later.
 
-**(b) KING's own files.** The same header pattern with KING substituted, reported verbatim by web
-search over the same mirror:
+Corroborating: the binary also carries MERLIN-format pedigree I/O text
+(`Start writing reconstructed pedigrees in MERLIN format...`, `--merlin`,
+`Error reading map file header...MARKER_ID, MARKER_NAME and BASE_PAIR_POSITION`) —
+KING's pedigree/datafile layer *is* the Abecasis pedigree library.
 
-> "This file is distributed as part of the KING source code package and may not be redistributed in
-> any form, without prior written permission from the author. Permission is granted for you to
-> modify this file for your own personal use, but modified versions must retain this copyright
-> notice and must not be distributed. Permission is granted for you to use this file to compile
-> KING."
+**Implication for us:** the linear-algebra and pedigree-container layer of KING is GPL-3
+third-party code. We are writing pure Rust with our own containers, so we neither need nor
+want any of it. It does mean the "just read the source, it's basically open" temptation is
+even worse than it looks: much of the source is *someone else's* GPL-3 code.
 
-(Reported by search index over `github.com/statgen/topmed_variant_calling/blob/master/king/*`;
-not independently re-fetched, deliberately — see §5. Its structure is identical to the MERLIN
-header confirmed above, which is consistent with it being the same boilerplate adapted.)
+### 3.2 Dynamically linked (verified on the reference macOS arm64 binary)
 
-### 2.4 Consequences — what is and is not permitted
+```
+$ otool -L king
+king:
+	/usr/lib/libz.1.dylib          (compatibility version 1.0.0, current version 1.2.12)
+	/opt/homebrew/opt/libomp/lib/libomp.dylib (compatibility 5.0.0, current 5.0.0)
+	/usr/lib/libSystem.B.dylib     (compatibility version 1.0.0, current version 1356.0.0)
+	/usr/lib/libc++.1.dylib        (compatibility version 1.0.0, current version 2100.43.0)
+```
 
-| Action | Permitted? | Basis |
-|---|---|---|
-| Run KING locally for research | Yes | "Feel free to use KING for your research" |
-| Run KING locally to generate reference output for our tests | Yes (research/verification use, local, not distributed) | same |
-| Read the source | Legally yes (it's published) — **but see §5, we choose not to** | no confidentiality obligation attaches |
-| Modify source for personal use | Yes, explicitly | per-file header |
-| **Distribute modified versions** | **NO — explicitly forbidden** | per-file header: "must not be distributed" |
-| **Redistribute the source** | **NO — explicitly forbidden** | per-file header: "may not be redistributed in any form, without prior written permission" |
-| **Ship a compiled KING binary inside our app** | **NO** | building and shipping a binary from non-redistributable source is redistribution in object form |
-| Relicense any part of it as MIT | **NO** | we are not the copyright holder; no sublicense right granted |
+| Library | Role | License | Notes |
+| --- | --- | --- | --- |
+| **zlib** (`-lz`, `libz.1.dylib`) | gzip I/O for IBD segment / GRM outputs | zlib license (permissive) | Compile-time optional. Binary contains `--ibdall cannot run without ZLIB` and `--ibdGRM cannot run without ZLIB`, and emits `.rohseg.gz`. Rust equivalent: `flate2` (MIT/Apache-2.0). |
+| **OpenMP** (`-fopenmp`, `libomp.dylib`) | parallel kinship loops | LLVM `libomp`: Apache-2.0 WITH LLVM-exception | Confirmed by undefined symbols `_omp_get_max_threads`, `_omp_get_thread_num`; strings `--cpus %d`, `%d CPU cores are used to compute the pairwise kinship coefficients...`, `OMP loop starts.` Rust equivalent: `rayon` (MIT/Apache-2.0). |
+| **libc++ / libSystem** | C++ runtime + libc | Apache-2.0 WITH LLVM-exception / APSL | Not applicable to a Rust port. |
+| **LAPACK** | *optional, NOT linked here* | BSD-3-Clause | String at line 975: `  Please re-compile KING with LAPACK library.` — LAPACK is a compile-time-optional accelerator (eigen-decomposition for `--pca`/`--mds`, variance components). Our reference binary was built **without** it. `nm -u` shows no `dsyev`/`dgemm`/BLAS symbols. Relevant only if we ever port `--pca`; for relatedness we do not need it. |
 
-This is why `runtimes/` in this repo contains no `king/` directory: KING was removed 2026-08-12
-(`docs/RUNTIMES.md` §"Intentionally not bundled"; `THIRD-PARTY-LICENSES` line 196). That decision
-stands and this recon confirms it.
+`nm -u` otherwise shows only C stdlib (`_malloc`, `_memcpy`, `_fopen`, `_fread`, `_exp`,
+`_log`, `_pow`, `_longjmp`, …). **No Boost, no Eigen, no Intel MKL, no htslib, no GSL.**
 
-**Note the double encumbrance:** even if Wei-Min Chen granted us written permission tomorrow, ~37%
-of the archive is Abecasis's MERLIN code, and Chen cannot grant rights in it. Permission would have
-to come from *both* authors. That is one more reason the reimplementation route is the right one.
+### 3.3 Runtime (out-of-process) dependencies — R, not linked
 
-### 2.5 What is *not* encumbered
+KING shells out to R for plotting (`--rplot` / `--pngplot`; strings show `R CMD BATCH %s` and
+`--rpath`). The R scripts are **emitted from string constants embedded in the binary**, headed
+with comments like:
 
-- **The algorithm itself.** The KING-robust and KING-homo estimators are published in
-  Manichaikul et al. 2010, *Bioinformatics* 26(22):2867-2873. Mathematical methods are not
-  copyrightable; an independent implementation of a published estimator is lawful.
-- **Output formats.** Column names, field widths, header lines, and number formatting are facts
-  about an interface, not expressive code. Extracting them from the binary's string table
-  (`strings king`) and from the published manual is legitimate and is the correct source for
-  byte-level parity.
-- **Command-line flag names.** Documented on the manual pages.
-- **Patents.** No patent covering the KING estimator surfaced in this search. Absence of evidence
-  is not a clearance opinion, but the paper predates any obvious filing and none is asserted on
-  the site or in the binary.
+```
+## %s for KING --related, by Wei-Min Chen and Zhennan Zhu
+## %s for KING Ancestry plot, by Zhennan Zhu and Wei-Min Chen
+## %s for KING --ibdseg, by Wei-Min Chen
+```
+
+R packages referenced by those emitted scripts: **ggplot2** (GPL-2), **kinship2** (GPL-2+),
+**igraph** (GPL-2+), **e1071** (GPL-2+), **doParallel** (GPL-2). Graceful-degradation strings
+exist, e.g. `--roh is done but R plot is not available for missing R library ggplot2.` and
+`Please rerun R code %s (or rerun KING) after ggplot2 is installed.`
+
+**Two consequences.** (1) The embedded R scripts are substantial creative expression by named
+authors — treat them as **source code, do not transcribe**, even though `strings` surfaces
+them. Our scope is the numeric relatedness output, not KING's plots; GeneQuire renders its own
+MDX/SVG figures. (2) An MIT Rust port has zero R dependency, which is a genuine product win
+(no `runtimes/r` requirement for the relatedness path).
 
 ---
 
-## 3. GitHub mirrors of KING source
+## 4. Open-source reimplementations of KING kinship (legitimate cross-checks)
 
-| Location | What it is | License shown |
-|---|---|---|
-| `github.com/statgen/topmed_variant_calling` → `king/` | **A full copy of the KING C++ source (170 files)** vendored into the University of Michigan TOPMed variant-calling pipeline. Contains `KingCore.cpp/.h`, `Kinship.cpp/.h`, `KinshipX.cpp/.h`, `ShortKingCore.cpp`, `relationship.cpp`, `shortrelationship.cpp`, `ibdsegment.cpp`, `integrated.cpp`, `bigdataKING.cpp`, `SubsetKING.cpp`, plus the MERLIN libsrc set. | No repo-level license covering `king/`; the per-file headers described in §2.3 govern. **Vendoring by a third party does not create a license.** |
-| `github.com/CDNMBioinformatics/KING_Wrappers` | Snakemake wrappers that *invoke* the KING binary. No KING source. | Wrapper's own; irrelevant. |
-| `github.com/chenlab-uva/*` | Author's lab satellites (R plots, ancestry projection, webserver, test harness). Not the core. | Mostly unstated. |
+Ranked by how safely we may read them **and** how useful they are as numeric oracles.
 
-**Do not treat any mirror as a license grant.** A third party republishing code that says "may not
-be redistributed in any form" is evidence of a possible license violation upstream, not evidence
-that we may copy it.
+| Tool | License | Readable for an MIT port? | Notes / output differences |
+| --- | --- | --- | --- |
+| **Hail** `hl.king()` (`hail/methods/relatedness/king.py`) | **MIT** (Copyright 2015-2023, Hail Authors) | ✅ **Yes — fully. Best legal position.** MIT-in → MIT-out with attribution. | Returns a **square kinship MatrixTable/BlockMatrix**, not a pair table. Implements **KING-robust between-family only**. Diploid calls only. No `.kin0` text emission, no `InfType` classification, no `PropIBD`/IBD-segment logic. Ideal for validating the *kinship scalar* only. |
+| **cuKING** (`populationgenomics/cuKING`) | **MIT** | ✅ **Yes** | CUDA reimplementation; README states results are "identical to Hail's `hl.king` implementation." Emits **Parquet** (`i`, `j`, `kin`, plus `ibs0`/`ibs1`/`ibs2`), converted to Hail tables by a helper script. Useful as a second MIT-licensed cross-check and for the IBS0/1/2 counts. |
+| **somalier** (`brentp/somalier`) | **MIT** | ✅ **Yes** | Sketch-based relatedness for QC; "similar kinship estimates to KING in much less time." Uses its own selected-sites sketches, so numbers are *close but not bit-identical* to KING on the same BED. Good sanity oracle, not a parity oracle. |
+| **PLINK 2.0** `--make-king` / `--make-king-table` / `--king-cutoff` | **GPL-3.0** | ⚠️ **Read docs freely; DO NOT read plink2 C source** and copy into MIT. | Best *numeric* oracle (documented as identical to KING when no chrX). Documented divergences below. |
+| **SNPRelate** `snpgdsIBDKING()` | **GPL-3** | ⚠️ Docs yes, source no (copyleft). | Offers both `"KING-robust"` (returns `IBS0` proportion + `kinship`) and `"KING-homo"` (returns `k0`, `k1`). R-object output, no KING file formats. |
+| **akt** (`Illumina/akt`) `akt kin` | **PolyForm Strict 1.0.0** | ❌ **NO — do not read.** | PolyForm Strict is *noncommercial + no-derivatives-flavored*; strictly worse than GPL for us. Repo archived 2026-04-20. htslib-based, VCF/BCF input, kinship in column 6 of a bespoke table. Skip entirely. |
+| **NgsRelate** | **GNU (GPL)** | ⚠️ Docs only. | Genotype-likelihood MLE relatedness for low-depth NGS — a *different estimator*, not KING-robust. Not a parity oracle. |
+| **KIMGENS / exKING-robust** | academic | Paper readable | Extends KING-robust to haploid-diploid systems. Method reference only; out of scope. |
 
----
+### 4.1 PLINK 2.0 — the documented divergences from KING (important for our parity work)
 
-## 4. Third-party libraries KING uses
+Because plink2 is our most convenient numeric oracle, its *known* deltas from KING matter:
 
-### 4.1 From the published build line
+- **Chromosome scope.** plink2: *"Only autosomes are included in this computation."*
+  KING uses autosomes **and** X/XY SNPs in some paths → `NSNP` (and, marginally, kinship) can
+  differ. Where no X data is present, plink2 and KING agree exactly.
+- **Pedigree handling.** plink2: *"Pedigree information is currently ignored; the
+  between-family estimator is used for all pairs."* KING has both within-family
+  (`--kinship` on `.kin`) and between-family (`.kin0`) estimators. Our port must implement
+  both if we want KING parity; plink2 can only validate the between-family arm.
+- **Multiallelics.** plink2: *"For multiallelic variants, REF allele counts are used."*
+- **Scaling agrees.** Both scale so a duplicate pair is **0.5**, not 1 (1st-degree ≈ 0.25,
+  2nd-degree ≈ 0.125, 3rd ≈ 0.0625).
+- **`.kin0` column set differs from KING's.** plink2's `--make-king-table` columns (per its
+  format spec) are:
+  `FID1, ID1, SID1, FID2, ID2, SID2, NSNP, HETHET, IBS0, HET1_HOM2, HET2_HOM1, IBS, KINSHIP`
+  — with `SID*` source-ID columns KING does not have, counts *or* proportions depending on
+  modifiers, and an added Hamming-distance `IBS` column. plink2's own docs say it uses
+  *"KING's original .kin0 text table format with minor changes,"* with *"row order … more
+  friendly to incremental addition of samples."* By contrast, KING 2.3.2's own `.kin0`
+  column tokens visible in the binary's string table are
+  `FID1 / ID1 / FID2 / ID2 / N_SNP / HetHet / IBS0 / HomIBS0 / Kinship` and, for `--ibdseg`
+  paths, `PropIBD` / `InfType`; plus an `N_IBS0` token and an `IID1` variant in other
+  reports. **Therefore: use plink2 for numeric cross-checking only — never for
+  column/format parity.** Exact KING formats come from the format-recon doc and from
+  running the reference binary.
+- **`--king-table-filter`** exists in plink2 to restrict output to high kinship; KING's
+  analogous gate is `--degree`.
 
-`c++ -lm -lz -O2 -fopenmp -o king *.cpp` →
+### 4.2 Suggested validation ladder
 
-- **libm** — C standard math library (system).
-- **zlib** (`-lz`) — zlib license (permissive, BSD-like). Used for compressed I/O. Binary strings
-  confirm it is *conditionally required*: `--ibdGRM cannot run without ZLIB`,
-  `--ibdall cannot run without ZLIB`.
-- **OpenMP** (`-fopenmp`) — the runtime, not the spec. On this arm64 build that is LLVM
-  `libomp` (Apache-2.0 with LLVM Exceptions); with GCC it would be `libgomp` (GPLv3 + Runtime
-  Library Exception).
+1. **Unit-level:** hand-computed KING-robust on tiny synthetic genotype matrices, derived
+   straight from the paper's estimator equations.
+2. **Estimator parity:** our Rust output vs **Hail `hl.king`** (MIT, safe to read) on the
+   same autosomal BED — should match to floating-point tolerance.
+3. **Numeric parity at scale:** our output vs **plink2 `--make-king-table`** restricted to
+   autosomes — should match KINSHIP/IBS0/NSNP to tolerance.
+4. **Byte parity:** our output vs the **shipped KING binary** on the real
+   `bundled_data/` fixtures — this is the only thing that validates exact column order,
+   header text, field widths, and `%.4f`/`%.3f` formatting.
 
-### 4.2 Verified against the actual binary
-
-`otool -L` on the local arm64 build:
-
-```
-/usr/lib/libz.1.dylib                        (current version 1.2.12)
-/opt/homebrew/opt/libomp/lib/libomp.dylib    (compatibility version 5.0.0)
-/usr/lib/libSystem.B.dylib
-/usr/lib/libc++.1.dylib
-```
-
-Undefined-symbol audit (`nm -u`, 97 symbols total) — the complete external surface is:
-
-- **libc/libm only**: `fopen fclose fread fwrite fprintf fscanf fgets fgetc fputs fputc fseek
-  rewind feof fflush remove tmpfile printf sprintf snprintf vprintf vfprintf vsnprintf sscanf
-  puts putchar getchar malloc free memcpy memmove memset bzero memset_pattern16 strcpy stpcpy
-  strcat strchr strcmp strlen strtod atof atoi setjmp longjmp exit atexit system time clock
-  localtime asctime exp exp2 log log10 pow sin atan __maskrune __tolower __toupper
-  __DefaultRuneLocale __stdinp __stdoutp __assert_rtn __stack_chk_* __chkstk_darwin`
-- **C++ runtime**: `__Unwind_Resume`, `___gxx_personality_v0`, `operator new/delete` (mangled).
-- **OpenMP**: `__kmpc_barrier __kmpc_fork_call __kmpc_global_thread_num __kmpc_push_num_threads
-  __kmpc_for_static_init_4 __kmpc_for_static_init_4u __kmpc_for_static_init_8
-  __kmpc_for_static_fini __kmpc_reduce_nowait __kmpc_end_reduce_nowait omp_get_max_threads
-  omp_get_thread_num`
-
-**No BLAS, no LAPACK, no Eigen, no Boost, no GSL, no htslib, no Intel MKL** are linked in this
-build. LAPACK is an *optional compile-time* dependency: the binary contains the string
-`Please re-compile KING with LAPACK library.` — some analyses (large eigen-decompositions for
-`--pca`/`--mds`, likely the `Largest %d eigenvalues:` path) degrade or refuse without it. Linear
-algebra otherwise comes from KING's own vendored numeric files (`MathSVD`, `MathCholesky`,
-`MathLu`, `MathMatrix`, `MathNormal`, `MathGenMin`, `MathGold`, `MathDeriv`, `MathSobol`,
-`MathMiser`, `MathVegas`).
-
-`_system` is in the undefined set, consistent with KING shelling out to **R** for `--rplot` and to
-a PNG path for `--pngplot`; the binary emits `## %s for KING --…, by Wei-Min Chen and Zhennan Zhu`
-banners at the top of the R scripts it writes. R is a runtime tool invocation, not a linked library.
-
-### 4.3 Vendored source-level third-party code (from mirror file listing — names only, no code read)
-
-The `king/` directory listing (170 files) shows a large **Abecasis MERLIN `libsrc` subset**
-vendored wholesale. Identified by filename:
-
-- Containers/strings/CLI: `StringBasics`, `StringArray`, `StringHash`, `StringMap`, `IntArray`,
-  `LongArray`, `LongHash`, `LongInt`, `LongLongCounter`, `BasicHash`, `Hash`, `Sort`, `MerlinSort`,
-  `QuickIndex`, `Parameters`, `Error`, `Constant.h`, `MemoryAllocators`, `MemoryInfo`,
-  `InputFile`, `Input`, `FortranFormat`, `WindowsHelper`, `MiniDeflate`.
-- Math: `MathVector`, `MathFloatVector`, `MathMatrix`, `MathSVD`, `MathCholesky`, `MathLu`,
-  `MathStats`, `MathConstant.h`, `MathNormal`, `MathDeriv`, `MathGenMin`, `MathGold`,
-  `MathSobol`, `MathMiser`, `MathVegas`, `MathAssoc`, `Random`, `OLS`, `OptimizerConstraints`.
-- Pedigree/genetics: `Pedigree`, `PedigreeGlobals`, `PedigreeFamily`, `PedigreePerson`,
-  `PedigreeDescription`, `PedigreeLoader`, `PedigreeAlleles.h`, `PedigreeAlleleFreq`,
-  `PedigreeTrim`, `PedigreeTwin`, `Genetics`, `Matings`, `MapFunction`, `GenotypeLists`,
-  `GenotypeCompressor`, `PeelerNodes`, `Intervals`, `Davies` (Davies 1980 AS 155 quadratic-form
-  tail probability, used by SKAT-type tests), `BrentC`.
-
-KING's own files are the rest: `Main.cpp`, `KingCore`, `ShortKingCore`, `Kinship`, `KinshipX`,
-`relationship`, `shortrelationship`, `integrated`, `ibdsegment`, `ibdmapping`, `rohmapping`,
-`bigdataKING`, `bigdataOffline`, `SubsetKING`, `ReadPLINK`, `structure`, `ancestry`, `admixture`,
-`qc`, `autoQC`, `buildped`, `phase`, `poly`, `rplot`, `assoc`, `LMM`, `LMMSCORE`, `GRAMMAR`,
-`FASTASSOC`, `SKAT`, `famSKAT`, `TDT.h`, `permuteTDT`, `rareTDT`, `ROADTRIPS`, `RSCORE`, `VC*`,
-`RiskPrediction`, `TraitTransformations`, `diseaseGEE`, `IBD`.
-
-The binary's own string table corroborates the MERLIN CLI heritage without any source access —
-these are `Parameters.cpp`/`Error.cpp` hallmarks:
-
-```
-FATAL ERROR - 
-Problems encountered parsing command line:
-The following parameters are in effect:
-Command line parameter %s (#%d) ignored
-Command line parameter -%c%s: the option '%c' has no meaning
-Command line parameter --%s is ambiguous
-Command line parameter --%s is undefined
-```
-
-**Implication for us:** our Rust reimplementation needs none of this. We need a PLINK `.bed/.bim/.fam`
-reader, popcount-based genotype arithmetic, and the output formatter. No SVD, no LAPACK, no pedigree
-peeling for `--kinship`/`--related` kinship estimation.
+Step 4 uses the binary as a black box. That is the clean-room-legal way to get byte parity:
+compare bytes, never read source.
 
 ---
 
-## 5. RECOMMENDATION — the safe clean-room process
+## 5. RECOMMENDATION — the safe process
 
-**Do not read KING's source code. Do not download `KINGcode.tar.gz`. Do not open any file under
-`statgen/topmed_variant_calling/king/`.** This matches your prior. Reasons, in order of weight:
+**Confirmed: your prior is correct. Do NOT read KING's source. Implement from paper +
+website + observed binary behavior only.**
 
-1. **No derivative-work grant exists.** Every route from "we read it" to "we ship it" requires a
-   license we do not have. Even accidental structural similarity becomes hard to defend.
-2. **We intend to relicense as MIT.** Publishing MIT code that a plaintiff can trace to
-   all-rights-reserved source is the specific failure mode a clean room exists to prevent.
-3. **Two copyright holders.** Chen and Abecasis. Contamination from either is fatal.
-4. **The cost of avoiding it is near zero.** The estimators are two closed-form expressions in a
-   published paper; the output format is fully recoverable from the binary's string table and the
-   manual; and Hail's MIT implementation is available as a legitimate reference.
+### 5.1 Why, stated as a decision rather than a hedge
 
-### Rules of engagement for the implementing agents
+- Under the **website reading**, we have no reproduction/derivative-works grant at all;
+  reading is at best unlicensed access and any resemblance in our code is exposure.
+- Under the **GPL-3 reading**, reading is permitted but *any* derivation forces GPL-3 on
+  GeneQuire's relatedness module — fatal for an MIT crate shipped inside a commercial-capable
+  desktop app.
+- The license is **internally contradictory**, so we cannot even get a clean opinion on which
+  reading applies without counsel. An engineering team does not need to resolve that: the
+  clean-room route costs us little and removes the question entirely.
+- Third-party GPL-3 code (libStatGen) is statically bundled in the same tarball, so "reading
+  KING's source" also means reading *Michigan's* GPL-3 source.
+- The algorithm is **published, short, and closed-form**. KING-robust is a handful of counting
+  statistics and a ratio. There is nothing in the source we actually need. The cost of the
+  clean-room constraint here is near zero, which makes accepting any legal risk irrational.
 
-**ALLOWED (use freely, and log what you used):**
+### 5.2 Permitted inputs (whitelist — nothing else)
 
-- Manichaikul et al. 2010, *Bioinformatics* 26(22):2867-2873, and its supplement.
-- Every page under `https://www.kingrelatedness.com/` (manual, tutorial, index, history).
-- `strings`, `nm`, `otool` on the local binary; running the binary on synthetic genotypes and
-  diffing its output files byte-for-byte. **This is the primary source for format parity.**
-- Hail (MIT), plink2 (GPLv3), SNPRelate (GPL-3), GENESIS (GPL) — read for *understanding*; copy
-  code only from Hail, and only with attribution (see §6 for what each license permits).
-- Third-party descriptions of KING's output format (e.g. GENESIS `kingToMatrix` docs, biostars
-  threads, plink2 docs comparing to KING).
+1. Manichaikul A, Mychaleckyj JC, Rich SS, Daly K, Sale M, Chen WM (2010) *Robust relationship
+   inference in genome-wide association studies.* Bioinformatics 26(22):2867-2873. PMC3025716.
+2. Chen et al. 2021 and Chen et al. 2024 (the papers KING's own help text cites for
+   `--ibdseg`/relatedness).
+3. `kingrelatedness.com` manual, tutorial, and download pages (paraphrase; do not copy prose).
+4. `strings`, `otool -L`, `nm`, `otool -tv` on the shipped binary; and **running** the binary
+   on synthetic and fixture data and diffing its output files.
+5. MIT-licensed reimplementations: **Hail `hl.king`**, **cuKING**, **somalier**.
+6. Public docs (not source) of GPL tools: plink2, SNPRelate.
 
-**FORBIDDEN:**
+### 5.3 Prohibited inputs (blacklist — enforce on every agent, human and LLM)
 
-- `KINGcode.tar.gz`, any file inside it, any mirror of it, any GitHub blob under a `king/` source
-  tree, any code-search snippet of KING source, any Stack Overflow/biostars post that pastes KING
-  source lines.
-- Decompilation/disassembly of the binary into pseudo-C for the purpose of transcribing logic.
-  (Reading the *string table* is fine and is not decompilation; reconstructing control flow to
-  copy it is not.)
-- Asking an LLM to "recall" or reproduce KING source.
+1. `KINGcode.tar.gz`, `KING2.*code.tar.gz`, any `king*.cpp` / `king*.h`.
+2. `statgen/topmed_variant_calling` `king/` subtree, and any other mirror of the same files.
+3. plink2's C/C++ source, SNPRelate's C/R source, akt's source (any part).
+4. Verbatim transcription of the R scripts embedded in KING's binary (they are authored code,
+   even though `strings` reveals them). We do not need them.
+5. **Prompting any LLM to "recall," "reproduce," or "show" KING's source.** Ask for
+   implementations *from the paper's equations*. If a model volunteers something that looks
+   like transcribed C++, discard it and restate the task from the paper.
 
-**Contamination note already in play:** the licensing audit recorded in this repo's
-`THIRD-PARTY-LICENSES` (2026-08-12) states file counts and per-file headers from inside
-`KINGcode.tar.gz` — i.e. **someone on this project has already opened the archive**, for licensing
-review. That is defensible (license review is a recognized, non-implementing purpose) but it means
-the clean-room record should be explicit: *the license reviewer and the implementer are separate
-roles, and the implementer works only from the allowed-inputs list above.* Nothing from that audit
-beyond license headers and file counts should reach the implementation.
+### 5.4 Process controls to put in place
 
-### Record-keeping to produce alongside the code
+- **Written provenance header** in `crates/gq-core/src/relatedness/` (or wherever the module
+  lands): a short comment stating this is a clean-room implementation from Manichaikul et al.
+  2010 + observed binary I/O, that KING's source was never consulted, and listing the
+  permitted inputs. Cheap, and it is the artifact that matters if the question is ever raised.
+- **A `NOTICE`/`THIRD_PARTY.md` entry** recording: KING is not vendored, not linked, and not
+  redistributed by GeneQuire; only its published output format is interoperated with.
+- **Test fixtures, not source, are the oracle.** Commit small synthetic genotype fixtures plus
+  the *expected output text* we generated by running the reference binary. Expected-output
+  text is factual data produced by running a program we are licensed to use for research; it
+  is not KING's source. Keep fixtures tiny and synthetic (the CLAUDE.md data rule already
+  forbids committing real genomes).
+- **Cite KING in our UI/docs** — "relatedness estimates computed with a KING-robust estimator
+  (Manichaikul et al. 2010)" — which is scientifically correct, courteous to the authors, and
+  makes clear we are not passing off their software.
+- **Do not use the phrase "KING-compatible" as a product claim** in a way that implies
+  endorsement; "implements the KING-robust estimator" is accurate and safe.
 
-1. A short `PROVENANCE.md` (or a section in the implementation's module doc) listing exactly which
-   sources were consulted, with dates — paper, manual URLs, `strings` output, Hail file paths.
-2. An explicit statement in that doc: *"KING's source code was not consulted. Output-format parity
-   was derived from the KING 2.3.2 binary's embedded string constants and observed output files."*
-3. MIT headers on our files; a `NOTICE`-style line crediting the *method* to Manichaikul et al.
-   2010 (academic citation, not a license obligation) and any code genuinely derived from Hail
-   under Hail's MIT terms (copyright line: `Copyright (c) 2015-2023, Hail Authors`).
-4. Do **not** name the crate/module in a way that implies endorsement (`king-rs` invites confusion;
-   something like `gq-relatedness` with "KING-robust estimator (Manichaikul et al. 2010)" in the
-   docs is cleaner). KING is not a registered trademark we found, but the courtesy costs nothing.
+### 5.5 Independent, separate issue: stop shipping the KING binary
 
----
+This is out of scope for the reimplementation but it is the *reason* the reimplementation
+exists, so record it:
 
-## 6. Legitimately readable reimplementations (cross-check oracles)
+`runtimes/king/king` is currently committed to this repository. Under the vendor's own
+sentence — *"please do not redistribute AND make profits"* — redistributing that binary in a
+GitHub repo and in a shipped `.dmg` is at minimum against the author's stated wishes and, on
+the restrictive reading, outside the granted permission. Under the GPL-3 reading it would
+additionally trigger source-offer obligations (GPL-3 §6), and note the committed binary is a
+**locally-built** arm64 artifact (Homebrew `libomp` path), i.e. our own build of GPL-3-flavored
+sources, which is the clearest §6 trigger of all. **Once the Rust reimplementation reaches
+parity, delete `runtimes/king/` from the shipped app and from git history-going-forward
+(new commits; a rewrite is optional).** Keep the binary only outside the repo, as a local
+parity oracle, at the read-only path
+`/Users/wgu/Desktop/GeneQuire Project/GeneQuire/software/king/king`.
 
-| Tool | License | Copyable into MIT? | What it implements | How its output differs from KING's |
-|---|---|---|---|---|
-| **Hail** `hl.king()` | **MIT** (`Copyright (c) 2015-2023, Hail Authors`) | **YES**, with attribution | **Between-family (KING-robust) estimator only.** Documented formula: φ̂ᵢⱼ = ½ + (2N^{Aa,Aa} − 4N^{AA,aa} − N^{Aa}ᵢ − N^{Aa}ⱼ) / (4·min(N^{Aa}ᵢ, N^{Aa}ⱼ)) | Returns a **MatrixTable with one entry field `phi`** — no file format, no IBS0, no NSNP, no HetHet, no relationship inference. Zero format parity; pure numeric oracle. Explicitly does *not* implement the within-family estimator. |
-| **PLINK 2.0** `--make-king`, `--make-king-table` | **GPLv3** (`plink-ng/2.0/COPYING`; `pgenlib` also LGPLv3 via `COPYING.LESSER`) | **NO** — GPL is incompatible with relicensing under MIT | KING-robust between-family estimator, heavily optimized | Files: `.king` + `.king.id` (triangular/square text matrix), `.king.bin` (float32/64), `.kin0` (table). `.kin0` columns: `#FID1 ID1 SID1 FID2 ID2 SID2 NSNP HETHET IBS0 HET1_HOM2 HET2_HOM1 IBS KINSHIP` — header line starts with `#`, tab-delimited. **Differences from KING:** (1) **autosomes only** — KING also uses X/XY in some analyses, so `NSNP` and hence estimates differ slightly when X is present; identical when no X is present. (2) **Pedigree is ignored** — the between-family estimator is used for *all* pairs, whereas KING switches to the within-family estimator for pairs in the same FID. (3) HETHET/IBS0/HET1_HOM2/HET2_HOM1 may be emitted as *proportions* or counts depending on modifiers. (4) Multiallelic variants use REF allele counts. |
-| **SNPRelate** `snpgdsIBDKING()` | **GPL-3** | **NO** | Both `"KING-robust"` and `"KING-homo"` | Returns R **matrices** (`$IBS0`, `$kinship`, plus `sample.id`, `snp.id`, `afreq`); `KING-homo` returns `k0`/`k1` instead. No KING-compatible text file. Useful as a second numeric oracle, especially for the *homo* estimator which Hail doesn't implement. |
-| **akt** (`akt kin -M 1`) | **PolyForm Strict License 1.0.0** — **not open source**: no distribution, **no derivative works**, non-commercial | **NO — and treat as read-with-care** | KING-style kinship on VCF/BCF | Writes a whitespace table to stdout, not KING's `.kin0`. Given the license forbids "making changes or new works based on the software," it is the *least* safe of the four to read; I recommend skipping it entirely — Hail covers the same ground under MIT. |
-| **GENESIS** `kingToMatrix()` | GPL (Bioconductor) | NO | Nothing — it *parses* KING's own `.kin`/`.kin0` output | Valuable for a different reason: it is a **third-party documented description of KING's actual output columns**, i.e. a legitimate secondary source for format parity to cross-check against `strings`. |
-| **sgkit** | Apache-2.0 | Yes (permissive, compatible) | `genetic_relatedness` / `pc_relate` | KING-robust support not confirmed in this search; treat as a maybe. Apache-2.0 is MIT-compatible, so if it does have it, it's a second copyable reference. |
-| PLINK **1.9** | GPLv3 | NO | **Does not implement KING** (`--genome` is the method-of-moments PI_HAT estimator) | Not a cross-check for KING kinship. |
-
-### Recommended verification strategy
-
-1. **Byte-level format parity**: run the local `king` binary on small synthetic PLINK filesets
-   (permitted: research use, local, output not redistributed), capture `.kin`, `.kin0`, `.seg`,
-   `.segments.gz`, `.log`, then diff our output against it byte-for-byte. This binary is the only
-   authority for field widths, `%.4f` vs `%.3f`, header spelling, and row ordering.
-2. **Independent numeric oracle**: `plink2 --make-king-table` on the same fileset. Because plink2
-   is autosomes-only and always between-family, restrict the comparison fileset to autosomes and
-   to samples with distinct FIDs to make the two agree exactly; any residual disagreement in the
-   third decimal is a bug in our estimator, not a format issue.
-3. **Formula sanity check**: Hail's documented between-family formula (§6 table) is the cleanest
-   written statement of the estimator outside the paper; it is MIT and quotable.
-4. Keep the synthetic fixtures tiny and committed; never commit KING's outputs from real bundles
-   (family-level PHI, per this repo's CLAUDE.md).
+The same audit should be run over the rest of `runtimes/` (`plink` is GPL-3; `bcftools` is
+MIT/GPL-dual; the JRE, python, node, r each carry their own terms) — but that is a separate
+ticket, tracked in `docs/RUNTIMES.md`.
 
 ---
 
-## 7. Sources consulted (all fetched 2026-08-13)
+## 6. Raw evidence appendix
 
-- https://www.kingrelatedness.com/Download.shtml — license sentence, build line, binaries, citation
-- https://www.kingrelatedness.com/index.shtml , /manual.shtml , /history.shtml — no license text
-- https://github.com/statgen/topmed_variant_calling — `king/` directory listing (170 filenames, via
-  GitHub contents API — metadata only) and the `PedigreeGlobals.cpp` MERLIN license header
-- https://github.com/chenlab-uva — author's lab repos (satellites only)
-- https://raw.githubusercontent.com/hail-is/hail/main/LICENSE — MIT
-- https://hail.is/docs/0.2/methods/relatedness.html — `king()` semantics and formula
-- https://raw.githubusercontent.com/chrchang/plink-ng/master/2.0/COPYING — GPLv3
-- https://www.cog-genomics.org/plink/2.0/distance and /formats — `--make-king*`, `.kin0` columns
-- https://raw.githubusercontent.com/zhengxwen/SNPRelate/master/DESCRIPTION — `License: GPL-3`
-- https://raw.githubusercontent.com/Illumina/akt/master/LICENSE — PolyForm Strict 1.0.0
-- Local binary: `otool -L`, `nm -u`, `strings -a`
-- This repo: `THIRD-PARTY-LICENSES` lines 196-221; `docs/RUNTIMES.md` §"Intentionally not bundled"
+### 6.1 Verbatim license sentence, Download.shtml (tags stripped)
+
+```
+Feel free to use KING for your research, but please do not redistribute AND make profits.
+```
+
+Surrounding context (same page, in order): current release 2.3.2 released September 8, 2023;
+pointer to Download History; "register at the KING User Forum"; "you may contact the developer
+Dr. Wei-Min Chen directly"; then the license sentence; then Precompiled Binaries; then
+Source Code; then the example dataset (`ex.tar.gz`, 1.35 MB, 332 HapMap samples — 165 CEU +
+167 YRI — at 18,290 SNPs); then REFERENCE (Manichaikul et al. 2010).
+
+### 6.2 Binary identity strings
+
+```
+KING 2.3.2 - (c) 2010-2023 Wei-Min Chen
+Please check the reference paper Manichaikul et al. 2010 Bioinformatics,
+Chen et al. 2024,
+          or the KING website at kingrelatedness.com
+Please check the reference paper Manichaikul et al. 2010 Bioinformatics,
+Chen et al. 2021,
+          or the KING website at kingrelatedness.com
+```
+
+### 6.3 Commands used for this recon (all read-only, on the local binary)
+
+```bash
+strings -n 5 king > king_strings.txt      # 3154 lines
+otool -L king                              # dynamic deps
+nm -u king                                 # undefined symbols
+file king                                  # Mach-O 64-bit executable arm64
+curl -s -L https://www.kingrelatedness.com/Download.shtml   # for verbatim license text
+```
+
+`KINGcode.tar.gz` was **not** downloaded.
+
+### 6.4 Sources
+
+- KING Download page (license sentence, source tarball, build line) — https://www.kingrelatedness.com/Download.shtml
+- KING home — https://www.kingrelatedness.com/
+- KING manual (citation, no license statement) — https://www.kingrelatedness.com/manual.shtml
+- KING download history (versioned tarballs) — https://www.kingrelatedness.com/history.shtml
+- Manichaikul et al. 2010, Bioinformatics 26(22):2867-2873 — https://pmc.ncbi.nlm.nih.gov/articles/PMC3025716/
+- Bioconda recipe `king` (declares GPL-3.0-or-later; source `KING2.3.2code.tar.gz`) — https://bioconda.github.io/recipes/king/README.html and https://github.com/bioconda/bioconda-recipes/blob/master/recipes/king/meta.yaml
+- statgen/topmed_variant_calling (contains a `king/` source subtree; repo badge Apache-2.0) — https://github.com/statgen/topmed_variant_calling
+- libStatGen (GPL-3-or-later; `StringArray.h` header) — https://csg.sph.umich.edu/mktrost/doxygen/current/StringArray_8h_source.html and https://genome.sph.umich.edu/wiki/C++_Library:_libStatGen
+- Hail `hl.king` source + LICENSE (MIT) — https://hail.is/docs/0.2/_modules/hail/methods/relatedness/king.html and https://github.com/hail-is/hail/blob/main/LICENSE
+- Hail relatedness docs — https://hail.is/docs/0.2/methods/relatedness.html
+- cuKING (MIT; "identical to Hail's hl.king") — https://github.com/populationgenomics/cuKING
+- PLINK 2.0 distance/KING docs — https://www.cog-genomics.org/plink/2.0/distance
+- PLINK 2.0 `.kin0` format spec — https://www.cog-genomics.org/plink/2.0/formats#kin0
+- plink2-users, "Comparison between plink --make-king-table and king --kinship" (chrX/NSNP divergence) — https://groups.google.com/g/plink2-users/c/JiCBudDTwjY
+- SNPRelate (GPL-3) `snpgdsIBDKING` — https://bioconductor.org/packages/release/bioc/html/SNPRelate.html and https://rdrr.io/bioc/SNPRelate/man/snpgdsIBDKING.html
+- Illumina akt (PolyForm Strict 1.0.0; archived) — https://github.com/Illumina/akt
+- somalier (MIT) — https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7362544/
+- NgsRelate (GPL) — https://academic.oup.com/bioinformatics/article/31/24/4009/198242
