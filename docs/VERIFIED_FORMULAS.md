@@ -169,18 +169,50 @@ real and verified.
 * `.kin0` — outer loop over samples in **`.fam` file order**, inner loop over
   later-ordered samples in a different family, also in `.fam` order. Verified on the
   `tiny` capture.
-* `.kin` — grouped by `FID` in first-appearance order; **within** a family the observed
-  order was ID-alphabetical, which on the `tiny` fixture is *not* the `.fam` order.
-  See [Open questions](#open-questions) — this needs an explicit discriminating test.
+* `.kin` — grouped by `FID`, and **within a family the rows are ordered by a
+  deterministic sort of the sample ID that is *independent of `.fam` order*.**
+
+The `.kin` ordering was established with a discriminating experiment: the same `.bed`
+was analysed with the family's members listed in several different `.fam` orders, and the
+emitted row order never changed.
+
+| IDs in family | `.fam` orders tried | `.kin` order emitted |
+| --- | --- | --- |
+| `alpha` `mike` `zeta` | `zeta,mike,alpha` and `alpha,zeta,mike` | `alpha` `mike` `zeta` |
+| `a2` `a9` `a10` | `a10,a9,a2` | `a2` `a9` `a10` |
+| `2` `9` `10` | `2,10,9` | `2` `9` `10` |
+| `Dad` `kid` `mom` | `kid,Dad,mom` | `Dad` `kid` `mom` |
+
+So the order is **natural sort** (numeric-aware): `a2 < a9 < a10` and `2 < 9 < 10`, which
+plain lexicographic ordering would get wrong (`a10 < a2 < a9`, `10 < 2 < 9`). Using
+`.fam` order — the obvious guess — is wrong, and using lexicographic order is also wrong.
+
+Pairs are then emitted as the `i < j` upper triangle over that sorted order.
+
+**Unresolved edge case:** zero-padded numeric IDs. For the family `{007, 7, 70}` the
+emitted order is `7`, `70`, `007` under all three `.fam` orders tried, which is neither
+plain natural sort (`007` and `7` would tie) nor lexicographic (`007 < 7 < 70`). Tracked
+as open question 6.
+
+## Single-family behaviour
+
+**When the dataset contains only one family, `.kin` is written as a zero-byte file** —
+not even the header row — even though the console still prints
+`Within-family kinship data saved in file king.kin` and the relationship-summary table
+reports the pairs as correctly inferred. Adding a second family to the same `.bed` makes
+the header and all within-family rows appear.
+
+Verified with `--kinship` and `--related`, and independently of the phenotype column.
+Reproducing this exactly is required for parity: a single-family dataset is a common
+real-world input, and emitting a populated `.kin` there would be a diff against the
+reference on the very first case a user tries.
 
 ## Open questions
 
 These are unresolved and each is paired with the experiment that settles it.
 
-1. **`.kin` within-family row order.** On `tiny` the order was alphabetical by ID, but
-   `.fam` order and alphabetical order were confounded for family 2.
-   *Experiment:* build a family whose `.fam` order is deliberately reverse-alphabetical
-   (e.g. IDs `zeta`, `mid`, `alpha` in that `.fam` order) and see which order `.kin` uses.
+1. ~~**`.kin` within-family row order.**~~ **RESOLVED** — natural sort on sample ID,
+   independent of `.fam` order. See [Row ordering](#row-ordering).
 2. **PO vs FS IBS0 threshold.** The binary's string table contains
    `1st-degree relatives are treated as parent-offspring if IBS0 < %.4lf`, implying the
    cutoff is computed from the data, not fixed.
@@ -198,3 +230,9 @@ These are unresolved and each is paired with the experiment that settles it.
    *Experiment:* diff `--cpus 1` against `--cpus 8` output on `bigish`.
 5. **`--degree` filtering semantics.** Whether `--degree n` filters `.kin0` rows only, or
    also changes `.kin`, and whether the cutoff is applied to kinship or to inferred class.
+6. **Zero-padded numeric ID ordering.** `{007, 7, 70}` emits as `7`, `70`, `007`.
+   *Experiment:* sweep families of IDs mixing widths and leading zeros
+   (`0`, `00`, `01`, `1`, `10`, `0010`, `1a`, `a1`, `-1`, `1.0`, very long digit strings
+   that overflow 32-bit) and fit the comparator. Likely the ID is parsed to an integer
+   with non-parsing or overflowing values falling back to a string compare and sorting
+   after the numerics — confirm or refute.
