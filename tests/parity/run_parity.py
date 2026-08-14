@@ -44,6 +44,7 @@ from pathlib import Path
 
 PARITY_DIR = Path(__file__).resolve().parent
 DEFAULT_GOLDEN = PARITY_DIR / "golden"
+DEFAULT_BASELINE = PARITY_DIR / "BASELINE.txt"
 DEFAULT_DATA = PARITY_DIR / "work" / "data"
 DEFAULT_ALT = PARITY_DIR / "work" / "alt"
 GENERATOR = PARITY_DIR / "generate_corpus.py"
@@ -642,6 +643,51 @@ def die(msg: str, code: int = 2):
     raise SystemExit(code)
 
 
+def baseline_lines(results: list["Result"]) -> list[str]:
+    """The canonical regression record: one line per case, status then per-file notes.
+
+    The notes are included deliberately. A case that fails on `king.seg` numerics before a
+    change and on a *missing file* after it has the same status and the same totals, and a
+    summary count would call that no change. This catches it.
+    """
+    return [f"{r.status:<4} {r.case.key} | {'; '.join(r.notes)}".rstrip(" |")
+            for r in sorted(results, key=lambda r: r.case.key)]
+
+
+def baseline_check(results, path: Path, write: bool, filtered: bool, say) -> int:
+    """Diff this run against the recorded baseline; 0 only on an exact match."""
+    got = baseline_lines(results)
+    if write:
+        if filtered:
+            print("refusing to write a baseline from a --filter'ed run", file=sys.stderr)
+            return 2
+        path.write_text("\n".join(got) + "\n")
+        say(f"wrote baseline {path} ({len(got)} case(s))")
+        return 0
+    if not path.exists():
+        print(f"baseline {path} does not exist; create it with --write-baseline",
+              file=sys.stderr)
+        return 2
+    want = path.read_text().splitlines()
+    if filtered:
+        keys = {line.split(" | ")[0].split()[-1] for line in got}
+        want = [w for w in want if w.split(" | ")[0].split()[-1] in keys]
+    if got == want:
+        print(f"baseline: MATCH ({len(got)} case(s) against {path.name})")
+        return 0
+    delta = list(difflib.unified_diff(want, got, "baseline", "this run", lineterm="",
+                                      n=0))
+    print()
+    print(f"baseline: MISMATCH against {path.name} "
+          f"({sum(1 for d in delta if d.startswith('-') and not d.startswith('---'))} "
+          f"line(s) changed)")
+    for line in delta:
+        print("  " + line)
+    print("\nA '+' line that now says PASS is an improvement: re-run with "
+          "--write-baseline and commit the new file with the change that earned it.")
+    return 1
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         prog="run_parity.py",
@@ -673,6 +719,13 @@ def main() -> int:
                     help="max unified-diff lines printed per file with -v")
     ap.add_argument("--keep", action="store_true", help="keep per-case temp dirs")
     ap.add_argument("--json", type=Path, help="write machine-readable results here")
+    ap.add_argument("--baseline", type=Path, nargs="?", const=DEFAULT_BASELINE,
+                    help="compare the per-case status AND per-file notes against this "
+                         "recorded list and exit non-zero on any difference, in either "
+                         "direction (default: tests/parity/BASELINE.txt)")
+    ap.add_argument("--write-baseline", action="store_true",
+                    help="rewrite the --baseline file from this run instead of "
+                         "comparing; review the diff before committing it")
     ap.add_argument("-q", "--quiet", action="store_true",
                     help="print only the summary and failing rows")
     ap.add_argument("-v", "--verbose", action="count", default=0,
@@ -751,6 +804,10 @@ def main() -> int:
              "diff_excluded": r.skipped}
             for r in results], indent=1) + "\n")
         say(f"wrote {args.json}")
+
+    if args.baseline:
+        return baseline_check(results, args.baseline, args.write_baseline,
+                              bool(args.filt), say)
 
     return 1 if n_fail else 0
 

@@ -30,6 +30,20 @@
 //! `<prefix>splitped.txt` is written from [`crate::analysis::splitped`] before any
 //! segment work; it depends only on the `.fam`, which is why it is byte-identical under
 //! every `--degree` / `--seglength` / `--related` variant.
+//!
+//! # `<prefix>.seg` is not the `.kin` table with different columns
+//!
+//! It differs from every other pairwise file this crate writes in two ways, and both were
+//! found the same way — by diffing bytes after the numbers stopped being wrong:
+//!
+//! * **`PropIBD` is computed from the two columns printed beside it**, not from the
+//!   underlying totals. The reference prints two different `PropIBD` values for the same
+//!   pair in the same run — one in `.kin`, one in `.seg`. [`ibdseg::seg_prop_ibd`].
+//! * **The rows are ordered by 16-sample block**, not by sample index. [`seg_pair_order`].
+//!
+//! Neither changes a value or a row: the same pairs with the same estimates, printed
+//! differently. Together they took this pass from 18 of 52 captured `--ibdseg`
+//! invocations byte-identical to 41 of 52, and the default 3 Mb floor to all of them.
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -256,30 +270,28 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
     let samples = &loaded.fileset.samples;
     let g = &loaded.fileset.genotypes;
     let mut rows = Vec::new();
-    for i in 0..samples.len() {
-        for j in i + 1..samples.len() {
-            let seg = ibdseg::pair_segments(g, &a.auto_pos, &auto, i, j, seglen);
-            if !seg.reported() {
-                continue;
-            }
-            let (pi1, pi2, prop) = (
-                seg.ibd1_seg(denom),
-                seg.ibd2_seg(denom),
-                seg.prop_ibd(denom),
-            );
-            if !ibdseg::reported_at_degree(degree, pi2, prop) {
-                continue;
-            }
-            rows.push(Row {
-                fid1: samples[i].fid.clone(),
-                id1: samples[i].iid.clone(),
-                fid2: samples[j].fid.clone(),
-                id2: samples[j].iid.clone(),
-                pi1,
-                pi2,
-                prop,
-            });
+    for (i, j) in seg_pair_order(samples.len()) {
+        let seg = ibdseg::pair_segments(g, &a.auto_pos, &auto, i, j, seglen);
+        if !seg.reported() {
+            continue;
         }
+        let (pi1, pi2, prop) = (
+            seg.ibd1_seg(denom),
+            seg.ibd2_seg(denom),
+            seg.prop_ibd(denom),
+        );
+        if !ibdseg::reported_at_degree(degree, pi2, prop) {
+            continue;
+        }
+        rows.push(Row {
+            fid1: samples[i].fid.clone(),
+            id1: samples[i].iid.clone(),
+            fid2: samples[j].fid.clone(),
+            id2: samples[j].iid.clone(),
+            pi1,
+            pi2,
+            prop,
+        });
     }
 
     let _ = out.write_all(console::ends_at(ENDS_AT_INDENT, console::now_local()).as_bytes());
@@ -296,7 +308,10 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
             r.id2,
             r.pi1,
             r.pi2,
-            r.prop,
+            // `.seg` alone prints PropIBD from the two columns above it rather than from
+            // the underlying totals — the reference's own two writers disagree on this
+            // and only one rule can match each. See `ibdseg::seg_prop_ibd`.
+            ibdseg::seg_prop_ibd(r.pi1, r.pi2),
             ibdseg::inf_type(r.pi1, r.pi2, r.prop),
         ));
     }
@@ -375,6 +390,48 @@ impl Segments {
             s.prop_ibd(self.denom),
         )
     }
+}
+
+/// Samples per block in the `<prefix>.seg` row order — see [`seg_pair_order`].
+const SEG_BLOCK: usize = 16;
+
+/// The order `<prefix>.seg` lists its pairs in: **by 16-sample block, then by index**.
+///
+/// Not `i` ascending then `j` ascending, which is what every other pairwise file uses and
+/// what this pass used until it was measured. The reference walks blocks of
+/// [`SEG_BLOCK`] samples — for each block `b1`, for each block `b2 >= b1`, every reported
+/// pair with `i` in `b1` and `j` in `b2`, `i` then `j` ascending. On a fileset of 16
+/// samples or fewer there is one block and the two orders coincide, which is why nine of
+/// the corpus's thirteen datasets never showed it.
+///
+/// `multifam` (20 samples) does: after the within-block pairs run out at `(13, 14)` the
+/// reference jumps to `(11, 16)`, deferring every pair that reaches into the second block
+/// until the first block is exhausted. `bigish` (200 samples, 13 blocks) shows the same
+/// shape thirteen times over.
+///
+/// **The block size is 16 and nothing else.** Sweeping it over 2..80 against the row
+/// order of **all 50 captured `.seg` files**, exactly one value reproduces every one:
+/// `threegen` (12 samples) rules out everything below 12, `multifam` rules out everything
+/// from 20 up, and inside that window only 16 survives `bigish`.
+///
+/// It is a pure ordering: the same rows with the same values, and `measure_gaps.py`
+/// (which matches rows on their identifier columns before comparing) reported **0 extra
+/// and 0 missing** both before and after. Only a byte-for-byte diff can see it, which is
+/// why it stayed hidden behind the `PropIBD` residual until `ibdseg::seg_prop_ibd` closed
+/// that: with the numbers finally exact on `multifam` and `bigish`, the order was all
+/// that was left.
+fn seg_pair_order(n: usize) -> impl Iterator<Item = (usize, usize)> {
+    let blocks = n.div_ceil(SEG_BLOCK);
+    (0..blocks).flat_map(move |b1| {
+        (b1..blocks).flat_map(move |b2| {
+            let i_hi = ((b1 + 1) * SEG_BLOCK).min(n);
+            (b1 * SEG_BLOCK..i_hi).flat_map(move |i| {
+                let j_lo = if b1 == b2 { i + 1 } else { b2 * SEG_BLOCK };
+                let j_hi = ((b2 + 1) * SEG_BLOCK).min(n);
+                (j_lo..j_hi).map(move |j| (i, j))
+            })
+        })
+    })
 }
 
 /// `--cpus` when given, otherwise however many cores are visible.
@@ -464,6 +521,42 @@ mod tests {
             seglength_bp(&parse(&["--ibdseg", "--seglength", "10"])),
             10_000_000
         );
+    }
+
+    #[test]
+    fn the_seg_pair_order_is_plain_index_order_within_one_block() {
+        let got: Vec<_> = seg_pair_order(4).collect();
+        assert_eq!(
+            got,
+            vec![(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)],
+            "16 samples or fewer is one block, so nothing is deferred"
+        );
+        // Every pair, exactly once, at the block boundary too.
+        for n in [1, 15, 16, 17, 33] {
+            let v: Vec<_> = seg_pair_order(n).collect();
+            assert_eq!(v.len(), n * n.saturating_sub(1) / 2, "n={n}");
+            let mut s = v.clone();
+            s.sort_unstable();
+            s.dedup();
+            assert_eq!(s.len(), v.len(), "n={n}: a pair was emitted twice");
+            assert!(v.iter().all(|&(i, j)| i < j), "n={n}");
+        }
+    }
+
+    /// The shape `multifam` exposed: with 20 samples the first block is finished before
+    /// any pair reaching into the second one is written.
+    #[test]
+    fn the_seg_pair_order_defers_cross_block_pairs() {
+        let v: Vec<_> = seg_pair_order(20).collect();
+        let at = |p: (usize, usize)| v.iter().position(|&q| q == p).unwrap();
+        assert!(at((13, 14)) < at((11, 16)), "within-block pairs come first");
+        assert!(at((11, 19)) < at((12, 16)), "cross-block runs i then j");
+        assert!(
+            at((15, 19)) < at((16, 17)),
+            "the second block's own pairs are last"
+        );
+        assert_eq!(v[0], (0, 1));
+        assert_eq!(*v.last().unwrap(), (18, 19));
     }
 
     #[test]

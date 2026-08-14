@@ -25,3 +25,28 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo build --workspace --release
       - run: cargo test --workspace
+
+      # The row-level segment scorecard. Prints, does not assert — docs/PARITY.md
+      # §4.4 quotes its "row=" and "est=" totals, so a change here should be visible
+      # in the log of the run that made it.
+      - name: segment scorecard
+        run: cargo test -p king-core --test ibdseg_parity -- --nocapture
+        env:
+          KING_GOLDEN: tests/parity/golden
+
+  # The differential harness: replay all 480 captured reference invocations and require
+  # the outcome to equal tests/parity/BASELINE.txt exactly — per case AND per output
+  # file. It fails on a new difference and equally on an unrecorded improvement, so the
+  # committed baseline can never drift away from what the tree actually does. The input
+  # corpus is generated on the fly (Python 3 stdlib only); no reference binary is needed.
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: cargo build --release
+      - run: python3 tests/parity/run_parity.py --impl ./target/release/king -q --baseline

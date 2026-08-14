@@ -2,15 +2,18 @@
 
 Everything you need to change this project safely: the one rule that cannot be broken, how
 the tree is laid out, how the test corpus and its golden output are produced, how to run and
-extend the parity suite, **the fixture technique the whole segment engine rests on (§8)**, and
-how to add an analysis.
+extend the parity suite and its regression baseline, **the fixture technique the whole
+segment engine rests on (§8)**, and how to add an analysis.
 
 Read `docs/PARITY.md` first if you want to know what currently works.
 
-If you are picking this up cold and intend to work on the IBD-segment caller — which is where
+If you are picking this up cold and intend to work on the IBD-segment engine — which is where
 all the remaining parity gap lives — read in this order: `docs/PARITY.md` §5.0 (what is
-solved, what is not, what to run next), then §8 below (the instrument), then
-`docs/research/17-seg-caller.md` and `18-ibd1-caller.md`.
+solved, what is not, what to run next), then §8 below (the instruments), then
+`docs/research/17-seg-caller.md` and `18-ibd1-caller.md` for the caller, `19-` and `20-` for
+what closed it. The one-line summary of where things stand: at the default `--seglength 3`
+the segment engine is byte-exact on all 982 corpus rows, and everything still open is at
+`--seglength 5` and `10`.
 
 ---
 
@@ -82,9 +85,12 @@ docs/
   SPEC.md                the reference's observable behaviour, flag by flag
   BEHAVIOR.md            raw sweeps behind the rules
   VERIFIED_FORMULAS.md   the estimators and the experiment that fixed each
-  research/              the investigation log, numbered in the order it happened;
-                         18-ibd1-caller.md is the newest; it and 17-seg-caller.md
-                         (whose §14 is the bridge, landed) cover the .seg caller
+  research/              the investigation log, numbered in the order it happened.
+                         17-seg-caller.md + 18-ibd1-caller.md derive the .seg
+                         caller constant by constant; 19-ibd2seg-residual.md adds
+                         the segment fringe; 20-seg-writer.md is the two WRITER
+                         rules (PropIBD from the printed columns, 16-sample block
+                         row order) that finished the default floor
   research/fixtures/     the fixture rigs (see §8 — read it before touching the
                          segment caller): filesets whose answer is forced by
                          construction, used to pin constants the corpus cannot see.
@@ -92,8 +98,12 @@ docs/
                          gate8.py brackets the --degree 1 IBD2 clause;
                          segcanvas.py is the .seg canvas (+ its measured cache);
                          ibd1canvas.py is the same canvas built IBD1-side up;
+                         fringecanvas.py builds a segment that does NOT start on a
+                         word boundary, which the other two cannot (19-…);
                          gradebinary.py replays those canvases with OUR binary and
                          grades it against the cached reference answers;
+                         segwriter.py proves the two writer rules from the CAPTURES
+                         alone — no binary, no fileset, no engine (§8.5);
                          avfs.py / avfs_score.py are the --build AV.FS rig
 
 tests/parity/
@@ -105,6 +115,8 @@ tests/parity/
   verify_formulas.py     checks docs/VERIFIED_FORMULAS.md against captured output
   verify_row_order.py    checks the .kin0 / .ibs0 block-tiled row ordering
   golden/<group>/<case>/ one captured reference invocation per directory
+  BASELINE.txt           the recorded outcome of all 480 cases, per case AND per
+                         output file; run_parity.py --baseline gates on it (§3)
   work/                  generated inputs (gitignored) — data/ and alt/
   fit/                   analysis scripts used while fitting rules
   probes/                small one-off reference probes worth keeping
@@ -117,18 +129,26 @@ rebuild-and-replay. It is a *mirror, not a second source of truth*: `fit/check_m
 asserts that with default `Params` it reproduces the built binary's own `.seg` columns and
 `MaxIBD2` on every corpus row. **If you change a rule in `ibdseg.rs`, either update
 `engine.py` to match or expect `check_mirror.py` to fail** — and when the two disagree,
-the Rust is right and the mirror has the bug. `fit/seg17.py` and `fit/seg18.py` are the
-scorecards built on it: each prints the committed rule and the retired one side by side over
-all 982 primary rows — `seg17.py` for the `.seg` IBD2 caller, `seg18.py` for the `IBD1Seg`
-overlap rule at 3, 5 and 10 Mb — and `R17(...)` / `R18(...)` expose every knob for a
-candidate. `seg17.py grid19` and `seg18.py grid` sweep them all.
+the Rust is right and the mirror has the bug. `fit/seg17.py`, `fit/seg18.py` and
+`fit/seg19.py` are the scorecards built on it: each prints the committed rule and the one it
+replaced side by side over all 982 primary rows at 3, 5 and 10 Mb — `seg17.py` for the `.seg`
+IBD2 caller, `seg18.py` for the `IBD1Seg` overlap rule, `seg19.py` for the IBD2 fringe — and
+`R17(...)` / `R18(...)` / `R19(...)` expose every knob for a candidate. `seg17.py grid19`,
+`seg18.py grid` and `seg19.py grid` sweep them all.
 
-**Two committed files are measurement caches, and a non-reference binary will silently
-corrupt them.** `docs/research/fixtures/segcanvas_measured.json` (6 416 answers) and
-`ibd1canvas_measured.json` (1 013) hold readings *measured from the reference*, which is what
-lets both rigs re-run in under a second without it. `segcanvas.py` writes whatever it measures
-back into its cache and takes the binary from `$KING`, so **never point `$KING` at our build
-while running `segcanvas.py` or `ibd1canvas.py` in the tree.** To grade our own build, use
+`engine.py` also pins four **named parameter bundles**, so every scorecard quoted anywhere in
+`docs/research/17-` … `20-` re-runs from that one file: `RETIRED` (the word-aligned geometry,
+705 exact rows), `FRINGE18` (before the IBD2 fringe, 747), `PROP19` (before the writer rules,
+806) and the committed `BASE` (982). If you retire a rule, add a bundle for it — that is what
+keeps the historical numbers in the research log reproducible instead of merely recorded.
+
+**Three committed files are measurement caches, and a non-reference binary will silently
+corrupt them.** `docs/research/fixtures/segcanvas_measured.json` (6 416 answers),
+`ibd1canvas_measured.json` (1 013) and `fringecanvas_measured.json` (576) hold readings
+*measured from the reference*, which is what lets all three rigs re-run in under a second
+without it. Each writes whatever it measures back into its cache and takes the binary from
+`$KING`, so **never point `$KING` at our build while running `segcanvas.py`,
+`ibd1canvas.py` or `fringecanvas.py` in the tree.** To grade our own build, use
 `gradebinary.py` (§8), which reads those caches, never writes them, and keeps its own answers
 in `$TMPDIR`. `git diff --stat docs/research/fixtures/` before committing; those two files
 should only ever change when the reference was the thing being run.
@@ -162,34 +182,43 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --check
 ```
 
-CI (`.github/workflows/ci.yml`) runs exactly these four on Linux, macOS and Windows. All
-four must be clean before the parity suite is worth looking at.
+CI (`.github/workflows/ci.yml`) runs exactly these four on Linux, macOS and Windows, and
+**then replays all 480 captured reference invocations on Linux** against
+`tests/parity/BASELINE.txt`:
 
-CI does **not** run the parity suite, and there are two separate reasons — only the first
-of which is usually remembered:
+```bash
+python3 tests/parity/run_parity.py --impl ./target/release/king --baseline
+```
 
-1. **It cannot gate as-is.** `run_parity.py` exits 1 whenever any case fails, and the suite
-   sits at 408/480 by design, so a bare invocation would fail every build. Gating it needs
-   a regression *floor* (`--json`, then assert the pass count has not dropped), not a
-   pass/fail.
-2. **It has only ever been run on macOS.** The goldens were captured there. Nothing in them
-   is obviously host-dependent — timestamps, thread counts, progress tokens and absolute
-   paths are all normalized (`docs/PARITY.md` §7) — but that is an argument, not a
-   measurement. Run the suite on Linux and confirm 408/480 *before* wiring it into CI, and
-   restrict the step to one OS until Windows is checked too (the binary is `king.exe`
-   there).
+That is a two-sided gate. `BASELINE.txt` records the outcome of every case *with its
+per-file notes*, and the step fails on any difference in either direction:
 
-The goldens are committed and the corpus regenerates from a seed, so neither reason is
-about missing inputs; only the 480/480 self-check needs the reference binary.
+* a case that now fails, or fails for a *different reason* than recorded — a case that
+  failed on `king.seg` numerics before a change and on a missing file after it has the same
+  status and the same totals, and a summary count would call that no change;
+* a case that now **passes** and is still recorded as failing. This is deliberate. It means
+  the committed record can never drift away from what the tree actually does, and it forces
+  the person who fixed something to say so in the same commit.
+
+Regenerate with `--baseline --write-baseline` and commit the diff **alongside the change
+that earned it**, never on its own.
+
+The suite needs no reference binary — the goldens are committed and the input corpus
+regenerates from a seed in about 20 seconds — which is why it can run in CI at all. Only the
+480/480 self-check needs the reference, and that stays a local step. The parity job is
+restricted to Linux: the goldens were captured on macOS and the suite is run there
+constantly, but Windows has never been checked (the binary is `king.exe` there, and line
+endings in the captured text files are an open question).
 
 ### Before tagging a release
 
 ```bash
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace                                             # 290 passed, 1 ignored
-cargo clean && cargo build --release --offline   # must work from a clean checkout, offline
+cargo test --workspace                                             # 307 passed, 1 ignored
+cargo clean && cargo build --release            # must work from a clean checkout
 python3 tests/parity/run_parity.py --impl target/release/king      # record the exact count
+python3 tests/parity/run_parity.py --impl target/release/king --baseline   # must MATCH
 python3 tests/parity/run_parity.py --impl "<reference>"            # must be 480/480
 python3 tests/parity/measure_gaps.py --impl target/release/king -q # the numbers PARITY.md §4 quotes
 KING_GOLDEN=tests/parity/golden \
@@ -197,30 +226,37 @@ KING_GOLDEN=tests/parity/golden \
 cd tests/parity/fit && python3 check_mirror.py                     # must print MIRROR OK
 python3 docs/research/fixtures/gradebinary.py target/release/king          # 6000/6000
 python3 docs/research/fixtures/gradebinary.py target/release/king --ibd1   # 540/540 closed
+python3 docs/research/fixtures/segwriter.py                        # the two .seg writer rules
 git ls-files | grep -E '\.(bed|bim|fam|vcf|bcf)$'                  # must print nothing
 git diff --stat docs/research/fixtures/*_measured.json             # the caches must be untouched
 ```
 
-The last release measured **408 PASS / 72 FAIL / 480**, self-check **480/480**, 290 tests
-passing, a clean offline build in **8.07 s** from a pristine copy of the tree, and that
-clean-tree binary re-measured at 408/480. Do not publish a count you have not just re-run: the
-parity number is the project's entire claim, and it is cheap to check (the suite takes about
-two seconds).
+The last release measured **464 PASS / 16 FAIL / 480**, self-check **480/480**, 307 tests
+passing, a clean build in **8.07 s** from a pristine copy of the tree, and that clean-tree
+binary re-measured at 464/480 with the same 307 tests. Do not publish a count you have not
+just re-run: the parity number is the project's entire claim, and it is cheap to check (the
+suite takes about two seconds warm, eight cold).
 
-**Publish both counts, not just the headline.** The 408 is a *whole-file* number — a case
-turns `PASS` only when every row of every file it writes is byte-exact — and the residual is
-spread thinly enough that a large row-level gain can move it by nothing. `docs/PARITY.md` §4.4
-is the row-level scoreboard and §3 the file-level one; a release note that quotes one without
-the other misleads in one direction or the other. The `17-seg-caller.md` §14 correction moved
-**zero** corpus rows and zero cases and was still right (§8 below is how that was shown).
+**Publish both counts, not just the headline.** The 464 is a *whole-file* number — a case
+turns `PASS` only when every row of every file it writes is byte-exact — and the two counts
+move independently in **both** directions. `docs/PARITY.md` §4.4 is the row-level scoreboard
+and §3 the file-level one; a release note that quotes one without the other misleads one way
+or the other. Two cases from this project's history make the point: the `17-seg-caller.md`
+§14 correction moved **zero** corpus rows and zero cases and was still right (§8 below is how
+that was shown), and the `20-seg-writer.md` rules moved **zero estimates** and were worth 28
+cases.
 
-The last one is not decoration. `.gitignore` excludes `/docs/research/fixtures/work/` and
-`/tests/parity/work/`, but **`.gitignore` does not untrack files already committed** — a
-fixture fileset added before the rule stays in the index forever until someone runs
-`git rm --cached`. Fixture filesets are regenerated by the rigs in
-`docs/research/fixtures/`; none of them is evidence that needs preserving, and none should
-ever be committed. Keep `docs/PARITY.md` and `README.md` in step with the recorded count:
-the README must claim nothing `PARITY.md` does not measure.
+The `git ls-files` line is not decoration. `.gitignore` excludes
+`/docs/research/fixtures/work/` and `/tests/parity/work/`, but **`.gitignore` does not
+untrack files already committed** — a fixture fileset added before the rule stays in the
+index forever until someone runs `git rm --cached`. Fixture filesets are regenerated by the
+rigs in `docs/research/fixtures/`; none of them is evidence that needs preserving, and none
+should ever be committed. This project ships **no genomic data of any kind**: the 13 corpus
+datasets are built by a seeded generator at test time, and the committed goldens are the
+reference's *output* only.
+
+Keep `docs/PARITY.md` and `README.md` in step with the recorded count: the README must claim
+nothing `PARITY.md` does not measure.
 
 Two test suites want the goldens and skip themselves without them:
 
@@ -228,7 +264,10 @@ Two test suites want the goldens and skip themselves without them:
 KING_GOLDEN=tests/parity/golden cargo test -p king-core --test ibdseg_parity -- --nocapture
 ```
 
-prints the per-dataset `.seg` scorecard rather than just passing.
+prints the per-dataset `.seg` scorecard rather than just passing. Its two totals are not the
+same thing — `row=` counts rows byte-exact on all four printed fields, `est=` only on the two
+estimate columns — and quoting `est=` alone overstates the engine. Both are 982 at the
+default floor.
 
 ---
 
@@ -323,6 +362,10 @@ python3 tests/parity/run_parity.py --impl "/path/to/reference/king"
 # how big the differences are, not just that they exist
 python3 tests/parity/measure_gaps.py --impl target/release/king -q
 python3 tests/parity/measure_gaps.py --impl target/release/king --by-dataset king.seg
+
+# the regression gate: per case AND per output file, against the committed record
+python3 tests/parity/run_parity.py --impl target/release/king --baseline
+python3 tests/parity/run_parity.py --impl target/release/king --baseline --write-baseline
 ```
 
 Both scripts are Python 3 standard library only. Exit status of `run_parity.py`: 0 all
@@ -341,6 +384,15 @@ number the harness prints is unreliable until that is fixed.
 be numeric and will show you a column-wise report with `-v`, `missing:<file>` means we did
 not write a file the reference wrote. `measure_gaps.py` turns any of these into rows and
 columns and errors.
+
+**`!=(num)` is a hint, not a diagnosis, and `-v` is not optional.** The classifier looks at
+the *aligned* rows; if the rows are aligned differently on the two sides it says
+`STRUCTURAL` and shows you why. `docs/research/20-seg-writer.md` §4 is the case to remember:
+`multifam`'s `king.seg` was reported as a numeric difference for the entire life of the
+project, and when the numbers were finally exact the `-v` output showed all 104 rows correct
+and in the wrong order. Every row-level tool in this tree matches rows on their identifier
+columns *before* comparing — that is what makes `0 extra, 0 missing` meaningful — and it is
+also what makes them blind to order. Only the byte diff sees it.
 
 ---
 
@@ -378,7 +430,8 @@ Working backwards from the output, which is the order that keeps you honest:
 This section is the one a newcomer cannot reconstruct from the code. The IBD-segment
 algorithm is unpublished, the corpus is 13 noisy datasets, and **every constant in
 `king-core::ibdseg` was measured rather than derived**. These are the instruments that made
-that possible, in increasing order of power.
+that possible, in increasing order of power — §8.3 is the one to read if you read only one,
+and §8.5 is the one that found the last two rules, which the canvas structurally could not.
 
 ### 8.1 Construct the answer — `fixlab.py`
 
@@ -446,6 +499,17 @@ python3 segcanvas.py 5 8        # only sections 5 and 8
 python3 ibd1canvas.py           # the same for 18-ibd1-caller.md
 ```
 
+**A third rig, `fringecanvas.py`, exists because both of the others are word-aligned.**
+`segcanvas.py` and `ibd1canvas.py` lay chr2 out so its first marker starts a 64-marker word,
+which means neither can see what a call does in the partial word *beyond* the segment's word
+grid — and that fringe turned out to carry its own rule (an opposite homozygote there does
+not stop an IBD2 call, though one inside the grid disqualifies its whole word). `fringecanvas`
+shortens chr1 by `f` markers so chr2's segment opens `f` markers before a boundary while the
+painted words stay aligned, keeping the read-back arithmetic intact. `19-ibd2seg-residual.md`
+is the write-up; the clause it found was worth 86 exact `IBD2Seg` rows. The general lesson:
+**check what your rig holds fixed by construction**, because that is exactly where the
+unmeasured clause will be.
+
 `ibd1canvas.py` is the same rig built the other way up. To read `IBD1Seg` you must silence
 IBD2, and it does that **by paint, not by walls**: a word carrying 34 het-vs-hom mismatches is
 perfectly usable to the IBD1 pass and refused outright by the IBD2 one. Every fixture there is
@@ -454,9 +518,10 @@ an assumption.
 
 **Two hazards.**
 
-1. **The caches are reference-only.** `segcanvas_measured.json` (6 416 answers) and
-   `ibd1canvas_measured.json` (1 013) are what make these rigs re-run in a second. Both rigs
-   write whatever they measure back into them and take the binary from `$KING`. Pointing
+1. **The caches are reference-only.** `segcanvas_measured.json` (6 416 answers),
+   `ibd1canvas_measured.json` (1 013) and `fringecanvas_measured.json` (576) are what make
+   these rigs re-run in a second. All three rigs write whatever they measure back into them
+   and take the binary from `$KING`. Pointing
    `$KING` at our build in the tree silently replaces the reference's answers with our own,
    and nothing will tell you afterwards.
 2. **The reference aborts at random on small constructed filesets.** It has a major-allele QC
@@ -486,7 +551,53 @@ Current: **6 000/6 000** on the IBD2 families, **540/540** on the closed IBD1 fa
 with the pre-§14 IBD2 rule while the binary carries the corrected one — another reason to
 grade the thing that ships.
 
-### 8.5 The rule for landing a change
+### 8.5 When the canvas cannot help: reading the reference's own output
+
+The canvases answer "what did the caller do?". They cannot answer "what did the *writer*
+do?", because each one reads a single printed column back as a marker count and never
+compares two files. Two of this project's rules live entirely in that blind spot, and the
+technique that found them is worth stating separately —
+`docs/research/fixtures/segwriter.py` is the whole rig, and it drives nothing at all:
+
+**The captures are themselves an experiment.** `tests/parity/golden/` holds 4 172 `.seg`
+rows, 4 248 `.kin` rows and so on, written by the reference. Any hypothesis that is a
+*function of printed values* can be tested against all of them without a binary, a fileset
+or an engine — and tested to a standard the corpus scorecards cannot reach, because there is
+no caller error in the way.
+
+That is how `PropIBD` was settled. The hypothesis "`.seg` computes it from its own printed
+columns" is checkable row by row in exact integers; it survived 4 172 rows with 0
+refutations, was refuted on `.kin` (42 rows) and `cluster.kin` (3), and the 1 313 rows where
+it lands on an exact decimal half then discriminated nine candidate expressions that are all
+*mathematically identical*, leaving exactly one. None of that needed the reference to be run
+even once.
+
+**Three habits this rewards:**
+
+1. **Diff the reference against itself.** Two files from one invocation that carry the same
+   pair are two measurements of the same quantity. When they disagree — `.kin` and `.seg`
+   print different `PropIBD` for 54 of the 201 pairs they share — that is not noise to be
+   averaged away, it is the statement that there are two rules and you have been looking for
+   one.
+2. **Count refutations, not agreements, and know what the test could have found.** "0
+   inconsistencies in 4 172 rows" is worth nothing until you can say how often the competing
+   hypothesis *would* have been caught. Here: 1.7 % of rows put the full-precision value more
+   than half a printed ulp from the printed-column combination, so the rival predicts ≈ 71
+   refutations. Zero were seen. Do that arithmetic before believing the result.
+3. **When a hypothesis has a free tie-break, keep looking.** "Round half up" fitted 84 % of
+   the ties and would have improved every scorecard — and it was wrong, with 214
+   counterexamples in the reference's own output. The right expression has no free parameter
+   and fits all 1 313. A rule that needs a fitted constant to cover its exceptions is usually
+   the wrong rule, not a rule with exceptions.
+
+**And the ordering lesson.** The 16-sample block order was visible in principle from the
+first day and invisible in practice for the whole project, because every grader in the tree
+matches rows on their identifier columns before comparing anything. `measure_gaps.py`
+reported `0 extra, 0 missing` on those files throughout. If a file's numbers are exact and
+the case still fails, the answer is in the bytes: run `run_parity.py … -v` and read the
+`STRUCTURAL` report.
+
+### 8.6 The rule for landing a change
 
 When a fitted rule and a constructed fixture disagree, **the fixture wins**. The corpus is 13
 datasets; the fixture is an experiment.
@@ -496,13 +607,29 @@ moves **no** corpus row can still be a real correction, if a fixture family sepa
 the rule it replaces. The bar for landing such a change is:
 
 * the `.seg` scorecard must not move **at all** — exact rows, `IBD1Seg`, `IBD2Seg`, mean and
-  worst `PropIBD`, extra/missing, at 3, 5 and 10 Mb (`seg17.py`, `seg18.py`);
+  worst `PropIBD`, extra/missing, at 3, 5 and 10 Mb (`tests/parity/fit/engine.py`, or the
+  `seg17.py` / `seg18.py` / `seg19.py` scorecards for the historical comparisons);
 * the canvas count must go **up**, on the binary (`gradebinary.py`), with each clause of the
   change shown independently necessary by ablation;
 * `check_mirror.py` must still print `MIRROR OK`, which means `fit/engine.py` was updated to
-  match.
+  match, **and** the retired parameter bundles it pins (`RETIRED`, `FRINGE18`, `PROP19`) must
+  still reproduce the numbers quoted for them in `docs/research/17-` through `20-`.
 
-Anything that trades one of those against another is a different, worse change. And when the
-scorecard *does* move, say by how much in both directions: the `IBD1Seg` overlap rule improved
-every headline figure at 3 Mb and made the *worst row* at 5 and 10 Mb slightly worse, and
-`docs/PARITY.md` §4.4 says so.
+For a change that *does* move the scorecard, the bar is: **exact rows up and mean error not
+worse**, at every floor. Anything that trades one against the other is a different, worse
+change — report the trade numerically and leave it out. Two examples from the final pass,
+both refused: cutting `IBD1Seg` by all `IBD2` calls rather than the surviving ones (982 → 950
+at 3 Mb), and merging `IBD2` calls separated by less than `--seglength`, which improves the
+worst row at 10 Mb from 0.0916 to 0.0424 while losing 25 exact rows.
+
+And when the scorecard does move, say by how much in **both** directions: the `IBD1Seg`
+overlap rule improved every headline figure at 3 Mb and made the *worst row* at 5 and 10 Mb
+slightly worse, and `docs/PARITY.md` §4.4 says so.
+
+**Do not re-sweep the caller's constants.** Forty single-knob perturbations of
+`fit/engine.py`'s `Params` and all 32 combinations of the two IBD1 endpoint rules crossed
+with the two IBD1 fringe rules were scored in the final pass: the committed values are the
+unique maximum on both exact rows and mean error. Five knobs — `bridge_rule="17"`,
+`gate_end="right"`, `inf2_ibs1b=True`, `ibd1_clip_ibd2=True`, `clip_before_len=False` — score
+*identically* to the committed engine on every corpus row, so if you change one of those, the
+canvases are the only thing that can tell you whether you were right.

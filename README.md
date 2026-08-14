@@ -4,16 +4,37 @@ A clean-room, MIT-licensed reimplementation of **KING** (Kinship-based INference
 Genome-wide association studies) — the relatedness-inference program described in
 [Manichaikul *et al.* 2010, *Bioinformatics*](https://pmc.ncbi.nlm.nih.gov/articles/PMC3025716/).
 
+KING answers one question about a genotype dataset: **for every pair of samples in it, how
+are those two people related?** Given a PLINK1 fileset (`.bed`/`.bim`/`.fam`) it estimates
+kinship coefficients from genome-wide SNPs, finds duplicate samples, calls the IBD segments
+two people share, labels each pair `PO`, `FS`, `2nd`, `3rd`, `4th`, `Dup/MZ` or `UN`, flags
+pairs whose inferred relationship contradicts the pedigree, reconstructs families, and picks
+a maximal unrelated subset. It is a standard first step in GWAS quality control, and the
+original implementation is a widely used binary with no source license permitting reuse.
+
+open-king is that program rewritten in Rust from the published algorithms, the public
+documentation and black-box observation of the reference binary — **no KING source code was
+read or copied** — so that a permissively licensed implementation of these formats and
+estimators can be embedded in other software.
+
 The goal is **drop-in parity**: the same command line, the same input files, and
-byte-identical output files as the reference `king` 2.3.2 binary.
+byte-identical output files as the reference `king` 2.3.2 binary. Not "statistically
+equivalent" — the same bytes, including column widths, row order and the reference's own
+rounding quirks. That is a falsifiable target, and the whole project is organised around
+measuring it: 480 captured reference invocations across 13 synthetic datasets are replayed
+on every change and diffed byte for byte.
 
 ```bash
-king -b study.bed --related --prefix study
+cargo build --release
+target/release/king -b study.bed --related --prefix study
 ```
+
+Requires a Rust toolchain and nothing else. Python 3 (standard library only) runs the parity
+suite.
 
 ## Status
 
-**408 of the 480 captured reference invocations reproduce byte-identically (85.0 %)**,
+**464 of the 480 captured reference invocations reproduce byte-identically (96.7 %)**,
 including all 220 flag-plumbing and error probes. Run the suite yourself:
 
 ```bash
@@ -26,51 +47,52 @@ measured size of every remaining gap, and a labelled limitations section. Everyt
 is a summary of it and says nothing it does not support.
 
 The one-paragraph version: the relatedness estimators, the QC reports, duplicate detection,
-auto-QC, unrelated-set selection, `--ibs` and the whole command-line surface are
-byte-identical everywhere. What is left is the `.seg` IBD-segment **caller**, which finds
-exactly the right set of segments — **0 spurious and 0 missing rows on every output file in
-the corpus** — but places a called IBD2 segment's endpoints a few markers from the reference.
-So the segment columns are close without being equal: on the primary `--ibdseg` capture
-**896 of 982** rows carry both estimates exactly, every one of the 982 `InfType` labels is
-right, and the mean absolute `PropIBD` error is **0.00006** with a worst row of **0.0042**.
-**`IBD1Seg` is exact on all 982 rows**, and on every `.kin`, `.kin0`, `X.kin` and
-`cluster.kin` row in the corpus; whether a pair has any IBD2 at all is decided correctly
-everywhere. The residual is purely the *length* of the 86 rows whose IBD2 calls are a few
-markers out.
+auto-QC, unrelated-set selection, clustering, `--ibs`, X-chromosome kinship and the whole
+command-line surface are byte-identical everywhere, and so is the IBD-segment engine at its
+default settings. **Thirty of the thirty-three output files this project writes are
+byte-identical in every case that produces them**; only `<prefix>.seg` (39 of 50 cases),
+`<prefix>build.log` (7 of 8) and `<prefix>X.seg` (never written) differ anywhere. On the
+primary `--ibdseg` capture all **982** rows are byte-exact on all four printed fields —
+`IBD1Seg`, `IBD2Seg`, `PropIBD` and `InfType` — with **0 spurious and 0 missing rows on
+every output file in the corpus**.
 
-Of the 72 cases that are not byte-identical, 71 are that one cause; the remaining one is
-`--build`'s pedigree reconstruction, which is unimplemented — and which is itself blocked on
-the same segment residual, so it is not a second independent problem.
+The 16 cases that are not byte-identical are four named causes:
+
+| cases | cause |
+| ---: | --- |
+| 11 | `IBD1Seg`/`IBD2Seg` under `--seglength 5` and `--seglength 10`, where the reference merges IBD1 runs across short interruptions by a rule that is two-thirds measured (`docs/research/18-ibd1-caller.md` §9) |
+| 2 | `<prefix>X.seg` is not written — the only thing wrong with either case |
+| 2 | one stdout line: `--related`'s two-stage screening count on `bigish` |
+| 1 | `--build`'s `<prefix>build.log` is unimplemented |
+
+Two further differences sit outside the 480 captures entirely, so they cost no case but a
+user could still hit them: `--ibdseg` does not apply the reference's 100 Mb usable-total
+floor, and `splitped.txt` is written unconditionally. Both are measured and written up in
+`docs/PARITY.md` §5.10.
 
 ### Two numbers, and why they are different
 
 The headline is a **whole-file** count: a case turns `PASS` only when every row of every file
-it writes is byte-exact. The residual is spread thinly across nearly every dataset, so it is
-routine for a large row-level gain to move the headline by little or nothing. That is not a
-caveat invented after the fact — it is how the last two corrections landed:
+it writes is byte-exact. For most of this project's life the residual was spread thinly
+across nearly every dataset, so it was routine for a large row-level gain to move the
+headline by nothing — and, at the very end, for a change that moved no estimate at all to
+move it by 28:
 
 | change | row-level effect | headline |
 | --- | --- | --- |
 | the `.seg` IBD2 caller (`docs/research/17-seg-caller.md`) | `IBD2Seg` 822 → 896 of 982 exact; mean `PropIBD` error ÷3.7, worst row ÷24 | **+0** |
-| its bridge and gate, re-bisected (§14 of the same doc) | none at all — a binary with the change reverted scores the same 408/480 and the same `.seg` scorecard to the digit; on constructed canvases it goes 5 723 → **6 000 of 6 000** | **+0** |
-| the `IBD1Seg` overlap rule (`docs/research/18-ibd1-caller.md`) | `IBD1Seg` 826 → **982 of 982** exact; mean error 0.00037 → 0.00007 | **+5** |
+| its bridge and gate, re-bisected (§14 of the same doc) | none at all — a binary with the change reverted scores the same `.seg` scorecard to the digit; on constructed canvases it goes 5 723 → **6 000 of 6 000** | **+0** |
+| the `IBD1Seg` overlap rule (`18-ibd1-caller.md`) | `IBD1Seg` 826 → **982 of 982** exact | **+5** |
+| the IBD2 segment fringe (`19-ibd2seg-residual.md`) | `IBD2Seg` 896 → **982 of 982** exact | 408 → **436** |
+| `.seg`'s two writer rules (`20-seg-writer.md`) | no estimate changed at all; byte-exact rows 806 → **982 of 982** | 436 → **464** |
+
+The last row is the point: `PropIBD` computed from the printed columns instead of the
+totals, and rows listed in 16-sample blocks instead of by index. Neither touches a segment,
+an estimate or a reported pair — and between them they were worth 28 cases, because the
+numbers underneath had finally stopped being wrong.
 
 So read both. `docs/PARITY.md` §4.4 is the row-level scoreboard, §3 the file-level one, and
-§5.0 says which grader to use for what.
-
-`--ibs` left the residual entirely when its IBD2 caller was solved outright: both of its IBD2
-columns, `MaxIBD2` and `Pr_IBD2`, are exact on all 21 561 rows of every dataset. It is a
-*different* caller from `.seg`'s (`docs/research/16-segment-extension.md`, `docs/PARITY.md`
-§5.8), so the `.seg` caller needed its own campaign and its own instrument — a canvas that
-inverts a printed segment column back to the number of calls and the number of words
-(`docs/research/17-seg-caller.md`, and `18-ibd1-caller.md` for the same canvas built the other
-way up, so the painted region is IBD2-free). `docs/PARITY.md` §4.4 is where both are graded,
-and §5.0 says what is left, in what shape, and which experiment to run next.
-
-Two known differences sit outside the 480 captures entirely, so they cost no case but a user
-could still hit them: `--ibdseg` does not apply the reference's 100 Mb usable-total floor,
-and `splitped.txt` is written unconditionally. Both are measured, localised and written up in
-`docs/PARITY.md` §5.10.
+§5.0 says which grader to use for what, what is left, and which experiment to run next.
 
 ## Scope (v1)
 
@@ -87,10 +109,10 @@ cases, not files.
 | `--autoQC` | `_autoQC_Summary.txt`, `_autoQC_snptoberemoved.txt`, `_autoQC_sampletoberemoved.txt`, `_autoQC_updatesex.txt` | **byte-identical** (13/13) |
 | `--unrelated` | `unrelated.txt`, `unrelated_toberemoved.txt`, `allsegs.txt` | **byte-identical** (26/26) |
 | `--ibs` | `.ibs`, `.ibs0`, `allsegs.txt` | **byte-identical** (13/13) — every column, `MaxIBD2` and `Pr_IBD2` included, on all 21 561 rows |
-| `--cluster` | `allsegs.txt`, `updateids.txt`, `cluster.kin` | 12/13 — on `bigish`, `cluster.kin`'s segment columns differ on 16 of 165 rows; the pair set, the ordering and every other column are exact |
-| `--build` | `updateids.txt`, `updateparents.txt`, `build.log`, `allsegs.txt` | 12/13 — on `bigish` the pedigree-reconstruction rules are unimplemented, so `build.log` and `updateparents.txt` come out empty where the reference writes 18 and 33 lines; `updateids.txt` is already byte-identical |
-| `--related` | `.kin` (16 col), `.kin0` (14 col), `X.kin`, `allsegs.txt` | 40/65 — the only columns that differ anywhere are `IBD2Seg` (463 of 4 805 rows) and `PropIBD` (456). `IBD1Seg`, `InfType`, `Error`, `HetConc`, `HomIBS0` and the ten `--kinship` columns are exact on every row |
-| `--ibdseg` | `.seg`, `allsegs.txt`, `splitped.txt`, `X.seg` | 20/65 (16/52 alone, 4/13 with `--related`) — `allsegs.txt` byte-identical everywhere; `.seg` has the right rows (0 extra, 0 missing) with 1 086 of 4 169 differing numerically; `X.seg` is not written; `splitped.txt` is byte-identical in all 50 corpus cases but is written unconditionally, which the reference does not always do (`docs/PARITY.md` §5.10) |
+| `--cluster` | `allsegs.txt`, `updateids.txt`, `cluster.kin` | **byte-identical** (13/13) |
+| `--build` | `updateids.txt`, `updateparents.txt`, `build.log`, `allsegs.txt` | 12/13 — `updateids.txt` and `updateparents.txt` are byte-identical in all 8 cases that write them; on `bigish` only `build.log` is missing, and its one variable statistic is segment-derived (`docs/PARITY.md` §6.2) |
+| `--related` | `.kin` (16 col), `.kin0` (14 col), `X.kin`, `allsegs.txt` | 64/65 — every file byte-identical in every case, all 4 805 16-column rows exact on all sixteen. The one failure is a single stdout line, the two-stage screening count on `bigish` (`docs/PARITY.md` §5.7) |
+| `--ibdseg` | `.seg`, `allsegs.txt`, `splitped.txt`, `X.seg` | 51/65 (40/52 alone, 11/13 with `--related`) — `allsegs.txt` and `splitped.txt` byte-identical everywhere; `.seg` byte-identical on all 13 datasets at the default 3 Mb floor, 232 of 4 172 rows differing at `--seglength 5` and `10`; `X.seg` is not written (2 cases); `splitped.txt` is written unconditionally, which the reference does not always do (`docs/PARITY.md` §5.10) |
 
 `--related` is **not** a synonym for `--kinship`: it emits six extra columns
 (`HetConc`, `HomIBS0`, `IBD1Seg`, `IBD2Seg`, `PropIBD`, `InfType`), four of which come from
@@ -100,8 +122,10 @@ the reference itself downgrades `--related` to the `--kinship` path and emits th
 
 X-chromosome kinship **is** implemented: with 512 or more X markers, no `--degree`, and
 more than one family, `--kinship` writes `<prefix>X.kin` and `<prefix>X.kin0` with their
-own three sex-specific estimators. `<prefix>X.seg` — which `--ibdseg` writes only when
-`--degree` is non-zero and the fileset has usable X segments — is **not** implemented.
+own three sex-specific estimators, byte-identical in all 17 and all 5 diffable cases.
+`<prefix>X.seg` — which `--ibdseg` writes only when `--degree` is non-zero and the fileset
+has usable X segments — is **not** implemented, and is now the *only* thing wrong with the
+two cases that want it (`docs/PARITY.md` §6.1).
 
 Note that `--prefix` is a plain **concatenation**, not a stem plus separator:
 `--prefix ZZ_` yields `ZZ_.kin` and `ZZ_allsegs.txt`. The reference also opens
@@ -118,8 +142,9 @@ segment writer, so it never produces that file despite the manual documenting it
 
 ## Three things the reference itself gets wrong
 
-All three are measured, and they are why a handful of captures cannot be graded normally.
-`docs/PARITY.md` §4.3, §5.1 and §5.2 have the evidence.
+All three are measured. `docs/PARITY.md` §4.3, §5.1 and §5.2 have the evidence — and the
+third one stopped being an obstacle only when it was taken literally rather than treated as
+noise.
 
 * **`<prefix>X.kin0` is written by racing threads.** Six identical reference runs produced
   six different files, one truncated to 187 of 662 bytes, with records torn mid-number.
@@ -134,11 +159,13 @@ All three are measured, and they are why a handful of captures cannot be graded 
 * **The reference disagrees with itself about `PropIBD`.** In a single
   `--related --degree 2 --ibdseg` run on `bigish`, 147 pairs appear in both `king.kin` and
   `king.seg` — all 147 with identical `IBD1Seg` and `IBD2Seg`, and **43** with a different
-  `PropIBD` in the two files (e.g. 0.5048 against 0.5049). open-king computes it once, from
-  the unrounded estimates, which matches `.kin` almost everywhere and costs 149 `.seg` rows a
-  ±1 in the fourth decimal. Fifteen arithmetic reformulations were scored and all fifteen tie
-  exactly; rounding off the printed columns instead is measurably worse, in both files and in
-  both rounding modes. This is not a formula that can be fixed.
+  `PropIBD` in the two files (e.g. 0.5048 against 0.5049). Corpus-wide the two writers
+  disagree on 54 of the 201 pairs the reference puts in both. This turned out to be the last
+  thing standing between the project and an exact `.seg`: `.kin` computes `PropIBD` from the
+  full-precision totals and `.seg` computes it from the four-decimal columns it is about to
+  print (`i2*1e-4 + i1*5e-5`, exact on all 4 172 captured `.seg` rows including all 1 313
+  that land on an exact decimal half). open-king implements both, one per writer, and
+  reproduces each file. `docs/research/20-seg-writer.md`.
 
 ## Building
 
@@ -146,9 +173,10 @@ All three are measured, and they are why a handful of captures cannot be graded 
 cargo build --release
 ```
 
-The binary is emitted as `target/release/king`. It builds offline from a clean checkout in
-under ten seconds with no external toolchain: `Cargo.lock` has 15 packages, three of which
-are this workspace. Contributing, regenerating the corpus, re-capturing goldens and the
+The binary is emitted as `target/release/king`. It builds from a clean checkout in
+about eight seconds with no external toolchain: `Cargo.lock` has 15 packages, three of which
+are this workspace. `cargo test --workspace` is 307 tests; CI additionally replays all 480
+captured invocations against `tests/parity/BASELINE.txt` on every push. Contributing, regenerating the corpus, re-capturing goldens and the
 fixture technique the segment work depends on: `docs/MAINTAINING.md`.
 
 ## Relationship to the original KING

@@ -43,7 +43,10 @@ def main():
                     a, b, _lg, _m = E.call_pair(ds, i, j)
                     g1, g2 = a / ds.denom, b / ds.denom
                     want = (f[4], f[5], f[6], f[7])
-                    got = ("%.4f" % g1, "%.4f" % g2, "%.4f" % (g2 + g1 / 2),
+                    # `.seg` prints PropIBD from its own two printed columns; `InfType`
+                    # still reads the full-precision value. Both mirror `Scan`/the writer.
+                    got = ("%.4f" % g1, "%.4f" % g2,
+                           "%.4f" % E.seg_prop_ibd(g1, g2),
                            kd.inf_type(g1, g2, g2 + g1 / 2))
                     n += 1
                     if want != got:

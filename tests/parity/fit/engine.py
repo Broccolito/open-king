@@ -14,11 +14,16 @@ divergence there is a bug in this file, never a discovery.
 
 The `.seg` IBD2 caller is `SegScan.ibd2_17` — the rule of
 `docs/research/17-seg-caller.md` §7 with §14's corrected bridge, gate window and `inf2`,
-committed to `Scan::ibd2`. Every clause §14 replaced is still reachable as a knob
-(`bridge_rule="17"`, `gate_end="right"`, `inf2_ibs1b=True`) and the geometry both
-replaced is `RETIRED` (`seg_rule="word"`), because the sweeps in `sweep2.py`,
+and `docs/research/19-ibd2seg-residual.md` §1-§4's fringe, committed to `Scan::ibd2`.
+Every clause a later write-up replaced is still reachable as a knob (`bridge_rule="17"`,
+`gate_end="right"`, `inf2_ibs1b=True`, `ibd2_fringe="extend"`), and the geometry all of
+them replaced is `RETIRED` (`seg_rule="word"`), because the sweeps in `sweep2.py`,
 `segtry.py` and `rules*.py` were scored against them and their numbers are quoted in the
-research write-ups; passing those reproduces them.
+research write-ups; passing those reproduces them. Two named bundles are pinned:
+
+    Params()   BASE       806 exact / 982 IBD1Seg / 982 IBD2Seg, MAE 0.000023  (19-…)
+    FRINGE18              747        / 982        / 896        , MAE 0.000067  (18-…)
+    RETIRED               705        / 822        / 822        , MAE 0.001376  (17-…)
 
 Two rulers are implemented over one caller, exactly as `analysis/segments.rs` describes:
 
@@ -96,6 +101,10 @@ class Params:
     # marker granularity, excluding the IBD2 call's own end markers, and apply the
     # `--seglength` floor to each piece. "overlap" is the retired `length - overlap`.
     ibd1_sub: str = "pieces"
+    # Which IBD2 calls the IBD1 pass is cut by: only those that survived `--seglength`
+    # ("kept", committed) or every call the IBD2 caller made ("all"). Identical at the
+    # default floor, where nothing is dropped.
+    ibd1_cut: str = "kept"
 
     # --- marker-level boundary refinement --------------------------------
     # Where inside the flanking word a call stops. `last`/`first` name which IBS0 of that
@@ -105,8 +114,36 @@ class Params:
     ibd1_left: tuple = ("last", 1)
     ibd2_right: tuple = ("last", 0)
     # The fringe rules, for a run that reaches the usable segment's own first/last word.
+    # These two are the **IBD1** pass's fringe (they read the IBS0 masks); the IBD2
+    # pass's own fringe is `ibd2_fringe` below and reads the mismatch masks.
     fringe_right: tuple = ("first", -1)
     fringe_left: tuple = ("last", 1)
+    # The IBD2 fringe (`docs/research/19-ibd2seg-residual.md` §1-§4). Once a computed end
+    # lands on the word grid's own edge the word scan is over and a **marker** scan takes
+    # over across the partial word beyond it.
+    #   "mis"    — the committed rule: run out to the segment's own first/last marker, or
+    #              only as far as the nearest het-vs-hom **mismatch** there, stopping one
+    #              marker short of it (the last such marker on the left, the first on the
+    #              right). An opposite homozygote in a fringe does not stop the call.
+    #   "extend" — the retired `17-…` §5 clause: a run whose own first/last *word* is the
+    #              segment's runs unconditionally to the segment's first/last marker, and
+    #              it is applied after the push rather than before. This is exactly the
+    #              engine of `docs/research/18-ibd1-caller.md` (747 exact / 896 `IBD2Seg`
+    #              at 3 Mb), kept so those numbers still reproduce.
+    #   "none"   — never leave the word grid.
+    ibd2_fringe: str = "mis"
+    ibd2_fringe_off: int = 1   # markers between the call's end and that mismatch
+
+    # --- how `<prefix>.seg` prints PropIBD ---------------------------------
+    # "printed"   — the committed rule (`king_core::ibdseg::seg_prop_ibd`): the two
+    #               columns are rounded to the four decimals the file shows, then
+    #               combined as `i2*1e-4 + i1*5e-5` and printed. Exact on all 4 172
+    #               reference `.seg` rows.
+    # "unrounded" — `IBD2Seg + IBD1Seg/2` at full precision, which is what the `.kin`
+    #               family prints and what `.seg` was assumed to print through
+    #               `docs/research/17-` and `18-`. Retired for `.seg`; keep it to
+    #               reproduce those write-ups' scorecards.
+    seg_prop: str = "printed"
 
     def label(self):
         d = Params()
@@ -118,9 +155,35 @@ class Params:
 BASE = Params()
 
 #: The geometry `BASE` replaced: word-aligned ends, a five-mismatch word predicate, the
-#: two-word tail snap and `length - overlap`. Scores 705 exact `.seg` rows against 747,
-#: MAE 0.00138 against 0.000067. Kept so the sweeps scored against it still reproduce.
-RETIRED = Params(seg_rule="word", ibd2_dirty_ibs1=5, ibd1_sub="overlap")
+#: two-word tail snap and `length - overlap`. Scores 705 exact `.seg` rows against
+#: `BASE`'s 806, MAE 0.001376 against 0.000023. Kept so the sweeps scored against it
+#: still reproduce.
+RETIRED = Params(seg_rule="word", ibd2_dirty_ibs1=5, ibd1_sub="overlap",
+                 seg_prop="unrounded")
+
+#: The engine of `docs/research/18-ibd1-caller.md`: everything `BASE` has except the
+#: IBD2 fringe of `19-…` (still `17-…` §5's unconditional "extend") and `.seg`'s own
+#: `PropIBD` rule (still the `.kin` one). Scores 747 exact rows / 896 exact `IBD2Seg` /
+#: MAE 0.000067 at 3 Mb. Kept so `18-…`'s numbers reproduce from this file too.
+FRINGE18 = Params(ibd2_fringe="extend", seg_prop="unrounded")
+
+#: `BASE`'s caller with the retired **`.kin`** `PropIBD` rule on `.seg` — the tree as it
+#: stood after `19-…` and before `20-…`. 806 exact rows against `BASE`'s 982.
+PROP19 = Params(seg_prop="unrounded")
+
+
+def seg_prop_ibd(ibd1_seg, ibd2_seg):
+    """`PropIBD` as `<prefix>.seg` prints it — `king_core::ibdseg::seg_prop_ibd`.
+
+    The two columns are first rounded to the four decimals the file shows; the printed
+    value is then `i2*1e-4 + i1*5e-5` on those integers. The 1 313 of 4 172 reference rows
+    where that lands on an exact decimal half are resolved by which side of the half the
+    double falls on, and this expression agrees with the reference on every one of them —
+    `(i1+2*i2)/20000`, `i2/10000 + i1/20000` and integer round-half-up do not.
+    """
+    i1 = int(round(float("%.4f" % ibd1_seg) * 10000))
+    i2 = int(round(float("%.4f" % ibd2_seg) * 10000))
+    return i2 * 1e-4 + i1 * 5e-5
 
 
 # ---------------------------------------------------------------------------
@@ -199,16 +262,38 @@ class SegScan:
         self.cum1, self.cum2 = k1, k2
         # the `.seg` gate's own cumulative — see `Params.inf2_ibs1b`
         self.cum2s = k2 if p.inf2_ibs1b else k2s
-        # fringe IBS0 masks: the segment's own markers in the words it does not own
+        # Fringe masks: the segment's own markers in the two words it does not own.
+        # The IBD1 pass reads the IBS0 ones, the IBD2 pass the het-vs-hom mismatch ones —
+        # each pass stops at its own breaking marker (`19-…` §2, §5).
         self.head = 0
         self.tail = 0
+        self.head_mis = 0
+        self.tail_mis = 0
         if self.n > 0:
             if lo != WORD * self.w0:
                 keep = lo - WORD * (self.w0 - 1)
-                self.head = int(ibs0[self.w0 - 1]) & ~((1 << keep) - 1)
+                drop = ~((1 << keep) - 1)
+                self.head = int(ibs0[self.w0 - 1]) & drop
+                self.head_mis = int(ibs1[self.w0 - 1]) & drop
             if hi != WORD * (self.w1 + 1) - 1:
                 keep = hi - WORD * (self.w1 + 1) + 1
                 self.tail = int(ibs0[self.w1 + 1]) & ((1 << keep) - 1)
+                self.tail_mis = int(ibs1[self.w1 + 1]) & ((1 << keep) - 1)
+
+    # --- the IBD2 fringe stops ------------------------------------------
+    def head_stop(self):
+        """How far left an IBD2 call may creep past the word grid — `Scan::head_stop`."""
+        if self.p.ibd2_fringe != "mis" or not self.head_mis:
+            return self.lo
+        last = WORD * (self.w0 - 1) + _last_bit(self.head_mis)
+        return max(last + self.p.ibd2_fringe_off, self.lo)
+
+    def tail_stop(self):
+        """The mirror — `Scan::tail_stop`."""
+        if self.p.ibd2_fringe != "mis" or not self.tail_mis:
+            return self.hi
+        first = WORD * (self.w1 + 1) + _first_bit(self.tail_mis)
+        return min(first - self.p.ibd2_fringe_off, self.hi)
 
     # --- gates ---------------------------------------------------------
     def informative(self, cum, u, v):
@@ -286,6 +371,8 @@ class SegScan:
         z = [int(self.n0[w0 + k]) != 0 for k in range(n)]
         mis = [int(self.n1[w0 + k]) for k in range(n)]
         usable = [(not z[k]) and mis[k] < p.ibd2_dirty_ibs1 for k in range(n)]
+        # The two marker-level stops beyond the word grid (`19-…` §3).
+        head_stop, tail_stop = self.head_stop(), self.tail_stop()
 
         def ge_of(b):
             """The one word a run ending at `b` reaches into — whole-word."""
@@ -341,11 +428,19 @@ class SegScan:
                 left = max(0, last - REACH)
                 if a < 2 or z[a - 2]:
                     left = max(left, WORD * (u - 1))
+            # Once a computed end lands on the grid's own edge the word scan is over and
+            # the marker scan takes over, whether that moves the end out (the fringe
+            # carries no mismatch) or pulls it back in (`19-…` §4). It is the computed
+            # end that snaps, not the run: `left <= WORD*w0`, not `u == w0`.
+            if p.ibd2_fringe == "mis" and left <= WORD * w0:
+                left = head_stop
             right = WORD * v + WORD - 1
             if b + 1 < n and not z[b + 1] and int(self.ibs1[v + 1]):
                 right = WORD * (v + 1) + _first_bit(int(self.ibs1[v + 1])) + REACH
                 if b + 2 >= n or z[b + 2]:
                     right = min(right, WORD * (v + 2) - 1)
+            if p.ibd2_fringe == "mis" and right >= WORD * (w1 + 1) - 1:
+                right = tail_stop
             gs = next((t for t in range(a, b + 1) if mis[t] == 0), None)
             if gs is None:
                 continue
@@ -361,10 +456,12 @@ class SegScan:
             if emitted:
                 left = max(left, WORD * (w0 + gs + 1))
             emitted += 1
-            if u == w0:
-                left = min(left, self.lo)
-            if v == w1:
-                right = max(right, self.hi)
+            if p.ibd2_fringe == "extend":
+                # The retired `17-…` §5 clause, in the place it used to occupy.
+                if u == w0:
+                    left = min(left, self.lo)
+                if v == w1:
+                    right = max(right, self.hi)
             left, right = max(left, self.lo), min(right, self.hi)
             if out:
                 left = max(left, out[-1][1])   # calls may touch, but not overlap
@@ -450,6 +547,10 @@ def call_pair(ds, i, j, p=BASE, min_bp=SEGLEN):
             continue
         c2 = sc.ibd2(pos, min_bp)
         c1 = sc.ibd1(pos, min_bp)
+        # What the IBD1 pass is cut by: the IBD2 calls that survived `--seglength`
+        # ("kept", committed) or every IBD2 call the caller made, floor or no floor
+        # ("all"). They are the same set at the default floor.
+        cut = c2 if p.ibd1_cut == "kept" else sc.ibd2(pos, 0)
         for lo, hi in c2:
             ln = int(pos[hi] - pos[lo])
             ibd2_bp += ln
@@ -459,10 +560,10 @@ def call_pair(ds, i, j, p=BASE, min_bp=SEGLEN):
             longest = max(longest, ln)
             if p.ibd1_sub == "pieces":
                 ibd1_bp += sum(v for v in
-                               (int(pos[b] - pos[a]) for a, b in _pieces((lo, hi), c2))
+                               (int(pos[b] - pos[a]) for a, b in _pieces((lo, hi), cut))
                                if v >= min_bp)
             else:
-                ibd1_bp += ln - _overlap((lo, hi), c2, pos)
+                ibd1_bp += ln - _overlap((lo, hi), cut, pos)
     return ibd1_bp, ibd2_bp, longest, max_ibd2(ds, i, j, p)
 
 
@@ -749,7 +850,10 @@ def score_seg(p=BASE, datasets=None, suffix="__ibdseg", min_bp=SEGLEN, per_ds=Fa
             r += 1
             a1, a2, ap, at = ref[(i, j)]
             g1, g2 = i1 / d, i2 / d
-            gp = g2 + g1 / 2
+            # `.seg`'s own PropIBD rule, unless a retired parameterisation asked for the
+            # `.kin` one. `inf_type` still reads the full-precision value, as the engine
+            # does — this is a printing rule, not a decision.
+            gp = seg_prop_ibd(g1, g2) if p.seg_prop == "printed" else g2 + g1 / 2
             ok1 = kd.fmt4(g1) == a1
             ok2 = kd.fmt4(g2) == a2
             ibd1ok += ok1
@@ -757,7 +861,8 @@ def score_seg(p=BASE, datasets=None, suffix="__ibdseg", min_bp=SEGLEN, per_ds=Fa
             if ok1 and ok2:
                 both += 1
                 b += 1
-            if ok1 and ok2 and kd.fmt4(gp) == ap and kd.inf_type(g1, g2, gp) == at:
+            if ok1 and ok2 and kd.fmt4(gp) == ap \
+                    and kd.inf_type(g1, g2, g2 + g1 / 2) == at:
                 exact += 1
                 e += 1
             err += abs(gp - ap)

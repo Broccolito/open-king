@@ -62,47 +62,68 @@
 //!   corpus rows at the default floor. One clause is measured and deliberately left out —
 //!   a `--seglength`-triggered run merge that never fires at 3 Mb; see [`Scan::ibd1`].
 //!
-//! # What is still not right — and it is all [`Scan::ibd2`]
+//! * The **fringe** — the partial word beyond a usable segment's word grid, read by both
+//!   passes — is **measured** (`docs/research/19-ibd2seg-residual.md`) on a third canvas,
+//!   `docs/research/fixtures/fringecanvas.py`, which builds a segment that does *not* start
+//!   on a word boundary by shortening the carrier chromosome by `f` markers. The other two
+//!   rigs are word-aligned and cannot reach any of it, so this clause was a corpus fit
+//!   until that rig existed. Both stops are bisected at 16 positions a side, and the
+//!   asymmetry is real and would not have been guessed: **an opposite homozygote in a
+//!   fringe does not stop an IBD2 call**, though one anywhere in a complete word inside the
+//!   grid disqualifies that word outright. Each pass stops at its own breaking marker — an
+//!   opposite homozygote for IBD1, a het-vs-hom mismatch for IBD2. See `fringe_tests`.
+//!
+//! # What is still not right — and none of it is at the default floor
 //!
 //! Against the captured reference `.seg` files at the default 3 Mb floor the caller
-//! reproduces **747 of 982 rows** with all four printed columns identical, **all 982**
-//! `InfType` labels, and a mean absolute `PropIBD` error of **0.000067** (worst 0.0042).
-//! The set of pairs reported is exactly right — 0 extra, 0 missing, on all ten datasets —
-//! so what is left is the *length* of calls that are already found.
+//! reproduces **all 982 rows** with all four printed columns identical: `IBD1Seg` 982,
+//! `IBD2Seg` 982, `PropIBD` 982, `InfType` 982, mean and worst absolute error 0.0000, and
+//! the reported pair set exactly right (0 extra, 0 missing) on all ten datasets. There is
+//! no residual left to point at here.
 //!
-//! Split those rows by whether the reference reports any IBD2 at all and the residual
-//! localises completely (`docs/research/14-ibd2-geometry.md` §2 drew this table for a
-//! rule two generations back; the second column is what moved):
+//! Two of those four columns were closed by a *writer* rule rather than by this function,
+//! and the distinction matters for anyone continuing. `<prefix>.seg` computes `PropIBD`
+//! from the four decimals it is about to print rather than from the totals
+//! ([`seg_prop_ibd`]), and lists its rows in 16-sample blocks rather than by sample index
+//! (`analysis::ibdseg::seg_pair_order`). Neither touches a segment. Before they landed,
+//! this caller scored 806 of 982 exact rows with both estimate columns already at 982, and
+//! `docs/research/19-ibd2seg-residual.md` §9 concluded from those 176 rows that the IBD1
+//! pass was "systematically about a marker short". It was not — the diagnosis was an
+//! artefact of comparing two different formulas, and `20-seg-writer.md` is the correction.
+//! **Do not re-derive the sub-ulp IBD1 argument; it is dead.**
 //!
-//! | reference row | rows | both estimate columns exact |
-//! | --- | ---: | ---: |
-//! | `IBD2Seg == 0.0000` | 823 | **823** |
-//! | `IBD2Seg > 0` | 159 | **77** (was 2) |
+//! At `--seglength 5` and `10` the picture is different and it is the only picture left:
+//! `IBD1Seg` 910 and 844, `IBD2Seg` 946 and 937, byte-exact rows 900 and 832 — which is
+//! exactly the number of rows whose two estimate columns are right, so `PropIBD` still
+//! contributes nothing. Two causes are known and one is measured:
 //!
-//! and by column, `IBD1Seg` is exact on **982 of 982** and `IBD2Seg` on 896. So
-//! [`Scan::ibd1`], its refinement and [`ibd1_pieces`] are **finished** at the default
-//! floor, the "is there any IBD2 here at all" question is finished, and every failing
-//! `--ibdseg` parity case is failing on the *length* of the 159 rows that do carry IBD2.
-//! Three notes for anyone continuing this:
+//! * **The run merge of `docs/research/18-ibd1-caller.md` §9.** Above the default floor the
+//!   reference merges two IBD1 runs across a short interruption. Its gap condition (strictly
+//!   under `--seglength`) and its tolerance (at most 5 opposite homozygotes in the
+//!   interrupting words) are both bisected against the reference; a third condition is
+//!   missing, and implementing the rule without it is worse (`IBD1Seg` 910 → 869 at 5 Mb,
+//!   and 1 054 invented pairs if the merged calls feed the ">10 Mb" filter). **This is the
+//!   whole remaining `.seg` gap and it is worth 11 parity cases.**
+//! * **A call whose length is right to a fraction of an ulp can still fall on the wrong side
+//!   of the floor**, and then the whole call is kept or dropped. `dups`' duplicate pair is
+//!   the sharpest instance: the reference prints the same `IBD2Seg 0.9877` at 5 and 10 Mb
+//!   while this caller falls 0.9018 → 0.8804. One row, the largest single error in the
+//!   corpus, and floor-independent on the reference's side.
 //!
-//! * **`.seg` exact-row count is a poor gradient for IBD2 work** — it is dominated by the
-//!   823 rows IBD2 barely touches, which is why a rule that cuts mean error by a factor of
-//!   3.7 and the worst row by a factor of 24 moved it only from 705 to 709. Grade with the
-//!   `IBD2Seg` column (822 → 896) and the mean, as `tests/parity/fit/seg17.py` does; the
-//!   `IBD1Seg` column is graded the same way by `tests/parity/fit/seg18.py`.
-//! * **`--ibs` is not a gradient either.** It used to be the sharp one, but
-//!   [`Scan::ibd2_words`] made both its IBD2 columns exact, so every candidate `.seg` rule
-//!   now scores an identical 158/158 on them. The grader that works is the `.seg`-native
-//!   canvas of `docs/research/17-seg-caller.md` §1 — `docs/research/fixtures/segcanvas.py`,
-//!   with 872 reference answers cached, so it re-runs in seconds without the binary.
-//! * **What is left is one clause.** All 11 misses of the exhaustive length-≤4 battery and
-//!   the whole 8 % random-canvas residual are the bridging condition of [`Scan::ibd2`],
-//!   whose lookahead is guessed: it stops at the next unusable word, and the canvas `Cyzy`
-//!   says it should not (`…/17-seg-caller.md` §11.1, §11.2). Two further open items are
-//!   recorded there: a two-marker left-end effect on runs that open on a mismatch word, and
-//!   the **100 Mb usable-total floor** (§2) — the reference refuses a fileset whose usable
-//!   total is under 100 000 000 bp, bisected to the base pair, and this crate does not
-//!   model it. No corpus dataset is anywhere near it.
+//! **How to grade work on it.** Not with the `.seg` exact-row count at 3 Mb, which is
+//! saturated, and not with `--ibs`, whose IBD2 columns have been exact under every candidate
+//! since [`Scan::ibd2_words`]. Grade `IBD1Seg` and `IBD2Seg` at 5 and 10 Mb
+//! (`tests/parity/fit/engine.py`), require the 3 Mb column to stay at 982, and confirm out
+//! of sample on the canvases — `gradebinary.py --ibd1`'s one open family is 43/60 and is the
+//! same phenomenon in its smallest reproduction. Do **not** re-sweep this function's
+//! constants: forty single-knob perturbations and all 32 combinations of the two IBD1
+//! endpoint rules crossed with the two IBD1 fringe rules were scored in the final pass, and
+//! the committed values are the unique maximum on both exact rows and mean error
+//! (`20-seg-writer.md` §6).
+//!
+//! One further open item: the **100 Mb usable-total floor** (`…/17-…` §2) — the reference
+//! refuses a fileset whose usable total is under 100 000 000 bp, bisected to the base pair,
+//! and this crate does not model it. No corpus dataset is anywhere near it.
 //!
 //! **What is *not* the answer, measured** (`…/16-segment-extension.md` §9,
 //! `…/17-seg-caller.md` §8): porting [`Scan::ibd2_words`]'s chunk geometry to this pass.
@@ -437,6 +458,14 @@ pub struct Scan {
     /// Tail fringe: markers `64*(last_word+1) ..= seg.hi`, as a mask relative to
     /// `64*(last_word+1)`.
     tail_ibs0: u64,
+    /// The same two fringes, as masks of **het-vs-hom mismatch** positions.
+    ///
+    /// The IBD2 pass reads these where the IBD1 pass reads the IBS0 ones: past the
+    /// segment's word grid the scan is marker by marker, and each pass stops at its own
+    /// breaking marker — an opposite homozygote for IBD1, a mismatch for IBD2. See
+    /// [`Scan::ibd2`] and `docs/research/19-ibd2seg-residual.md` §3.
+    head_ibs1: u64,
+    tail_ibs1: u64,
 }
 
 impl Scan {
@@ -460,19 +489,19 @@ impl Scan {
         // The fringes are the markers of the segment that fall in a word the segment does
         // not wholly own. They take no part in the word scan but they do bound the
         // boundary refinement, so their IBS0 pattern is kept.
-        let head = if nwords == 0 || seg.lo == WORD * w0 {
-            0
+        let (head, head_mis) = if nwords == 0 || seg.lo == WORD * w0 {
+            (0, 0)
         } else {
             let d = word_diff(g, i, j, w0 - 1);
-            let keep = seg.lo - WORD * (w0 - 1);
-            d.ibs0 & !((1u64 << keep) - 1)
+            let drop = !mask_low(seg.lo - WORD * (w0 - 1));
+            (d.ibs0 & drop, d.ibs1 & drop)
         };
-        let tail = if nwords == 0 || seg.hi == WORD * (w1 + 1) - 1 {
-            0
+        let (tail, tail_mis) = if nwords == 0 || seg.hi == WORD * (w1 + 1) - 1 {
+            (0, 0)
         } else {
             let d = word_diff(g, i, j, w1 + 1);
-            let keep = seg.hi - WORD * (w1 + 1) + 1;
-            d.ibs0 & mask_low(keep)
+            let keep = mask_low(seg.hi - WORD * (w1 + 1) + 1);
+            (d.ibs0 & keep, d.ibs1 & keep)
         };
         Scan {
             ibs0,
@@ -483,7 +512,32 @@ impl Scan {
             seg,
             head_ibs0: head,
             tail_ibs0: tail,
+            head_ibs1: head_mis,
+            tail_ibs1: tail_mis,
         }
+    }
+
+    /// How far left an IBD2 call may creep into the partial word before the segment's
+    /// word grid: one marker past the **last** mismatch among the segment's own markers
+    /// there, or the segment's first marker when that fringe carries none.
+    fn head_stop(&self) -> usize {
+        if self.head_ibs1 == 0 {
+            return self.seg.lo;
+        }
+        let w0 = self.seg.first_word();
+        let last = WORD * (w0 - 1) + (63 - self.head_ibs1.leading_zeros()) as usize;
+        (last + 1).max(self.seg.lo)
+    }
+
+    /// The mirror: one marker before the **first** mismatch in the partial word after the
+    /// grid, or the segment's last marker when that fringe carries none.
+    fn tail_stop(&self) -> usize {
+        if self.tail_ibs1 == 0 {
+            return self.seg.hi;
+        }
+        let w1 = self.seg.last_word();
+        let first = WORD * (w1 + 1) + self.tail_ibs1.trailing_zeros() as usize;
+        (first - 1).min(self.seg.hi)
     }
 
     /// Whether the run of scan words `k0..=k1` carries [`MIN_INFORMATIVE`] markers of
@@ -703,10 +757,20 @@ impl Scan {
     ///   from its gate-start word. It is the *emitted* call that pushes, not the break: a
     ///   run refused by the gate pushes nothing, and the push survives its cause being
     ///   dropped by `--seglength`, so the clip is applied before the length filter (§6).
-    /// * **A call touching the usable segment's own first or last complete word runs on to
-    ///   the segment's first or last marker.** The canvas cannot see this (its chromosome 2
-    ///   is word-aligned); the corpus can — it is worth 37 exact `IBD2Seg` values, and it is
-    ///   why `dups`' duplicate pair reads `IBD2Seg 1.0000` and not the word-aligned 0.8984.
+    /// * **The fringe.** Once an end lands on the grid's own edge the word scan is over and
+    ///   a **marker** scan takes over across the partial word beyond it — outwards to the
+    ///   segment's own first or last marker, or only as far as the nearest **het-vs-hom
+    ///   mismatch** there, stopping one marker short of it (the *last* such marker on the
+    ///   left, the *first* on the right). An opposite homozygote in that partial word does
+    ///   **not** stop the call, though one anywhere in a complete word inside the grid
+    ///   disqualifies that word outright. It is the computed end that snaps, not the run:
+    ///   a call whose run opens at the *second* complete word still reaches the fringe when
+    ///   the reach above carries its left end back to the edge. All of it is bisected on
+    ///   `docs/research/fixtures/fringecanvas.py` — the rig that finally builds a segment
+    ///   which does not start on a word boundary — and written up in
+    ///   `docs/research/19-ibd2seg-residual.md` §1-§4; `fringe_tests` holds the cases. This
+    ///   clause is why `dups`' duplicate pair reads `IBD2Seg 1.0000` and not the
+    ///   word-aligned 0.8984, and it is worth 86 exact `IBD2Seg` rows.
     ///
     /// Requiring a whole *word* to be usable rather than only cutting at boundaries is what
     /// makes a parent–offspring pair print `IBD2Seg 0.0000`: PO genotypes disagree far too
@@ -735,20 +799,25 @@ impl Scan {
     ///
     /// # Accuracy
     ///
-    /// Out of sample on the captured corpus — nothing in it chose a constant — this scores
-    /// **747 of 982 exact rows** against the retired geometry's 705, `IBD2Seg` exact on
-    /// **896 rows against 822**, mean `PropIBD` error **0.000067 against 0.00138**, worst
-    /// row **0.0042 against 0.2109**, with the reported pair set still exactly right
-    /// (0 extra, 0 missing).
+    /// Out of sample on the captured corpus — nothing in it chose a constant — `IBD2Seg` is
+    /// exact on **all 982** primary rows, and with the writer rules of [`seg_prop_ibd`] and
+    /// `analysis::ibdseg::seg_pair_order` alongside it the whole file is byte-identical on
+    /// all thirteen datasets at the default floor. This function's own contribution, scored
+    /// on the unrounded scale so the generations are comparable: `IBD2Seg` 822 → 896 → 982,
+    /// exact rows 705 → 747 → 806, mean `PropIBD` error 0.00138 → 0.000067 → 0.000023, worst
+    /// row 0.2109 → 0.0042 → 0.0001. `tests/parity/fit/engine.py` pins all three as named
+    /// parameter bundles (`RETIRED`, `FRINGE18`, `PROP19`), so every one of those numbers
+    /// re-runs.
     ///
-    /// The **bridge** used to be the one fitted clause, and it is now bisected (§14). The
-    /// binary is graded against the reference on the canvas batteries directly: over 6 000
-    /// canvases — the exhaustive sequences of length ≤ 4 and 5 over
-    /// `{clean, quiet, 1-mismatch, 2-mismatch}`, of length 4 over an eight-letter alphabet,
-    /// and six families of random and "rich" random canvases — the rule below reproduces
-    /// the reference on **6 000**, where the fitted lookahead it replaces reproduced
-    /// **5 723**. The two agree on every corpus pair, so that improvement is invisible to
-    /// the `.seg` scorecard and was landed on the canvas evidence alone.
+    /// Neither the **bridge** nor the **fringe** is a fit any longer (`…/17-…` §14,
+    /// `…/19-…` §1-§4). The binary is graded against the reference on the canvas batteries
+    /// directly: over 6 000 word-aligned canvases — the exhaustive sequences of length ≤ 4
+    /// and 5 over `{clean, quiet, 1-mismatch, 2-mismatch}`, of length 4 over an
+    /// eight-letter alphabet, and six families of random and "rich" random canvases — this
+    /// rule reproduces the reference on **6 000**, where the fitted lookahead it replaces
+    /// reproduced 5 723; and on **504** further canvases whose segment does not start on a
+    /// word boundary (two unused random seeds plus an exhaustive composition sweep crossed
+    /// with six fringe shapes) it reproduces the reference on **504**.
     pub fn ibd2(&self, pos: &[i64], min_bp: i64) -> Vec<Called> {
         let n = self.nwords();
         let (w0, w1) = (self.seg.first_word(), self.seg.last_word());
@@ -758,6 +827,8 @@ impl Scan {
         let mis: Vec<u32> = self.ibs1.iter().map(|m| m.count_ones()).collect();
         let inf2: Vec<u32> = self.inf2.iter().map(|m| m.count_ones()).collect();
         let usable: Vec<bool> = (0..n).map(|k| !ibd2_dirty(self, k)).collect();
+        // The two marker-level stops beyond the word grid — see `Scan::head_stop`.
+        let (head_stop, tail_stop) = (self.head_stop(), self.tail_stop());
 
         // The last word a run ending at `b` reaches into — the whole-word form of the
         // right-hand reach below, which is the window the gate is counted over.
@@ -842,6 +913,12 @@ impl Scan {
                     left = left.max(WORD * (u - 1));
                 }
             }
+            // Once the end reaches the grid's own first marker the word scan is over and
+            // the marker scan takes over, whether that moves the end out (the segment's
+            // fringe carries no mismatch) or pulls it back in (it does).
+            if left <= WORD * w0 {
+                left = head_stop;
+            }
             // Right: the mirror image, past the *first* mismatch of the word that ended it.
             let mut right = WORD * v + WORD - 1;
             if b + 1 < n && self.ibs0_at(b + 1) == 0 && self.ibs1[b + 1] != 0 {
@@ -850,6 +927,9 @@ impl Scan {
                 if b + 2 >= n || self.ibs0_at(b + 2) != 0 {
                     right = right.min(WORD * (v + 2) - 1);
                 }
+            }
+            if right >= WORD * (w1 + 1) - 1 {
+                right = tail_stop;
             }
 
             // The gate, from the run's first mismatch-free word through the one word the
@@ -868,14 +948,6 @@ impl Scan {
                 left = left.max(WORD * (w0 + gs + 1));
             }
             emitted += 1;
-            // The segment's own fringes: a call touching `w0`/`w1` runs to the segment's
-            // own first/last marker, which the word grid does not cover.
-            if u == w0 {
-                left = left.min(self.seg.lo);
-            }
-            if v == w1 {
-                right = right.max(self.seg.hi);
-            }
             let mut lo = left.max(self.seg.lo);
             let hi = right.min(self.seg.hi);
             // Consecutive calls may touch, but not overlap.
@@ -1237,7 +1309,12 @@ impl PairSegments {
         }
     }
 
-    /// `PropIBD = IBD2Seg + IBD1Seg/2`, in full precision — never from the printed 4 dp.
+    /// `PropIBD = IBD2Seg + IBD1Seg/2`, in full precision.
+    ///
+    /// This is the value the **`.kin` family** prints and the value every *decision* is
+    /// made on — [`inf_type`], [`reported_at_degree`], `--unrelated`'s greedy and
+    /// `--related`'s `Error` grader all take it. `<prefix>.seg` prints a different one;
+    /// see [`seg_prop_ibd`], which is a formatting rule and nothing more.
     pub fn prop_ibd(&self, denom: i64) -> f64 {
         self.ibd2_seg(denom) + self.ibd1_seg(denom) / 2.0
     }
@@ -1339,6 +1416,90 @@ fn ibd1_pieces(c: Called, others: &[Called]) -> Vec<Called> {
         out.push(Called { lo: cur, hi: c.hi });
     }
     out
+}
+
+// ---------------------------------------------------------------------------
+// The `.seg` writer's own PropIBD
+// ---------------------------------------------------------------------------
+
+/// The `PropIBD` **`<prefix>.seg` prints** — computed from the two columns beside it,
+/// after they have been rounded to the four decimals the file shows.
+///
+/// ```text
+/// i1 = the integer <prefix>.seg prints as IBD1Seg, scaled by 10 000
+/// i2 = the same for IBD2Seg
+/// PropIBD = i2 * 1e-4 + i1 * 5e-5          , printed "%.4lf"
+/// ```
+///
+/// # Why this is not the same number as [`Segments::prop_ibd`]
+///
+/// The reference contradicts itself, and that is the whole finding. Run it once:
+///
+/// ```text
+/// king -b bigish.bed --related --degree 2 --ibdseg --cpus 1 --prefix r
+/// ```
+///
+/// **147** pairs land in both `r.kin` and `r.seg`; **all 147** carry identical `IBD1Seg`
+/// and `IBD2Seg` in the two files, and **43** carry a different `PropIBD` — e.g.
+/// `IBD1Seg 0.4885 / IBD2Seg 0.2974` prints `0.5417` in `.kin` and `0.5416` in `.seg`,
+/// and `0.3852 / 0.3123` prints `0.5048` against `0.5049`. Same invocation, same pair,
+/// same printed inputs, two answers. No single expression can match both files, so the
+/// two writers get one each: `.kin` and its relatives take `prop_ibd` (full precision,
+/// byte-exact on all 4 805 corpus rows), and `.seg` takes this.
+///
+/// # How it was pinned, and how strong the evidence is
+///
+/// Entirely from the reference's own captured output — the rule is a function of two
+/// printed columns, so it needs no genotypes to test:
+///
+/// * Over **all 4 172** `.seg` rows the corpus captures, `PropIBD` is consistent with
+///   *some* rounding of `IBD2Seg + IBD1Seg/2` read off the printed columns: **0
+///   refutations**. 2 859 of those rows determine the answer outright; the other 1 313
+///   land on an exact decimal half, where the reference rounds up 1 099 times and down
+///   214, so the tie is not a convention — it is arithmetic.
+/// * That the inputs are the *printed* columns and not the underlying totals is what
+///   1.7 % of rows decide: on those the full-precision value sits at least half a printed
+///   ulp away from the printed-column combination, so the full-precision hypothesis would
+///   have been refuted on ≈ 71 of the 4 172. It was refuted on **0**.
+/// * The expression is not free. `(i1 + 2·i2)/20000`, `i2/10000 + i1/20000`,
+///   `(i1/2 + i2)/10000`, `i2 + i1·0.5` on the printed doubles, `(i1+2·i2)·5e-5`, and
+///   integer round-half-up all reproduce between 3 804 and 4 086 of the 4 172. **This one
+///   reproduces 4 172.** The 1 313 ties are decided by whether `i2 * 1e-4 + i1 * 5e-5`
+///   lands infinitesimally above or below the exact decimal half, and it agrees with the
+///   reference on every one of them.
+/// * The rule is `.seg`'s alone. Applied to the reference's own `.kin` it reproduces
+///   3 714 of 4 248 rows, `.kin0` 236 of 302, `X.kin` 78 of 90, `cluster.kin` 139 of 165
+///   — all four of which open-king already reproduces byte for byte with `prop_ibd`.
+///
+/// # What it is worth
+///
+/// On the primary 3 Mb capture, byte-exact `.seg` rows go **806 → 982 of 982**, mean
+/// `PropIBD` error 0.000018 → **0.000000**, worst 0.0001 → **0.0000**. Held out at the
+/// two floors that had no part in finding it, row-exactness rises to exactly the number
+/// of rows whose two estimate columns are already right — 755 → **900** of 900 at 5 Mb
+/// and 713 → **832** of 832 at 10 Mb. `PropIBD` now contributes **no error at all** at
+/// any floor: whatever `.seg` still gets wrong is `IBD1Seg` or `IBD2Seg`.
+///
+/// It changes no decision anywhere. `InfType`, the `--degree` filter, `--unrelated` and
+/// `--related`'s `Error` all keep reading [`Segments::prop_ibd`]; this value reaches one
+/// column of one file.
+pub fn seg_prop_ibd(ibd1_seg: f64, ibd2_seg: f64) -> f64 {
+    printed_units(ibd2_seg) as f64 * 1e-4 + printed_units(ibd1_seg) as f64 * 5e-5
+}
+
+/// The integer a `{:.4}` column shows, scaled by 10 000 — read back off the formatter
+/// itself so it cannot drift from the digits actually written beside it.
+fn printed_units(x: f64) -> i64 {
+    let s = format!("{x:.4}");
+    let digits: i64 = s
+        .bytes()
+        .filter(u8::is_ascii_digit)
+        .fold(0i64, |a, b| a * 10 + i64::from(b - b'0'));
+    if s.starts_with('-') {
+        -digits
+    } else {
+        digits
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1535,6 +1696,44 @@ mod tests {
         assert!(!chrs.contains(&14), "chr14 has only four");
     }
 
+    /// Every case here is a real row of the reference's own `<prefix>.seg`, and every one
+    /// of them is an exact decimal tie — `IBD2Seg + IBD1Seg/2` lands on `x.xxxx5`. They
+    /// do **not** all go the same way, which is the point: the direction is arithmetic,
+    /// not a rounding convention, and any "round half up"/"half even" rule fails half of
+    /// this list. See `seg_prop_ibd`.
+    #[test]
+    fn the_seg_writer_resolves_exact_ties_in_both_directions() {
+        let p = |a: f64, b: f64| format!("{:.4}", seg_prop_ibd(a, b));
+        // rounds DOWN
+        assert_eq!(p(0.4885, 0.2974), "0.5416"); // .kin prints 0.5417 for this pair
+                                                 // rounds UP
+        assert_eq!(p(0.7151, 0.0000), "0.3576");
+        assert_eq!(p(0.5207, 0.1808), "0.4412"); // .kin prints 0.4411
+        assert_eq!(p(0.4987, 0.0000), "0.2494");
+        assert_eq!(p(0.4461, 0.2703), "0.4934");
+        assert_eq!(p(0.4135, 0.0000), "0.2068");
+        // and a row that is not a tie at all, so every candidate rule agrees
+        assert_eq!(p(0.3852, 0.3123), "0.5049"); // .kin prints 0.5048
+    }
+
+    /// The full-precision value is a *different number*, and the difference is what the
+    /// two writers disagree about. Keep them distinct.
+    #[test]
+    fn the_two_prop_ibd_rules_are_not_the_same_function() {
+        // 0.4885 / 0.2974: full precision says 0.54165 -> "0.5417" only if the underlying
+        // totals push it there; the printed-column rule pins it at 0.5416.
+        assert_ne!(
+            format!("{:.4}", seg_prop_ibd(0.4885, 0.2974)),
+            format!("{:.4}", 0.2974_f64 + 0.4885_f64 / 2.0 + 1e-9)
+        );
+        // ...and it is a pure function of the two printed columns: anything inside the
+        // same 4-dp cell gives the same answer.
+        assert_eq!(
+            seg_prop_ibd(0.48851, 0.29739),
+            seg_prop_ibd(0.48849, 0.29741)
+        );
+    }
+
     #[test]
     fn inf_type_bands() {
         assert_eq!(inf_type(0.0, 1.0, 1.0), "Dup/MZ");
@@ -1660,9 +1859,8 @@ mod tests {
         }
     }
 
-    /// IBD2 calls over an all-hom-A1 canvas with `edits` — `(sample, marker, code)` —
-    /// measured over `seg`.
-    fn ibd2_calls_over(edits: &[(usize, usize, u8)], seg: Usable) -> Vec<Called> {
+    /// One scan over an all-hom-A1 canvas with `edits` — `(sample, marker, code)`.
+    fn scan_over(edits: &[(usize, usize, u8)], seg: Usable) -> (Scan, Vec<i64>) {
         let n = WORDS * WORD;
         let mut g = [vec![0u8; n], vec![0u8; n]];
         for &(s, m, code) in edits {
@@ -1670,7 +1868,21 @@ mod tests {
         }
         let gt = genotypes(&g[0], &g[1]);
         let pos: Vec<i64> = (0..n).map(|i| i as i64 * 1_000).collect();
-        Scan::new(&gt, 0, 1, seg).ibd2(&pos, 0)
+        (Scan::new(&gt, 0, 1, seg), pos)
+    }
+
+    /// IBD2 calls over an all-hom-A1 canvas with `edits` — `(sample, marker, code)` —
+    /// measured over `seg`.
+    pub(super) fn ibd2_calls_over(edits: &[(usize, usize, u8)], seg: Usable) -> Vec<Called> {
+        let (scan, pos) = scan_over(edits, seg);
+        scan.ibd2(&pos, 0)
+    }
+
+    /// The same canvas read by the IBD1 pass, so the two fringe predicates can be
+    /// compared side by side (`docs/research/19-ibd2seg-residual.md` §5).
+    pub(super) fn ibd1_calls_over(edits: &[(usize, usize, u8)], seg: Usable) -> Vec<Called> {
+        let (scan, pos) = scan_over(edits, seg);
+        scan.ibd1(&pos, 0)
     }
 
     /// IBD2 calls for a pair that is identical everywhere except at `edits`, which set
@@ -2212,5 +2424,176 @@ mod tests {
         // the interval covers the same six trailing words (22..=27).
         assert_eq!(cut(10), WordCall { lo: 2, hi: 27 });
         assert_eq!(cut(20), WordCall { lo: 2, hi: 27 });
+    }
+}
+
+/// The **fringe**: what happens in the partial word beyond a usable segment's word grid.
+///
+/// Every case here is a bisection off the reference on
+/// `docs/research/fixtures/fringecanvas.py`, the rig that builds a usable segment which
+/// does not start on a word boundary — see `docs/research/19-ibd2seg-residual.md`. The two
+/// canvases the other campaigns used are word-aligned and cannot reach any of it, so these
+/// were fitted to the corpus until §1-§5 measured them.
+#[cfg(test)]
+mod fringe_tests {
+    use super::tests::*;
+    use super::*;
+
+    /// A segment opening 32 markers before word 1 and closing on word 8's last marker:
+    /// head fringe = word 0's bits 32..=63, no tail fringe.
+    fn head_seg() -> Usable {
+        Usable {
+            chr: 1,
+            lo: WORD - 32,
+            hi: 9 * WORD - 1,
+        }
+    }
+
+    /// The mirror: word-aligned at the front, closing 32 markers into word 9.
+    fn tail_seg() -> Usable {
+        Usable {
+            chr: 1,
+            lo: WORD,
+            hi: 9 * WORD + 31,
+        }
+    }
+
+    /// One edit on the second sample: 1 = het (a het-vs-hom mismatch), 2 = hom A2 (IBS0).
+    fn at(m: usize, code: u8) -> (usize, usize, u8) {
+        (1, m, code)
+    }
+
+    #[test]
+    fn a_call_runs_into_a_clean_fringe_to_the_segments_own_end() {
+        // `19-…` §0.2: eight widths on each side, all `extend`.
+        assert_eq!(
+            ibd2_calls_over(&[], head_seg()),
+            vec![Called { lo: 32, hi: 575 }]
+        );
+        assert_eq!(
+            ibd2_calls_over(&[], tail_seg()),
+            vec![Called { lo: 64, hi: 607 }]
+        );
+    }
+
+    #[test]
+    fn a_mismatch_in_the_head_fringe_stops_the_call_one_marker_past_it() {
+        // `19-…` §1, bisected at 16 positions: `off = 1`, never 0.
+        for q in [32usize, 40, 50, 63] {
+            assert_eq!(
+                ibd2_calls_over(&[at(q, 1)], head_seg()),
+                vec![Called { lo: q + 1, hi: 575 }],
+                "mismatch at head marker {q}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_head_fringe_stop_reads_the_last_mismatch() {
+        // `19-…` §2: two breakers, the one nearest the grid wins.
+        assert_eq!(
+            ibd2_calls_over(&[at(40, 1), at(50, 1)], head_seg()),
+            vec![Called { lo: 51, hi: 575 }]
+        );
+    }
+
+    #[test]
+    fn a_mismatch_in_the_tail_fringe_stops_the_call_one_marker_before_it() {
+        for q in [576usize, 586, 600, 607] {
+            assert_eq!(
+                ibd2_calls_over(&[at(q, 1)], tail_seg()),
+                vec![Called { lo: 64, hi: q - 1 }],
+                "mismatch at tail marker {q}"
+            );
+        }
+        // ...and it is the *first* one that stops it.
+        assert_eq!(
+            ibd2_calls_over(&[at(586, 1), at(600, 1)], tail_seg()),
+            vec![Called { lo: 64, hi: 585 }]
+        );
+    }
+
+    /// The result of `19-…` §2, and the one no symmetry argument would have produced: an
+    /// opposite homozygote **anywhere in a complete word** disqualifies that word at any
+    /// HetHet density, and the same marker in a *fringe* is invisible to the IBD2 pass.
+    #[test]
+    fn an_opposite_homozygote_in_a_fringe_does_not_stop_an_ibd2_call() {
+        assert_eq!(
+            ibd2_calls_over(&[at(50, 2)], head_seg()),
+            vec![Called { lo: 32, hi: 575 }]
+        );
+        assert_eq!(
+            ibd2_calls_over(&[at(586, 2)], tail_seg()),
+            vec![Called { lo: 64, hi: 607 }]
+        );
+        // An IBS0 further out than a mismatch changes nothing: the mismatch still stops it.
+        assert_eq!(
+            ibd2_calls_over(&[at(40, 1), at(50, 2)], head_seg()),
+            vec![Called { lo: 41, hi: 575 }]
+        );
+    }
+
+    /// The fringe is the *segment's own* markers. Word 0's bits 0..=31 belong to whatever
+    /// precedes this segment — on the corpus, another chromosome — and must not be read.
+    #[test]
+    fn markers_before_the_segment_are_not_part_of_its_fringe() {
+        for m in [0usize, 20, 31] {
+            assert_eq!(
+                ibd2_calls_over(&[at(m, 1)], head_seg()),
+                vec![Called { lo: 32, hi: 575 }],
+                "mismatch at marker {m}, outside the segment"
+            );
+        }
+    }
+
+    /// `19-…` §4. Word 1 is unusable but IBS0-free, so the run is words 2..=8 and the
+    /// reach carries its left end back over word 1 to exactly the grid's edge — where the
+    /// marker scan takes over. Stating the clause as "a call whose *run* starts at `w0`"
+    /// instead would stop this call 32 markers short.
+    #[test]
+    fn the_reach_snaps_out_to_the_fringe_when_it_lands_on_the_grid_edge() {
+        let dirty = [at(WORD, 1), at(WORD + 1, 1)]; // two mismatches in word 1
+        assert_eq!(
+            ibd2_calls_over(&dirty, head_seg()),
+            vec![Called { lo: 32, hi: 575 }]
+        );
+        // ...and the fringe's own breaker still applies once it has snapped there.
+        let mut e = dirty.to_vec();
+        e.push(at(50, 1));
+        assert_eq!(
+            ibd2_calls_over(&e, head_seg()),
+            vec![Called { lo: 51, hi: 575 }]
+        );
+    }
+
+    /// `19-…` §5: the IBD1 pass reads the same two partial words with the *other*
+    /// predicate. Each pass stops at its own breaking marker and cannot see the other's.
+    #[test]
+    fn the_ibd1_fringe_breaks_on_ibs0_and_ignores_mismatches() {
+        assert_eq!(
+            ibd1_calls_over(&[at(50, 2)], head_seg()),
+            vec![Called { lo: 51, hi: 575 }]
+        );
+        assert_eq!(
+            ibd1_calls_over(&[at(50, 1)], head_seg()),
+            vec![Called { lo: 32, hi: 575 }]
+        );
+        assert_eq!(
+            ibd1_calls_over(&[at(586, 2)], tail_seg()),
+            vec![Called { lo: 64, hi: 585 }]
+        );
+        assert_eq!(
+            ibd1_calls_over(&[at(586, 1)], tail_seg()),
+            vec![Called { lo: 64, hi: 607 }]
+        );
+        // Head: the last IBS0 wins; tail: the first.
+        assert_eq!(
+            ibd1_calls_over(&[at(40, 2), at(50, 2)], head_seg()),
+            vec![Called { lo: 51, hi: 575 }]
+        );
+        assert_eq!(
+            ibd1_calls_over(&[at(586, 2), at(600, 2)], tail_seg()),
+            vec![Called { lo: 64, hi: 585 }]
+        );
     }
 }

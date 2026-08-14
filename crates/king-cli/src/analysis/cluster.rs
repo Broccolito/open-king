@@ -48,13 +48,18 @@
 //! standing between `apps/bigish__cluster` and a pass.
 //!
 //! Re-measured column by column against the reference on `bigish`, the only fileset in
-//! the corpus whose families merge: of the 165 rows, **30 differ and every one of them
-//! differs only on `IBD1Seg` (29 rows), `IBD2Seg` (30) and `PropIBD` (29)**. The header,
-//! the row set, the row order and the identifier columns match exactly, and so do
-//! `Sex1`, `Sex2`, `N_SNP`, `HetHet`, `IBS0`, `HetConc`, `HomIBS0`, `Kinship` and
-//! `InfType` on all 165. There is no clustering rule left to find here and no
-//! non-segment residual to chase: this file becomes byte-identical the moment the
-//! segment caller does.
+//! the corpus whose families merge: of the 165 rows, **15 differ, on `IBD2Seg` (15 rows)
+//! and `PropIBD` (14) alone**. `IBD1Seg` is now exact on all 165. The 166 lines of
+//! `FID`/`ID1`/`ID2` are identical in sequence, so the header, the row set, the row order,
+//! the cluster membership and the `KING<k>` assignment all match; so do `Sex1`, `Sex2`,
+//! `N_SNP`, `HetHet`, `IBS0`, `HetConc`, `HomIBS0`, `Kinship` and `InfType`.
+//!
+//! And the residual is **exactly** the segment engine's, not a second one of this pass's
+//! own: all 15 wrong pairs are a subset of the pairs our own `--ibdseg` already gets wrong
+//! on the same fileset (15 ⊂ 66 of 763), and on the 131 pairs the two files share the
+//! reference's `kingcluster.kin` and its `king.seg` agree on `IBD1Seg`/`IBD2Seg` row for
+//! row. There is no clustering rule left to find here and nothing non-segment to chase:
+//! this file becomes byte-identical the moment the segment caller does.
 
 use std::fmt::Write as _;
 use std::io::Write;
