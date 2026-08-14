@@ -162,22 +162,26 @@ Accepted on the command line (so the banner and the parse surface stay byte-exac
   scripts embedded as string constants. Those scripts are authored code — **do not
   transcribe**. GeneQuire renders its own MDX/SVG figures; the Rust port has **zero** R
   dependency, which is a product win.
-* **X-chromosome analysis** and its outputs `<p>X.kin`, `<p>X.kin0`, `<p>X.seg`. Consequence
-  to accept knowingly: on a fileset containing chr-23 SNPs, real KING `--kinship` emits two
-  extra files and an extra stdout block that we will not. The parity harness must therefore
-  use autosome-only fixtures, or diff per-file rather than per-directory. (`--sexchr` is still
-  Tier 1 because it changes which variants count as *autosomal* — §3.4.)
+* ~~**X-chromosome analysis**~~ — **brought in scope.** `<p>X.kin`, `<p>X.kin0` and
+  `<p>X.seg` are all implemented and byte-identical on every capture that produces them.
+  Each of the three X passes has its own gate, and they are not the same gate:
+  `--kinship`'s needs 512 or more X markers, no `--degree` and more than one family;
+  `--related`'s and `--ibdseg`'s need only that the X map yields a **usable segment**
+  (`crate::analysis::xseg`), and `--ibdseg`'s needs `--degree` as well. (`--sexchr` was
+  always Tier 1 because it changes which variants count as *autosomal* — §3.4.)
 * **Multi-dataset input** (`-b a.bed,b.bed`, `--fam a.fam,b.fam`) with its auto-flip / ambiguous-SNP
   merge rules. Reject a comma in `-b` with a clear error.
 * **Retired / never-exposed flags:** `--homog` and `--mtscore` (retired in 2.3.0); and the ~40
   names that exist only as strings in the binary and are *not* accepted by the 2.3.2 CLI
   (`--ibdall`, `--HEreg`, `--exact`, `--distant`, `--porel`, `--paternity`, `--lessmem`, …).
   Do not implement, do not accept.
-* **KING bug-compatibility** beyond what §2 requires: the `X.kin0` OpenMP data race, the
-  `X.seg` header/row mismatch, and the mis-indexed exclusion list are **not** reproduced (they
-  live in Tier-3 code paths anyway). The two bugs we *do* reproduce, because they are in the
-  Tier-1 console surface, are the `--noscreen` garbage default (§2.7) and the `3nd-degree`
-  typo (§2.8), both behind the `king-bugcompat` feature flag.
+* **KING bug-compatibility** beyond what §2 requires: the `X.kin0` OpenMP data race and
+  the mis-indexed exclusion list are **not** reproduced. The `X.seg` header/row mismatch
+  **is** — it moved in scope with X.seg itself, and a file whose eleven-name header sits
+  over nine-value rows is what the reference writes, so parity requires writing it too
+  (`crate::analysis::xseg`). The two console bugs we also reproduce are the `--noscreen`
+  garbage default (§2.7) and the `3nd-degree` typo (§2.8), both behind the
+  `king-bugcompat` feature flag.
 
 ### 1.4 Explicit non-goals for v1
 
@@ -1139,7 +1143,8 @@ a single digit of any pair's `Kinship`, `HetHet`, `IBS0` or `N_SNP`.**
 
 Universal rules **[V]**:
 * LF line endings only. Every file ends with exactly one `\n`; no trailing blank line, no BOM,
-  no trailing field separator (except the `X.seg` bug, Tier 3).
+  no trailing field separator — except `<p>X.seg`, whose rows genuinely end in a tab
+  (§1.3, `crate::analysis::xseg`).
 * **TAB** separators in `.kin`, `.kin0`, `.con`, `.ibs`, `.ibs0`, `allsegs.txt`,
   `unrelated*.txt`, `.seg`. **SPACE** separators in `bySample.txt`, `bySNP.txt`,
   `splitped.txt`, `pc.txt`. Never mix.
@@ -1156,6 +1161,7 @@ Universal rules **[V]**:
 |---|---|---|
 | **Sorted** | `.kin`, `.ibs` (and `X.kin`) | families in sorted order; members sorted within each family by the comparator below; then `i < j` over the sorted member list |
 | **Serial** | `.kin0`, `.con`, `.ibs0`, `.seg`, `bySample.txt` (and `X.kin0`) | `.fam` file order; `i < j` over the global sample index |
+| **Mirrored** | `X.seg` | exactly the rows of `<p>.seg`, in exactly its order (which is the 16-sample tiling, not the serial order) |
 
 These genuinely differ. Confirmed this session on a fixture whose `.fam` order is
 `FA1, MO1, KID1, KID2`: `.kin` emits `FA1–KID1, FA1–KID2, FA1–MO1, KID1–KID2, KID1–MO1,
@@ -1667,9 +1673,11 @@ and capture the printed cutoff. First hypothesis to test: it is a fixed fraction
 IBS0 rate among inferred-unrelated pairs (FS expectation is 0.25× the unrelated rate, so a
 natural cutoff sits well below that). Fit the constant, then validate on a held-out spectrum.
 
-**19. `X.seg` emission gate** (Tier 3, recorded so it is not lost): `--ibdseg` alone produced
-no `X.seg`, but `--ibdseg --degree 4` did.
-*Experiment:* sweep `--degree` 1…5 with and without X SNPs present, recording file existence.
+**19. `X.seg` emission gate — ANSWERED.** Two conditions: a non-zero `--degree`, and an X
+map that yields at least one usable segment. Swept `--degree` −1…10 and the X marker count
+over 319…1000 on built filesets; there is no 512-marker threshold (that one belongs to
+`--kinship`'s X pass alone) and no family-count condition. Rules and evidence:
+`crate::analysis::xseg`.
 
 ---
 

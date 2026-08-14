@@ -805,8 +805,12 @@ def main() -> int:
             for r in results], indent=1) + "\n")
         say(f"wrote {args.json}")
 
-    if args.baseline:
-        return baseline_check(results, args.baseline, args.write_baseline,
+    # `--write-baseline` implies the default baseline path. Without this it was a silent
+    # no-op on its own — `args.baseline` is None unless `--baseline` is also passed — and
+    # the mismatch message below tells the reader to "re-run with --write-baseline".
+    baseline = args.baseline or (DEFAULT_BASELINE if args.write_baseline else None)
+    if baseline:
+        return baseline_check(results, baseline, args.write_baseline,
                               bool(args.filt), say)
 
     return 1 if n_fail else 0

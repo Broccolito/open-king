@@ -195,7 +195,7 @@ PASS core/unrelated__related_degree3
 PASS core/unrelated__related_degree4
 PASS ibdseg/admixed__ibdseg
 PASS ibdseg/admixed__ibdseg_degree2
-FAIL ibdseg/admixed__ibdseg_seglength10 | king.seg!=(num)
+PASS ibdseg/admixed__ibdseg_seglength10
 PASS ibdseg/admixed__ibdseg_seglength5
 PASS ibdseg/admixed__related_degree2_ibdseg
 PASS ibdseg/bigish__ibdseg
@@ -205,8 +205,8 @@ FAIL ibdseg/bigish__ibdseg_seglength5 | king.seg!=(num)
 FAIL ibdseg/bigish__related_degree2_ibdseg | stdout!=
 PASS ibdseg/dups__ibdseg
 PASS ibdseg/dups__ibdseg_degree2
-FAIL ibdseg/dups__ibdseg_seglength10 | king.seg!=(num)
-FAIL ibdseg/dups__ibdseg_seglength5 | king.seg!=(num)
+PASS ibdseg/dups__ibdseg_seglength10
+PASS ibdseg/dups__ibdseg_seglength5
 PASS ibdseg/dups__related_degree2_ibdseg
 PASS ibdseg/missing__ibdseg
 PASS ibdseg/missing__ibdseg_degree2
@@ -221,7 +221,7 @@ PASS ibdseg/monomorphic__related_degree2_ibdseg
 PASS ibdseg/multifam__ibdseg
 PASS ibdseg/multifam__ibdseg_degree2
 FAIL ibdseg/multifam__ibdseg_seglength10 | king.seg!=(num)
-FAIL ibdseg/multifam__ibdseg_seglength5 | king.seg!=(num)
+PASS ibdseg/multifam__ibdseg_seglength5
 PASS ibdseg/multifam__related_degree2_ibdseg
 PASS ibdseg/nuclear__ibdseg
 PASS ibdseg/nuclear__ibdseg_degree2
@@ -234,10 +234,10 @@ PASS ibdseg/pair__ibdseg_seglength10
 PASS ibdseg/pair__ibdseg_seglength5
 PASS ibdseg/pair__related_degree2_ibdseg
 PASS ibdseg/sexchr__ibdseg
-FAIL ibdseg/sexchr__ibdseg_degree2 | stdout!=; missing:kingX.seg
+PASS ibdseg/sexchr__ibdseg_degree2
 PASS ibdseg/sexchr__ibdseg_seglength10
 PASS ibdseg/sexchr__ibdseg_seglength5
-FAIL ibdseg/sexchr__related_degree2_ibdseg | stdout!=; missing:kingX.seg
+PASS ibdseg/sexchr__related_degree2_ibdseg
 PASS ibdseg/singleton__ibdseg
 PASS ibdseg/singleton__ibdseg_degree2
 PASS ibdseg/singleton__ibdseg_seglength10
@@ -245,8 +245,8 @@ PASS ibdseg/singleton__ibdseg_seglength5
 PASS ibdseg/singleton__related_degree2_ibdseg
 PASS ibdseg/threegen__ibdseg
 PASS ibdseg/threegen__ibdseg_degree2
-FAIL ibdseg/threegen__ibdseg_seglength10 | king.seg!=(num)
-FAIL ibdseg/threegen__ibdseg_seglength5 | king.seg!=(num)
+PASS ibdseg/threegen__ibdseg_seglength10
+PASS ibdseg/threegen__ibdseg_seglength5
 PASS ibdseg/threegen__related_degree2_ibdseg
 PASS ibdseg/trio__ibdseg
 PASS ibdseg/trio__ibdseg_degree2

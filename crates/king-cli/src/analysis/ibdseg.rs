@@ -1,6 +1,7 @@
 //! `--ibdseg` — pairwise IBD-segment inference.
 //!
-//! The pass owns three files and one console body:
+//! The pass owns three files unconditionally, a fourth ([`xseg`]) when the run has an X
+//! chromosome and a `--degree`, and one console body:
 //!
 //! ```text
 //! kingsplitped.txt is generated for certain pedigree plot applications.
@@ -21,6 +22,7 @@
 //!   Sample pairs without any long IBD segments (>10Mb) are excluded.
 //!   Short IBD segments (<3Mb) are not reported/utilized.
 //! Summary statistics of IBD segments for individual pairs saved in file <p>.seg
+//! [Additional summary statistics of X-Chr IBD segments saved in file <p>X.seg]
 //! ```
 //!
 //! Two lines in there are hard-coded in the reference and must be copied verbatim even
@@ -51,7 +53,7 @@ use std::path::PathBuf;
 use king_core::ibdseg::{self, Usable};
 use king_io::Variant;
 
-use crate::analysis::splitped;
+use crate::analysis::{splitped, xseg};
 use crate::cli::{Opt, Options};
 use crate::console;
 use crate::load::{self, Class, Loaded};
@@ -182,6 +184,10 @@ fn allsegs_text(variants: &[Variant], a: &Arrays, auto: &[Usable], xseg: &[Usabl
 
 /// One reported pair.
 struct Row {
+    /// `.fam` indices of the pair, kept so [`xseg`] can re-scan exactly these pairs, in
+    /// exactly this order, over the X array.
+    i: usize,
+    j: usize,
     fid1: String,
     id1: String,
     fid2: String,
@@ -203,7 +209,7 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
     );
     let a = arrays(&loaded.fileset.variants, sexchr);
     let auto = ibdseg::usable_segments(&a.auto_chr, &a.auto_pos);
-    let xseg = ibdseg::usable_segments(&a.x_chr, &a.x_pos);
+    let x_usable = ibdseg::usable_segments(&a.x_chr, &a.x_pos);
 
     if auto.is_empty() {
         // No denominator, so nothing downstream can be computed and no file is written.
@@ -220,12 +226,12 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
         )
         .as_bytes(),
     );
-    if !xseg.is_empty() {
-        let xlen = ibdseg::denominator(&xseg, &a.x_pos);
+    if !x_usable.is_empty() {
+        let xlen = ibdseg::denominator(&x_usable, &a.x_pos);
         let _ = out.write_all(
             format!(
                 "  In addition to autosomes, {} segments of length {:.1} Mb on X-chr can be further used.\n",
-                xseg.len(),
+                x_usable.len(),
                 xlen as f64 / 1e6
             )
             .as_bytes(),
@@ -240,7 +246,7 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
     );
     write_file(
         &allsegs_path,
-        &allsegs_text(&loaded.fileset.variants, &a, &auto, &xseg),
+        &allsegs_text(&loaded.fileset.variants, &a, &auto, &x_usable),
     );
 
     let _ = out.write_all(
@@ -284,6 +290,8 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
             continue;
         }
         rows.push(Row {
+            i,
+            j,
             fid1: samples[i].fid.clone(),
             id1: samples[i].iid.clone(),
             fid2: samples[j].fid.clone(),
@@ -324,6 +332,20 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
         )
         .as_bytes(),
     );
+
+    // The X table, when this run has one: the same reported pairs measured a second time
+    // over the X array. Gate and rules in [`xseg`].
+    if let (true, Some(xg)) = (xseg::runs(degree, &x_usable), loaded.x_genotypes.as_ref()) {
+        let x = xseg::XSegments::new(&a.x_pos, &x_usable, xg, seglen);
+        let x_path = format!("{prefix}X.seg");
+        write_file(&x_path, &xseg::text(samples, &pairs(&rows), &x));
+        let _ = out.write_all(xseg::saved_line(&x_path).as_bytes());
+    }
+}
+
+/// The `.fam` index pairs of the reported rows, in the order `<prefix>.seg` printed them.
+fn pairs(rows: &[Row]) -> Vec<(usize, usize)> {
+    rows.iter().map(|r| (r.i, r.j)).collect()
 }
 
 /// Indent that lines this pass's `ends at` up under `IBD segment analysis starts at`.

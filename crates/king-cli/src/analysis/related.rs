@@ -338,7 +338,9 @@ impl Engine {
             if seg.words() == 0 {
                 continue;
             }
-            for c in ibdseg::Scan::new(genotypes, i, j, seg).ibd2(&self.pos, self.seglength_bp) {
+            for c in
+                ibdseg::Scan::new(genotypes, i, j, seg).ibd2(&self.pos, self.seglength_bp, true)
+            {
                 best = best.max(self.pos[c.hi] - self.pos[c.lo]);
             }
         }
@@ -383,9 +385,13 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
 
     // The X pass is a self-contained stage between the two autosomal ones. Unlike
     // `--kinship`'s, it is not suppressed by `--degree`: `sexchr` emits `X.kin` at every
-    // degree from 0 to 4.
+    // degree from 0 to 4. It *is* suppressed by the same thing that suppresses the
+    // autosomal `.kin` — a fileset with no family of two writes neither, and prints
+    // neither line. (`--kinship`'s X pass differs here too: it emits a header-only
+    // `X.kin` in exactly that case. Checked on a fileset of twelve singleton families,
+    // against the same fileset with one two-member family added, which writes both.)
     let x = x_engine(opts, loaded, seglength_bp);
-    if let Some((xengine, xgenotypes)) = x.as_ref() {
+    if let (true, Some((xengine, xgenotypes))) = (within_ran, x.as_ref()) {
         let path = out_path(opts, "X.kin");
         write_x_kin(&path, loaded, xengine, xgenotypes, &blocks);
         write(out, &x_within_saved(&path));
@@ -399,7 +405,14 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
     between_family(opts, loaded, &engine, x.as_ref(), out);
 }
 
-/// The X engine and planes, when the map carries enough X markers to run the X pass.
+/// The X engine and planes, when the X map yields a usable segment to measure over.
+///
+/// **That construction is the whole gate** — not the 512-marker count `--kinship`'s X
+/// pass uses. Both directions were checked against the reference on built filesets: 320 X
+/// markers over 30 Mb (one usable segment, well under 512) write `X.kin`, and 640 markers
+/// packed into 5 Mb (no usable segment, well over 512) do not. The corpus cannot tell the
+/// two rules apart — `sexchr` clears both — which is why the count stood in for the
+/// segment test here until it was measured.
 fn x_engine<'a>(
     opts: &Options,
     loaded: &'a Loaded,
@@ -408,7 +421,7 @@ fn x_engine<'a>(
     let genotypes = loaded.x_genotypes.as_ref()?;
     let sexchr = i64::from(opts.int(Opt::Sexchr));
     let engine = Engine::x_chromosome(&loaded.fileset.variants, sexchr, seglength_bp);
-    Some((engine, genotypes))
+    (!engine.is_empty()).then_some((engine, genotypes))
 }
 
 // ---------------------------------------------------------------------------
@@ -845,30 +858,54 @@ fn effective_degree(opts: &Options) -> i32 {
 /// # Known gap
 ///
 /// The screening count is exact only while `m <= 32768`; above it the reference screens
-/// on a subset of that size and this counts on the whole map. It reproduces `bigish` at
-/// degree 1 (18) but not at degree 2 (50 against the reference's 36) — the one stdout
-/// line in the corpus that `--related` still gets wrong.
+/// on something this does not model, and this counts on the map's first 32 768 markers.
+/// It reproduces `bigish` at degree 1 (18) but not at degree 2 (50 against the
+/// reference's 36) — the one stdout line in the corpus that `--related` still gets wrong.
 ///
-/// **It is not a subset-choice problem.** `bigish` was truncated to a ladder of marker
-/// counts and run at both degrees; the reference always prints `with 32768 SNPs`, so the
-/// subset — whatever it is — is fixed in size while the map grows:
+/// **The marker prefix above is a placeholder that happens to match at degree 1, and the
+/// reference demonstrably does not use it.** `docs/research/fixtures/screencanvas.py`
+/// builds the pair whose kinship one cloned marker set tunes, and drives the reference
+/// over it; `--facts` re-measures everything below in about two minutes. What it found,
+/// all of it on constructed filesets rather than on `bigish`'s own numbers:
 ///
-/// | `m` | reference (d1 / d2) | first 32 768 | evenly spaced | first / evenly spaced 512 words |
-/// | ---: | --- | --- | --- | --- |
-/// | 32 768 | 18 / **50** | 18 / 50 | 18 / 50 | 18 / 50 |
-/// | 33 280 | 18 / **50** | 18 / 50 | 18 / 50 | 18 / 50 |
-/// | 36 864 | 18 / **43** | 18 / 50 | 18 / 48 | 18 / 50, 17 / 47 |
-/// | 40 960 | 16 / **42** | 18 / 50 | 17 / 43 | 18 / 50, 17 / 47 |
-/// | 45 056 | 21 / **43** | 18 / 50 | 21 / 49 | 18 / 50, 21 / 49 |
-/// | 50 000 | 18 / **36** | 18 / 50 | 21 / 47 | 18 / 50, 20 / 46 |
+/// * **The stage is per-pair.** Rebuild `bigish` as its 167 unrelated fillers (which on
+///   their own print `No close relatives are inferred.`) plus exactly one candidate pair,
+///   47 times, and the printed count is 0 or 1 each time. It is 1 on **36** of them —
+///   the whole fileset's number. Not a budget, a cap, a ranking or a per-block bound;
+///   six sample permutations move it not at all.
+/// * **Every marker contributes, wherever it sits.** A 10 000-marker clone window at
+///   `[40000, 50000)`, where the prefix estimate reads 0.0020, is accepted at the same
+///   true kinship as one at `[0, 10000)`. Stride-2/3/4 clone sets at every offset agree
+///   to within the bisection's own noise. So the screen is not a prefix, not a stride and
+///   not a word decimation.
+/// * **It is a threshold on kinship, sitting above the printed cutoff.** Bisecting the
+///   clone count puts the boundary at kinship **0.0700** against a printed 0.0625
+///   (n = 167, m = 50 000) — lossy in exactly the direction that turns 50 into 36. Read
+///   as `k_screen = 0.5 + R*(k - 0.5)` the same `R` fits both degrees (1.0186 at 0.1250,
+///   1.0176 at 0.0625); an additive offset disagrees by 18 % across the two and a plain
+///   multiplicative one by a factor of two.
+/// * **`R` is exactly 1 while `m <= 32768`** (0.99995 at 32 768, 0.99993 at 33 280) and
+///   grows with the map — 1.0106 at 36 864, 1.0128 at 40 000, 1.0204 at 45 000, 1.0176 at
+///   50 000 — while *falling* with the sample count, 1.033 at n = 100 to 1.018 at n = 167,
+///   smoothly and with no 16- or 32-sample block structure. It varies pair to pair
+///   (1.018…1.026 over six filler pairs) and was never measured below 1.
+/// * **The estimate for a pair depends on the other samples' genotypes.** Drive the
+///   fillers to one homozygote at a random 17 232 markers and a pair related *only*
+///   there is rejected at kinship 0.154, while the same pair related on the remaining
+///   markers is accepted at 0.062. Replace the whole background with HWE-consistent
+///   random genotypes and the threshold moves past 0.25. No marker subset can do that —
+///   a uniformly spread clone set meets any subset in its own proportion — so the
+///   screening statistic reads **sample-level allele frequencies**, which is also what
+///   the `n` dependence above is.
 ///
-/// Every candidate subset — first, last, evenly spaced and highest-MAF markers, and the
-/// same four over whole 64-marker words — **overshoots at degree 2 on every map longer
-/// than 33 280 while matching at degree 1**, and no subset undershoots anywhere. A rule
-/// of the form "estimate kinship on 32 768 of the markers, count the pairs over the
-/// cutoff" therefore cannot produce these numbers at all: the stage is *lossy*, dropping
-/// pairs a full-precision estimate keeps, and it drops more of them the more distant the
-/// cutoff. Reproducing it means reproducing the two-stage bound, not picking markers.
+/// The lead that leaves, recorded because it is suggestive and **not landed because it
+/// fails out of sample**: a frequency-standardised estimate over a MAF-selected subset,
+/// `mean(z_i z_j)/2` with `z = (x - 2p)/sqrt(2p(1-p))` over the 32 768 highest-MAF
+/// markers, gives **36** on `bigish` at degree 2 and matches 48 of the 50 per-pair
+/// labels — but recomputed with each single-pair run's own 169-sample frequencies, which
+/// is what the reference saw in those runs, it predicts 44, matches 42 of 50, and gives
+/// 16 at degree 1 where the reference gives 18. Fitting it to `bigish` would be a
+/// fitted fiction; §5.7 of `docs/PARITY.md` states it as a lead.
 ///
 /// The consequence is contained: the count reaches stdout and nothing else. `.kin0`'s row
 /// set comes from the exhaustive re-estimate below and is byte-correct at every degree,
@@ -897,11 +934,16 @@ fn screen_cutoff(degree: i32) -> f64 {
 /// boundary and no tail masking is needed; the general case masks anyway rather than
 /// leave a `Genotypes` that breaks its own clean-tail contract.
 ///
-/// The reference calls them "a subset of informative SNPs" and this takes the map's own
-/// prefix. That is not the gap: [`detected_pairs`] shows with a marker-count ladder that
-/// *no* choice of 32 768 markers reproduces the counts, because the stage prunes pairs a
-/// full-precision estimate keeps. The prefix is kept because it is the cheapest subset
-/// that matches at degree 1 on every map tried.
+/// The reference calls them "a subset of informative SNPs"; this takes the map's own
+/// prefix, and **that is a placeholder, not a finding**. Clone-canvas runs against the
+/// reference ([`detected_pairs`], `docs/research/fixtures/screencanvas.py`) accept a
+/// clone window lying entirely past marker 32 768 — where this prefix estimate reads
+/// 0.0020 — at the same true kinship as one at the head of the map, so the reference's
+/// subset is not a prefix, a stride or a word decimation, and its screening statistic
+/// moves with the *other samples'* genotypes, which no fixed marker choice can do. The
+/// prefix is kept only because it is the cheapest subset that reproduces the printed
+/// count at degree 1 on every map tried; swapping it for the whole map would trade the
+/// degree-1 case (18, correct today) for no gain at degree 2 (47 against 36).
 fn screening_planes(g: &Genotypes, snps: usize) -> Option<Genotypes> {
     if snps >= g.n_variants {
         return None;

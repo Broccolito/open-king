@@ -7,45 +7,66 @@ headline, the per-file table and both segment scorecards on the tree this docume
 with; every figure outside those comes from a rig that is **named where the figure is
 quoted**, so any claim here can be re-run rather than taken on trust.
 
-> **Headline: 464 of the 480 captured reference invocations are byte-identical (96.7 %).**
+> **Headline: 472 of the 480 captured reference invocations are byte-identical (98.3 %).**
 > The harness self-check — the reference replayed against its own captures — is **480/480**.
 >
-> **Every one of the 16 that are not** is one of four named causes, and none of them is new:
+> **Every one of the 8 that are not** is one of three named causes, and none of them is new:
 >
 > | cases | cause | where |
 > | ---: | --- | --- |
-> | 11 | `IBD1Seg`/`IBD2Seg` under `--seglength 5` and `--seglength 10` — the measured-but-unmodelled run merge | §4.4, `18-ibd1-caller.md` §9 |
-> | 2 | `<prefix>X.seg` is never written | §6.1 |
+> | 5 | `IBD1Seg`/`IBD2Seg` under `--seglength 5` and `--seglength 10` — the residual the run merge did not close | §4.4, §5.0, `20-seglength-floor.md` |
 > | 2 | `--related`'s two-stage screening count on stdout | §5.7 |
 > | 1 | `--build`'s `<prefix>build.log` is unimplemented | §6.2 |
 >
-> **At the default 3 Mb reporting floor the segment engine is exact.** All **982** rows of
-> the primary `--ibdseg` capture are byte-exact on all four printed fields, mean `PropIBD`
-> error **0.0000**, worst row **0.0000**, 0 extra and 0 missing pairs. Every remaining
-> `.seg` failure is a raised-floor case.
+> **And the row-level scorecard, at all three captured reporting floors** — the same 982
+> pairs, graded on the printed columns (`tests/parity/fit/scorecard.py`). The case count
+> above and this table are different measurements of the same tree, and **both belong in any
+> summary of it**; see "Two numbers" below:
+>
+> | `--seglength` | all four columns | `IBD1Seg` | `IBD2Seg` | of | extra | missing | MAE | worst |
+> | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+> | 3 Mb (default) | **982** | **982** | **982** | 982 | 0 | 0 | 0.000000 | 0.0000 |
+> | 5 Mb | 947 | 959 | 947 | 982 | 0 | 0 | 0.000064 | 0.0111 |
+> | 10 Mb | 943 | 960 | 945 | 982 | 0 | 0 | 0.000114 | 0.0111 |
+>
+> **At the default floor the segment engine is exact** — all 982 rows byte-exact on all four
+> printed fields, mean `PropIBD` error a true 0, 0 extra and 0 missing pairs. Every remaining
+> `.seg` failure is a raised-floor case, never the default. Reporting only the first row of
+> that table would be true and misleading; reporting only the case count would hide that
+> 98.3 % of cases rests on 96–100 % of rows depending on the floor.
 >
 > **What the set of reported pairs does:** it is exactly right everywhere. **0 extra and 0
 > missing rows on every output file in the corpus**, all 982 `InfType` labels, and every
-> `Error`.
+> `Error` — at every floor.
 >
-> **Thirty of the thirty-three output files this project writes are byte-identical in every
-> case that produces them** — `.kin`, `.kin0`, `X.kin`, `X.kin0`, `cluster.kin`, `.ibs`,
-> `.ibs0`, `.con`, `allsegs.txt`, `splitped.txt`, `unrelated.txt`, `updateparents.txt`, the
-> `autoQC` set and the rest. Only `<prefix>.seg` (39 of 50 cases), `<prefix>build.log` (7 of
-> 8) and `<prefix>X.seg` (0 of 2) differ anywhere. **Eleven analyses are byte-identical on
+> **Twenty-nine of the thirty-one output files this project writes are byte-identical in
+> every case that produces them** — `.kin`, `.kin0`, `X.kin`, `X.kin0`, `X.seg`,
+> `cluster.kin`, `.ibs`, `.ibs0`, `.con`, `allsegs.txt`, `splitped.txt`, `unrelated.txt`,
+> `updateparents.txt`, the `autoQC` set and the rest. Only `<prefix>.seg` (45 of 50 cases)
+> and `<prefix>build.log` (7 of 8) differ anywhere. **Eleven analyses are byte-identical on
 > every dataset that runs them**, `--related` is 64/65 and `--build`/`--ibdseg` are the rest.
 >
-> **The headline moved 436 → 464 in this project's final pass, and for once the case count
-> is the right number to quote.** §3 grades whole files; §4.4 grades rows. A case turns
-> `PASS` only when *every* row of *every* file it writes is byte-exact, so for most of this
-> project's history large row-level gains moved the count by nothing — the `.seg` IBD2
-> bridge/gate correction (`17-seg-caller.md` §14) took the binary from 5 723 to **6 000 of
-> 6 000** on constructed canvases while changing **no corpus row and no case at all**. The
-> final pass was different because what it fixed was not the caller: `<prefix>.seg` computes
-> `PropIBD` from its own printed columns rather than from the underlying totals, and lists
-> its rows in 16-sample blocks rather than by sample index (`docs/research/20-seg-writer.md`).
-> Both are writer rules, both are exact, and between them they flipped 28 cases without
-> changing a single estimate. §5.0 says which grader to use for what, and why.
+> **Two numbers, and neither one alone is honest.** §3 and the case count grade **whole
+> files**: a case turns `PASS` only when *every* row of *every* file it writes is byte-exact.
+> §4.4 grades **rows**. They move independently, in both directions, and quoting either by
+> itself misleads:
+>
+> * A change can win thousands of rows and **no** cases. The `.seg` IBD2 bridge/gate
+>   correction (`17-seg-caller.md` §14) took the binary from 5 723 to **6 000 of 6 000** on
+>   constructed canvases while changing no corpus row and no case at all.
+> * A change can win 28 cases without touching **a single estimate**. `<prefix>.seg` computes
+>   `PropIBD` from its own printed columns rather than from the underlying totals, and lists
+>   its rows in 16-sample blocks rather than by sample index (`20-seg-writer.md`). Both are
+>   writer rules; between them they flipped 28 cases and moved no number.
+> * And a change can move both, which is what the run merge did: 464 → 472 cases, and
+>   `IBD1Seg` from 844 to 960 of 982 rows at the 10 Mb floor.
+>
+> So the headline is quoted here **with** the row-level scorecard of §4.4, never instead of
+> it. The case count is the stricter of the two and is the one the CI baseline asserts.
+>
+> **How the headline got here:** 436 → 464 on the two writer rules, → 466 when
+> `<prefix>X.seg` landed (§6.1), → **472** when the `--seglength` run merge landed
+> (`20-seglength-floor.md`). §5.0 says which grader to use for what, and why.
 >
 > **Two divergences live outside the corpus entirely** and therefore cost no case here, but
 > a user could hit them: `--ibdseg` does not apply the reference's 100 Mb usable-total floor,
@@ -60,7 +81,7 @@ quoted**, so any claim here can be re-run rather than taken on trust.
 cd /path/to/open-king
 cargo build --release
 
-# pass/fail for all 480 cases  -> "464 PASS, 16 FAIL, 480 total"
+# pass/fail for all 480 cases  -> "472 PASS, 8 FAIL, 480 total"
 python3 tests/parity/run_parity.py --impl ./target/release/king
 
 # the same, as a regression gate: compare per case AND per output file against the
@@ -76,8 +97,12 @@ python3 tests/parity/measure_gaps.py --impl ./target/release/king -q --by-datase
 # harness self-check: the reference against its own captures must be 480/480
 python3 tests/parity/run_parity.py --impl "/path/to/reference/king"
 
-# the row-level .seg scorecard, per dataset
+# the row-level .seg scorecard at the default floor, per dataset
 KING_GOLDEN=tests/parity/golden cargo test -p king-core --test ibdseg_parity -- --nocapture
+
+# the row-level .seg scorecard at ALL THREE captured floors (3 / 5 / 10 Mb) -- §4.4.
+# Measured from the binary against the goldens; the table above covers only the default.
+python3 tests/parity/fit/scorecard.py                 # add --per-dataset or --residual
 
 # our binary against the reference on the constructed canvases (§5.0)
 GRADE_CACHE=$TMPDIR/g2.json python3 docs/research/fixtures/gradebinary.py target/release/king
@@ -90,9 +115,11 @@ python3 docs/research/fixtures/segwriter.py
 python3 tests/parity/probes/degree_filter.py --ref "/path/to/reference/king"
 cd docs/research/fixtures && python3 gate8.py
 
-# the Python engine mirror must still reproduce the binary's own output
+# the Python engine mirror must still reproduce the binary's own output, at all three
+# floors -- the merge of 20-... is dormant at the default one, so a default-only check
+# cannot see it (and for a while did not)
 cd tests/parity/fit && python3 check_mirror.py     # -> "MIRROR OK"
-python3 seg17.py && python3 seg18.py && python3 seg19.py    # the historical scorecards
+python3 seg17.py && python3 seg18.py && python3 seg19.py && python3 seg20.py  # historical
 ```
 
 `run_parity.py` and `measure_gaps.py` are Python 3 standard library only, regenerate the
@@ -105,40 +132,36 @@ Measured on the tree this document describes:
 
 | command | result |
 | --- | --- |
-| `run_parity.py --impl target/release/king` | **464 PASS, 16 FAIL, 480 total**, 874 output files byte-compared, 8 diff-excluded |
+| `run_parity.py --impl target/release/king` | **472 PASS, 8 FAIL, 480 total**, 876 output files byte-compared, 8 diff-excluded |
 | `run_parity.py --impl target/release/king --baseline` | `baseline: MATCH (480 case(s))` |
 | `run_parity.py --impl <reference>` | **480 PASS, 0 FAIL**, 876 files byte-compared — the normalization is complete and the goldens are self-consistent |
 | `probes/degree_filter.py --ref <reference>` | 38 298 cases, **0 false-keep, 0 false-drop** |
+| `probes/xseg_probe.py --impl target/release/king` | `<prefix>X.seg` out of sample on 1 040 built runs: emission gate **1 040/1 040**, bytes at the default floor **625/625** of the runs whose autosomal `.seg` also matches (§6.1) |
 | `docs/research/fixtures/gate8.py` | brackets the `--degree 1` IBD2 clause to (0.0789, 0.0829] — its ladder refuses at `PropIBD` 0.0789 and accepts at 0.0829 |
 | `gradebinary.py target/release/king` | **6 000 / 6 000** canvases — the release binary against the reference's own readings, `IBD2Seg` |
-| `gradebinary.py target/release/king --ibd1` | **540 / 540** on the closed families; **43 / 60** on the one family that is deliberately open (§5.0 item 2) |
+| `gradebinary.py target/release/king --ibd1` | **540 / 540** on the closed families **and 60 / 60** on the one that was open before the run merge — 600 / 600 in total |
 | `segwriter.py` | `.seg`'s `PropIBD` rule consistent on **4 172 / 4 172** reference rows with **0** refutations, refuted on `.kin` (42 rows) and `cluster.kin` (3); row-order block size **uniquely 16** over 2..80 across all 50 `.seg` captures |
 | `cargo test -p king-core --test ibdseg_parity` | `TOTAL gold=982 row=982 est=982 infType=982 missing=0 extra=0 meandPropIBD=0.000017 worst=0.0001` |
-| `tests/parity/fit/check_mirror.py` | **MIRROR OK** — the mirror reproduces the binary's `.seg` columns on all 982 rows and 861 `MaxIBD2` values, 13 datasets |
-| `tests/parity/fit/seg19.py` | the `19-…` fringe scorecard, unchanged: `806 / 982 / 982` at 3 Mb against the pre-fringe `729 / 982 / 862` |
+| `tests/parity/fit/scorecard.py` | the three-floor row scorecard of §4.4: `982/982/982` at 3 Mb, `947/959/947` at 5, `943/960/945` at 10; 0 extra and 0 missing at all three |
+| `tests/parity/fit/check_mirror.py` | **MIRROR OK** — the mirror reproduces the binary's `.seg` columns on all 982 rows **at each of 3 / 5 / 10 Mb** (2 946 rows) and 861 `MaxIBD2` values, 10 datasets |
+| `tests/parity/fit/seg19.py` | the `19-…` scorecard, unchanged: `806 / 982 / 982` at 3 Mb, `755 / 910 / 946` at 5, `713 / 844 / 937` at 10 — the "before" the merge is measured against |
+| `tests/parity/fit/seg20.py` | the merge's own before/after; its `exact` column uses the retired `.kin` `PropIBD` rule, so read `IBD1Seg`/`IBD2Seg` from it and take `exact` from `scorecard.py` |
 | `tests/parity/fit/seg18.py` | `18-…`'s own numbers, unchanged: committed `exact 747  ibd1 982  ibd2 896  MAE 0.000067`; retired overlap rule `709 / 826 / 896` |
-| `cargo test --workspace` | **307 passed, 0 failed, 1 ignored** |
+| `cargo test --workspace` | **314 passed, 0 failed** |
 | `cargo clippy --workspace --all-targets -- -D warnings` | clean |
 | `cargo fmt --all --check` | clean |
-| a pristine copy of the tree, `cargo build --release` | succeeds in **8.07 s**; `Cargo.lock` has 15 packages — the 3 workspace crates and 12 external |
-| that clean-tree binary, re-run through `run_parity.py` and `cargo test` | **464 PASS, 16 FAIL** and **307 passed** — the published counts do not depend on a warm `target/` |
+| a pristine copy of the tree, `cargo build --release` | succeeds in **8.21 s**; `Cargo.lock` has 15 packages — the 3 workspace crates and 12 external |
+| that clean-tree binary, re-run through `run_parity.py --baseline` | **472 PASS, 8 FAIL**, `baseline: MATCH` — the published counts do not depend on a warm `target/` or a pre-generated corpus |
 
-By capture group: `apps` **90/91**, `core` **103/104**, `ibdseg` **51/65**, `params`
+By capture group: `apps` **90/91**, `core` **103/104**, `ibdseg` **59/65**, `params`
 **220/220**. By analysis: `--kinship`, `--duplicate`, `--bysample`, `--bySNP`, `--autoQC`,
 `--ibs`, `--cluster` **13/13** each; `--unrelated` **26/26**; `--build` **12/13**;
-`--related` **64/65**; `--ibdseg` **40/52**; `--related --ibdseg` **11/13**; `params`
+`--related` **64/65**; `--ibdseg` **47/52**; `--related --ibdseg` **12/13**; `params`
 **220/220**.
 
-The 16 failures, by shape: **11** in the `ibdseg` group (five datasets × `--seglength 5`
-and `--seglength 10`, plus `admixed` at 10 only), **2** `sexchr` cases missing
-`<prefix>X.seg`, **2** `bigish --related --degree 2` cases differing on one stdout line,
-**1** `apps/bigish__build`.
-
-**Two counts, and the difference between them.** The 464 is a **whole-file** number: a case
-passes only when every byte of every file matches. §4.4 is the **row-level** scoreboard, and
-the two can move independently in both directions. A change can win hundreds of rows and no
-cases (the §14 bridge correction won 277 canvases and zero rows), and — as the final pass
-showed — a change can win 28 cases without touching a single estimate. Quote both.
+The 8 failures, by shape: **5** in the `ibdseg` group (`bigish` and `missing` at
+`--seglength 5` and `10`, `multifam` at `10` only), **2** `bigish --related --degree 2`
+cases differing on one stdout line, **1** `apps/bigish__build`.
 
 ---
 
@@ -161,22 +184,22 @@ plus stdout, stderr and exit status.
 | `--cluster` | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **13/13** |
 | `--build` | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | 0/1 | 12/13 |
 | `--related` | **5/5** | **5/5** | **5/5** | **5/5** | **5/5** | **5/5** | **5/5** | **5/5** | **5/5** | **5/5** | **5/5** | **5/5** | 4/5 | 64/65 |
-| `--ibdseg` | **4/4** | **4/4** | 2/4 | 2/4 | 2/4 | 2/4 | **4/4** | 3/4 | **4/4** | 3/4 | **4/4** | **4/4** | 2/4 | 40/52 |
-| `--related --ibdseg` | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | 0/1 | **1/1** | **1/1** | **1/1** | **1/1** | 0/1 | 11/13 |
+| `--ibdseg` | **4/4** | **4/4** | **4/4** | 3/4 | **4/4** | 2/4 | **4/4** | **4/4** | **4/4** | **4/4** | **4/4** | **4/4** | 2/4 | 47/52 |
+| `--related --ibdseg` | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | 0/1 | 12/13 |
 | `--ibs` | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **13/13** |
 | flag plumbing + error probes (`params`) | \- | \- | \- | \- | \- | \- | \- | \- | \- | \- | \- | \- | \- | **220/220** |
-| | | | | | | | | | | | | | | **464/480** |
+| | | | | | | | | | | | | | | **472/480** |
 
 The `params` group is 220 invocations that exercise the command-line surface rather than one
 dataset: every `--prefix` shape, `--cpus`, `--sexchr`, `--degree`, `--minConc`,
 `--seglength`, alternate `--fam`/`--bim` inputs, malformed and missing files, and the banner
 in each case. All 220 are byte-identical.
 
-**Read the `--ibdseg` row carefully.** Every `2/4` and `3/4` in it is the *same* two cases:
-`--seglength 5` and `--seglength 10`. The bare invocation and `--degree 2` — both at the
-default 3 Mb floor — pass on all thirteen datasets. `sexchr`'s `3/4` and its `0/1` are
-`<prefix>X.seg` (§6.1), not a number; `bigish`'s `--related --degree 2` cases lose on one
-stdout line (§5.7).
+**Read the `--ibdseg` row carefully.** Every `2/4` and `3/4` in it is a `--seglength 5` or
+`--seglength 10` case and nothing else — `missing` and `bigish` lose both, `multifam` only
+the 10. The bare invocation and `--degree 2` — both at the default 3 Mb floor — pass on all
+thirteen datasets, `sexchr` included now that `<prefix>X.seg` is written (§6.1). `bigish`'s
+`--related --degree 2` cases lose on one stdout line (§5.7).
 
 ---
 
@@ -209,34 +232,35 @@ accuracy — not the narrower denominator §4 uses. `<prefix>` stands for `king`
 | `<prefix>.kin0` | 178 | **all** | 228 770 | 0 | **100 %** |
 | `<prefix>.kin` | 201 | **all** | 12 804 | 0 | **100 %** |
 | `<prefix>cluster.kin` | 1 | **all** | 165 | 0 | **100 %** |
-| `<prefix>.seg` | 50 | 39 | 4 172 | 232 | **94.44 %** |
+| `<prefix>.seg` | 50 | 45 | 4 172 | 74 | **98.23 %** |
 | `<prefix>build.log` | 8 | 7 | 18 | 18 | see §6.2 |
-| `<prefix>X.seg` | 2 | 0 | 28 | 28 | **never written**, §6.1 |
+| `<prefix>X.seg` | 2 | **all 2** | 28 | 0 | **100 %**, §6.1 |
 
-**Three files in the whole project differ anywhere**, and one of those is a file we do not
+**Two files in the whole project differ anywhere**, and one of those is a file we do not
 write at all. Everything above the `.seg` line — including the entire 16-column `--related`
 layer, which had 450 differing `.kin` rows and 28 `.kin0` rows two campaigns ago and 16
 `cluster.kin` rows one campaign ago — is now byte-identical in **every** case that produces
 it. Row identity is matched on the identifier columns before any comparison, so across the
-whole corpus there are **0 extra and 0 missing rows** on every file; the only rows we fail to
-produce anywhere are the 28 in the two unwritten `X.seg` files.
+whole corpus there are **0 extra and 0 missing rows** on every file, `X.seg` included now
+that it is written (§6.1).
 
-Of `<prefix>.seg`'s 232 differing rows, **every one is in a `--seglength 5` or
+Of `<prefix>.seg`'s 74 differing rows, **every one is in a `--seglength 5` or
 `--seglength 10` capture**. At the default floor the file is byte-identical on all 13
 datasets.
 
-**stdout, stderr and exit status.** 475 of the 480 cases match stdout byte-for-byte after
-the normalization of §7. **5 cases differ on stdout**, and every one of them also differs
-on a file — no case in the suite fails on console output alone:
+**stdout, stderr and exit status.** 477 of the 480 cases match stdout byte-for-byte after
+the normalization of §7. **3 cases differ on stdout**, and two of them differ on *nothing
+else* — the only cases in the suite that fail on console output alone:
 
 | cases | stdout line that differs | cause |
 | ---: | --- | --- |
 | 2 | `bigish --related --degree 2` — `Stages 1&2 (with 32768 SNPs): 36 pairs` vs `50 pairs` | the two-stage screening bound, §5.7 |
-| 2 | `sexchr --ibdseg --degree 2` — the `…X-Chr IBD segments saved in file kingX.seg` line is absent | §6.1 |
 | 1 | `apps/bigish__build` | §6.2 |
 
-Those five are also, exactly, five of the sixteen remaining failures. The other eleven fail
-on `king.seg` bytes alone.
+Those three cases are also three of the **eight** remaining failures. The other five fail on
+`king.seg` bytes alone, and all five are `--seglength 5`/`10` captures:
+`{bigish, missing}__ibdseg_seglength{5,10}` and `multifam__ibdseg_seglength10`. At the
+default floor `<prefix>.seg` is byte-identical on every dataset.
 
 ---
 
@@ -246,28 +270,42 @@ Row counts in this section use `measure_gaps.py`'s denominator, which is **rows 
 cases that differ**, not rows corpus-wide — it is the tighter, less flattering number. §3
 gives the corpus-wide view of the same data.
 
-### 4.1 The segment columns — 11 of the 16 failures
+### 4.1 The segment columns — 5 of the 8 failures
+
+Re-measured after the `--seglength` run merge landed (`docs/research/20-seglength-floor.md`);
+the row counts before it were 232 of 1 862 with `IBD1Seg` worst 0.0436 and `IBD2Seg` worst
+0.1073.
 
 | file | rows differing | of | +extra | −missing | column | mean abs err | worst |
 | --- | ---: | ---: | ---: | ---: | --- | ---: | ---: |
-| `king.seg` | 232 | 1 862 | **0** | **0** | `IBD1Seg` 210 rows | 0.002997 | 0.0436 |
-| | | | | | `PropIBD` 208 rows | 0.002406 | 0.0916 |
-| | | | | | `IBD2Seg` 81 rows | 0.006062 | 0.1073 |
+| `king.seg` | 74 | 1 658 | **0** | **0** | `IBD2Seg` 72 rows | 0.003879 | 0.0168 |
+| | | | | | `PropIBD` 74 rows | 0.002354 | 0.0111 |
+| | | | | | `IBD1Seg` 45 rows | 0.005231 | 0.0277 |
 
 That is the whole numeric gap in the project. `king.kin`, `king.kin0`, `kingX.kin`,
-`kingcluster.kin`, `king.ibs` and `king.ibs0` are **not** in this table: every one of them is
-byte-identical in every case, which is `IBD1Seg`, `IBD2Seg`, `PropIBD`, `InfType`, `Error`,
-`MaxIBD2` and `Pr_IBD2` exact on all 4 805 `--related` rows and all 21 561 `--ibs` rows.
+`kingX.seg`, `kingcluster.kin`, `king.ibs` and `king.ibs0` are **not** in this table: every
+one of them is byte-identical in every case, which is `IBD1Seg`, `IBD2Seg`, `PropIBD`,
+`InfType`, `Error`, `MaxIBD2` and `Pr_IBD2` exact on all 4 805 `--related` rows and all
+21 561 `--ibs` rows.
 
-**All 232 rows are in a `--seglength 5` or `--seglength 10` capture.** `PropIBD` appears here
-only because it is derived from the two columns beside it (§4.3): every one of its 208 rows
+**All 74 rows are in a `--seglength 5` or `--seglength 10` capture.** `PropIBD` appears here
+only because it is derived from the two columns beside it (§4.3): every one of its 74 rows
 also has a wrong `IBD1Seg` or `IBD2Seg`, and it contributes no error of its own at any floor.
 
-`IBD1Seg`'s 210 rows split 73 at 5 Mb and 137 at 10 Mb, and they are the run merge of
-`docs/research/18-ibd1-caller.md` §9: above the default floor the reference merges two IBD1
-runs across a short interruption, and the gap it tolerates is 65 marker intervals — which at
-real marker spacings cannot be under 3 Mb, which is why the column is exact on all 982
-primary rows.
+Where the 74 sit, per case (`fit/scorecard.py --residual` lists them individually):
+
+| case | rows | differing | `IBD1Seg` | `IBD2Seg` |
+| --- | ---: | ---: | --- | --- |
+| `bigish` 5 Mb | 763 | 34 | 23, **all too high** | 34, **all too low** |
+| `bigish` 10 Mb | 763 | 33 | 17 (8 high / 9 low) | 32 (10 high / 22 low) |
+| `multifam` 10 Mb | 104 | 5 | 5, all too low | 4, all too high |
+| `missing` 5 Mb | 14 | 1 | 0 | 1, too low |
+| `missing` 10 Mb | 14 | 1 | 0 | 1, too low |
+
+The one-sidedness at 5 Mb is the shape of the residual and is discussed in §5.0: it is one
+fault seen twice, not two. The reference merges an IBD2 pair of runs where we do not; the
+IBD2 territory we fail to claim is then *not* subtracted from `IBD1Seg`, so the same event
+pushes one column down and the other up on the same rows.
 
 ### 4.2 The 16-column `--related` layer is complete
 
@@ -390,20 +428,48 @@ unrounded scale, scored by `tests/parity/fit/engine.py`'s pinned parameter bundl
 | `RETIRED` — word-aligned geometry (`17-…`) | 705 | 822 | 822 | 0.001376 | 0.2109 |
 | `FRINGE18` — before the IBD2 fringe (`18-…`) | 747 | 982 | 896 | 0.000067 | 0.0042 |
 | `PROP19` — before the writer rule (`19-…`) | 806 | 982 | 982 | 0.000023 | 0.0001 |
-| **committed** (`20-…`) | **982** | **982** | **982** | — | — |
+| **committed** (`20-…`) | **982** | **982** | **982** | 0.000017 | 0.0001 |
 
-**Held out at other reporting floors, rules unchanged** — neither floor was used to fit
-anything, and neither had any part in finding the two writer rules:
+**The three-floor scorecard, rules unchanged.** The raised floors were never used to fit the
+caller's geometry, and had no part in finding the two writer rules; they *were* the evidence
+for the run merge, which is why that rule was bisected on constructed canvases against the
+reference and validated on unused seeds rather than tuned here (§5.0, "never fit to the
+corpus"). Measured from the binary against the goldens by `tests/parity/fit/scorecard.py`:
 
-| floor | all four | `IBD1Seg` | `IBD2Seg` | of | extra | missing |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 3 Mb (default) | **982** | **982** | **982** | 982 | 0 | 0 |
-| `--seglength 5` | 900 | 910 | 946 | 982 | 0 | 0 |
-| `--seglength 10` | 832 | 844 | 937 | 982 | 0 | 0 |
+| floor | all four | `IBD1Seg` | `IBD2Seg` | of | extra | missing | MAE | worst |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 3 Mb (default) | **982** | **982** | **982** | 982 | 0 | 0 | 0.000000 | 0.0000 |
+| `--seglength 5` | 947 | 959 | 947 | 982 | 0 | 0 | 0.000064 | 0.0111 |
+| `--seglength 10` | 943 | 960 | 945 | 982 | 0 | 0 | 0.000114 | 0.0111 |
+
+`MAE`/`worst` here are printed-column against printed-column — what a user diffing two files
+sees — so the default floor reads a true 0.
 
 At both raised floors **"all four" equals the number of rows whose two estimate columns are
-right** (900 and 832): `PropIBD` adds no error of its own anywhere. Everything left is
-`IBD1Seg` and `IBD2Seg` above the default floor — §4.1 and `18-…` §9.
+right** (947 and 943): `PropIBD` adds no error of its own anywhere. Everything left is
+`IBD1Seg` and `IBD2Seg` above the default floor — §4.1 and §5.0.
+
+**What the run merge of `20-seglength-floor.md` moved**, on these same rows and on one
+consistent scale — printed column against printed column, the metric of the table above,
+with the merge switched off (`replace(BASE, merge=False)`) as the "before":
+
+| floor | | all four | `IBD1Seg` | `IBD2Seg` | MAE | worst |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 3 Mb | before | 982 | 982 | 982 | 0.000000 | 0.0000 |
+| | after | 982 | 982 | 982 | 0.000000 | 0.0000 |
+| 5 Mb | before | 900 | 910 | 946 | 0.000140 | 0.0641 |
+| | after | **947** | **959** | **947** | **0.000064** | **0.0111** |
+| 10 Mb | before | 832 | 844 | 937 | 0.000369 | 0.0916 |
+| | after | **943** | **960** | **945** | **0.000114** | **0.0111** |
+
+**Exact rows up and mean error down at both raised floors, and nothing whatever at the
+default** — where the rule cannot fire on real marker spacings. That is the bar a change has
+to clear to land here at all (`MAINTAINING.md` §8.6), and it is why this one did.
+
+Beware of scale when comparing against the research scripts: `fit/seg19.py` and `fit/seg20.py`
+grade `PropIBD` with the retired **`.kin`** rule, so they report the same two estimate columns
+but different `exact` and `MAE` figures (795 and 793 rather than 947 and 943). The table above
+and `fit/scorecard.py` use the rule `.seg` actually prints.
 
 **Detection is finished; what is left is length, at raised floors only.** Splitting the 982
 primary rows by whether the reference reports any IBD2:
@@ -415,9 +481,12 @@ primary rows by whether the reference reports any IBD2:
 
 **How to grade further work on it.** Not with the case count and not with the exact-row
 count at 3 Mb — both are saturated. Grade at `--seglength 5` and `10`, on `IBD1Seg` and
-`IBD2Seg` (`tests/parity/fit/engine.py`, `score_seg(suffix=…, min_bp=…)`), and out of sample
-with `gradebinary.py --ibd1`, whose one open family (43/60) is the same phenomenon in its
-smallest reproduction.
+`IBD2Seg` (`tests/parity/fit/scorecard.py`, or `engine.py`'s `score_seg(suffix=…,
+min_bp=…)`), and out of sample with `gradebinary.py --ibd1`, which is now **600/600** — its
+one previously open family closed when the run merge landed, so it no longer localises the
+residual and a *new* canvas will be needed to. A candidate rule lands only if the
+exact-row counts **and** the MAE both improve (or MAE is unchanged); anything that trades
+one for the other is reported with its numbers and rejected.
 
 ### 4.5 `.seg`'s row order is not `.kin`'s either
 
@@ -460,62 +529,89 @@ from `docs/research/`, so their numbers must not move.
 | **The two `PropIBD` rules.** `.kin`/`.kin0`/`X.kin`/`cluster.kin` print `IBD2Seg + IBD1Seg/2` at full precision; `.seg` prints `i2*1e-4 + i1*5e-5` off its own four-decimal columns. The reference disagrees with itself on 54 of 201 pairs it writes into both, so this is two rules and not one | `.kin` family byte-identical on **all 4 805** rows; `.seg` rule consistent on **all 4 172** captured rows with **0** refutations | §4.3, `20-seg-writer.md`, `fixtures/segwriter.py` |
 | **`.seg`'s row order** — by 16-sample block, then by index | block size **uniquely 16** over 2..80 across all 50 `.seg` captures | §4.5, `20-seg-writer.md` §4 |
 | **`InfType` and `Error`** | **no row anywhere differs**, over all 4 805 rows — not merely where the segments are exact | §4.2 |
-| **The IBD1 caller, its boundary refinement, its gate and its `IBD1Seg` overlap rule** (`Scan::ibd1`, `ibd1_pieces`) | every clause bisected on an IBD1-native canvas; `IBD1Seg` exact on **all 982** primary rows and on every `.kin`/`.kin0`/`X.kin`/`cluster.kin` row; the binary matches the reference on **540 of 540** canvases in the closed families | `18-ibd1-caller.md`, `fixtures/ibd1canvas.py`, `gradebinary.py --ibd1` |
+| **The IBD1 caller, its boundary refinement, its gate and its `IBD1Seg` overlap rule** (`Scan::ibd1`, `ibd1_pieces`) | every clause bisected on an IBD1-native canvas; `IBD1Seg` exact on **all 982** primary rows and on every `.kin`/`.kin0`/`X.kin`/`cluster.kin` row; the binary matches the reference on **600 of 600** IBD1 canvases — 540 closed plus the 60 of the family that was open until the run merge landed | `18-ibd1-caller.md`, `20-seglength-floor.md`, `fixtures/ibd1canvas.py`, `gradebinary.py --ibd1` |
 | **The `--ibs` IBD2 caller** (`Scan::ibd2_words`, the chunk scan) | exact on all **21 561** rows | §5.8 |
 | **The `.seg` IBD2 caller** (`Scan::ibd2`) — word predicate, gate, reach, push, bridge and fringe | every constant bisected on a `.seg`-native canvas; the binary reproduces the reference on **6 000 of 6 000** word-aligned canvases and **504 of 504** fringe canvases; `IBD2Seg` exact on **all 982** primary rows | `17-seg-caller.md` §3–§7 and §14, `19-ibd2seg-residual.md`, `fixtures/segcanvas.py`, `fixtures/fringecanvas.py`, `gradebinary.py` |
 
-**At the default 3 Mb floor there is no segment residual left.** All 982 primary rows are
-byte-exact on all four printed fields. What follows is entirely about raised floors.
+**The `--seglength` run merge** (`docs/research/20-seglength-floor.md`) is now **solved on
+both passes and committed** — `Scan::merge_ok` / `Scan::join_runs`. Two runs of the same
+pass, after the gate has refused what it refuses, are joined iff at most **2** unusable words
+lie between them, the gap `pos[first marker of the later run] − pos[last marker of the
+earlier run]` is **strictly** under `--seglength`, and `cost·(bad − 2) ≤ X` over those words
+— IBD1: `bad` = opposite homozygotes, `X` = A1A1/A1A1 unless the het-vs-A1A1 markers alone
+reach 10, `cost` 4; IBD2: `bad` = opposite homozygotes **plus** het-vs-hom mismatches,
+`X` = `inf2`, `cost` 3. A merged call may **not** satisfy the >10 Mb pair filter. Every
+constant was bisected on `fixtures/mergelab.py` against the reference and validated on
+**360/360** held-out canvases at 5 and 10 Mb with three unused seeds, plus 600/600
+independently drawn interruptions — never fitted to the corpus. It took the headline
+464 → 472 and `IBD1Seg` at 10 Mb from 844 to 960 of 982.
 
-**Not solved — one clause, plus two structural gaps.**
+**At the default 3 Mb floor there is no segment residual left at all.** All 982 primary rows
+are byte-exact on all four printed fields, MAE a true 0.000000. What follows is entirely
+about raised floors.
 
-1. **The `--seglength` run merge**, `docs/research/18-ibd1-caller.md` §9. Above the default
-   floor the reference merges two IBD1 runs across a short interruption. Two of its three
-   conditions are bisected against the reference to the base pair:
+**Not solved — one residual, plus two unrelated gaps.**
 
-   * the gap must be **strictly under `--seglength`**, measured `pos[first marker of the
-     later run] − pos[last marker of the earlier run]` (bisected at two spacings);
-   * the interrupting words may carry **at most 5** opposite homozygotes in total (bisected:
-     5 merges, 6 does not; position within the word is irrelevant).
+1. **A second-order interaction at raised floors, 5 of the 8 cases.** 74 of 1 658 rows in
+   the raised-floor captures, in three datasets (`bigish` 34 at 5 Mb and 33 at 10,
+   `multifam` 5 at 10, `missing` 1 at each). The shape is specific, and it is the thing to
+   attack:
 
-   The third is missing, and it must exist: implemented with only those two conditions the
-   rule is **worse** — `IBD1Seg` 910 → 869 at 5 Mb, and with the merged calls feeding the
-   ">10 Mb" pair filter it invents 1 054 pairs. Real unrelated pairs are full of one-IBS0
-   interruptions, so the reference requires something further — a bound on how many merges, or
-   on the runs' own lengths, or on their `inf1`. **This is worth 11 of the 16 remaining
-   cases** and it is the only lever on them.
+   * **At 5 Mb it is one-sided and it is one fault seen twice.** Every wrong `IBD2Seg` is
+     **too low** (34 of 34) and every wrong `IBD1Seg` is **too high** (23 of 23), on the same
+     dataset and largely the same rows. The reference merges an IBD2 pair of runs where we do
+     not; the IBD2 territory we fail to claim is then not subtracted from `IBD1Seg`, so a
+     single missed merge pushes one column down and the other up.
+   * **At 10 Mb it is two-sided** (`IBD1Seg` 8 high / 9 low, `IBD2Seg` 10 high / 22 low), so
+     a second effect is present there that is not present at 5.
+   * **It is not the merge *test*.** On random IBD2-native canvases the same predicate is
+     56–58 of 60 where the identical mirror with no merge possible is 60/60, in both
+     directions. The failures track the **one-word push** of `17-seg-caller.md` §6 — which is
+     counted over gate-passing calls whether or not they survived the floor — i.e. an
+     interaction between the merge and the push's counter, not a wrong budget.
+   * **Ruled out, measured:** allele frequency (padding-only changes flip nothing);
+     rate-over-merged-segment readings (run length is irrelevant); per-word rather than
+     per-interruption budgets; and any linear function of the nine marker-kind counts (a
+     perceptron over all nine leaves 36/600 misclassified, because the region is non-convex
+     — the switch at 10 is what makes it so).
 
-2. **`<prefix>X.seg` is never written** (§6.1). 2 cases. Structural, not numeric.
+2. **`<prefix>build.log` is never written** (§6.2). 1 case, and no longer segment-blocked:
+   it needs exact segment *placement* plus the still-unidentified named-sib-pair rule. All
+   14 measured `AV.FS` triples miss the printed 3 dp, mean residual +0.0040, one-sided high
+   on every one — so the log's five `Join3/Join2` values would print wrong even with the rule
+   scaffolding written.
 
-3. **`<prefix>build.log` is never written** (§6.2). 1 case. Also segment-blocked, so not an
-   independent second problem.
-
-   (The 2 remaining `--related` cases are §5.7, which is not a segment problem at all.)
+3. **`--related`'s two-stage screening count**, 2 cases (§5.7). Not a segment problem: one
+   stdout line, `36 pairs` against our `50`.
 
 **The next experiments worth running, in order.**
 
-1. **`dups`' duplicate pair is one row and the largest single error in the corpus** — 0.0641
-   at 5 Mb, 0.0916 at 10 Mb, against a mean of 0.0024. The reference prints the *same*
-   `IBD2Seg 0.9877` at both raised floors while ours falls 0.9018 → 0.8804, and its
-   `IBD1Seg` stays 0.0000 where ours becomes 0.0436 → 0.0313. Its answer is
-   floor-independent above 3 Mb and ours is not. One pair, one question: what does the
-   reference do with an IBD2 call the floor would drop? (Not "cut `IBD1Seg` by the dropped
-   calls as well" — that is measured and worse: 982 → 950 at 3 Mb, 900 → 861 at 5,
-   832 → 783 at 10. `20-seg-writer.md` §6.)
-2. **Find the §9 run merge's missing condition** on `fixtures/ibd1canvas.py`, whose
-   `mixed seed 61803, L=8` family is 43/60 under `gradebinary.py --ibd1` and is the smallest
-   reproduction in the tree. The unconditioned merge is priced in `20-seg-writer.md` §6:
-   merging IBD1 calls costs 982 → 781 at 3 Mb, merging IBD2 calls trades 8 exact rows at
-   5 Mb for a better worst row at 10 Mb. Grade on `IBD1Seg` at 5 and 10 Mb, and require the
-   3 Mb column to stay at 982.
+1. **Attack the push counter, not the merge budget.** The merge predicate is validated out of
+   sample; the residual is where it meets `emitted`, the count of gate-passing IBD2 calls that
+   drives the one-word left clip (`17-…` §6). Specifically: when a merge joins two runs that
+   would each have been counted separately, does the reference increment that counter once or
+   twice? Build it both ways on `fixtures/segcanvas.py` with a floor above the default — the
+   corpus cannot answer it, because at 3 Mb no merge fires. This is the single most likely
+   explanation of the one-sided 5 Mb column.
+2. **Explain the extra effect at 10 Mb.** The two-sidedness there is not accounted for by (1)
+   alone. `multifam` at 10 Mb is the smallest reproduction — 5 rows, `IBD1Seg` all too low
+   and `IBD2Seg` all too high, the exact mirror of `bigish`'s 5 Mb sign pattern.
+   `fit/scorecard.py --residual` prints the five rows.
 3. **Do not re-sweep the caller's constants.** Forty single-knob perturbations and all 32
    combinations of the two IBD1 endpoint rules crossed with the two IBD1 fringe rules were
-   scored in the final pass: none improves exact rows, none beats the committed MAE, and the
-   committed values are the unique maximum of that grid (`20-seg-writer.md` §6).
+   scored: none improves exact rows, none beats the committed MAE, and the committed values
+   are the unique maximum of that grid (`20-seg-writer.md` §6). Likewise the merge's own
+   knobs, swept in `fit/seg20.py grid`.
 4. **Five knobs the corpus cannot see at all** — `bridge_rule="17"`, `gate_end="right"`,
    `inf2_ibs1b=True`, `ibd1_clip_ibd2=True`, `clip_before_len=False` all score identically to
    the committed engine on every corpus row. They were settled on the canvases (`17-…` §14)
    and the canvases remain the only evidence for them. If you change one, grade it there.
+
+**Closed since the previous revision of this section**, recorded so it is not re-derived:
+`dups`' duplicate pair, previously the largest single error in the corpus (0.0641 at 5 Mb,
+0.0916 at 10), is now **exact at all three floors** — it was the run merge, on the IBD2 pass.
+The old note asked "what does the reference do with an IBD2 call the floor would drop?"; the
+answer is that it never had one, because it had merged the runs first.
 
 **And one lesson about graders.** For most of this project the case count was the *wrong*
 number to optimise: the `.seg` residual was spread thinly across nearly every dataset, so a
@@ -525,6 +621,16 @@ the remaining differences were a printing rule and a row order — things only a
 see, which the row-level graders had been silently normalising away for the whole project
 (`measure_gaps.py` matches rows on their identifiers before comparing, and reported 0 extra
 and 0 missing throughout). Keep both scoreboards, and when one saturates, look at the other.
+
+**And one about where a check is pointed.** `check_mirror.py` asserts that `fit/engine.py`
+reproduces the binary exactly, and it is the guard that keeps the research mirror honest.
+For an interval it ran **only at the default floor** — and so passed while the binary had
+the run merge and the mirror did not, because the merge cannot fire at 3 Mb on the corpus's
+spacings. The check was green and the mirror was wrong. It now runs at 3, 5 and 10 Mb
+(2 946 rows), and the general rule it teaches is: **a rule whose predicate reads a CLI
+parameter must be exercised at a value of that parameter where it is live**, or the check
+only proves the rule is dormant. `fit/scorecard.py` exists for the same reason — the
+`ibdseg_parity` Rust test covers the default floor alone.
 
 ### 5.1 The four small filesets do not grade the caller
 
@@ -632,17 +738,52 @@ full sibs.
 ### 5.7 The two-stage screening count is not reproduced
 
 `bigish --related --degree 2` prints `Stages 1&2 (with 32768 SNPs): 36 pairs of relatives are
-detected`; open-king prints `50`. This is the only stdout line `--related` gets wrong, and it
-is **not** a marker-subset problem. A held-out ladder (*m* = 32 768 / 33 280 / 36 864 /
-40 960 / 45 056 / 50 000, both degrees) shows every candidate subset — first, last, evenly
-spaced, and highest-MAF markers, and the same four over whole 64-marker words — **overshoots
-at degree 2 on every map past 33 280 while matching at degree 1**, and none undershoots. The
-stage is lossy; reproducing the number means reproducing the two-stage bound itself. No rule
-was fitted to it. It costs 2 cases — `core/bigish__related_degree2` and
-`ibdseg/bigish__related_degree2_ibdseg` — and it is the only `--related` failure left. The
-consequence is contained to that one line: `.kin0`'s row set comes from the exhaustive
-re-estimate below it and is byte-correct at every degree, including in both of those cases,
-and both of their `.seg` files are byte-identical.
+detected`; open-king prints `50`. This is the only stdout line `--related` gets wrong. It
+costs 2 cases — `core/bigish__related_degree2` and `ibdseg/bigish__related_degree2_ibdseg` —
+and it is the only `--related` failure left. The consequence is contained to that one line:
+`.kin0`'s row set comes from the exhaustive re-estimate below it and is byte-correct at every
+degree, including in both of those cases, and both of their `.seg` files are byte-identical.
+
+**What the stage is, measured.** `docs/research/fixtures/screencanvas.py` turns the aggregate
+count into per-pair and per-marker measurements by driving the reference over two constructed
+canvases: `bigish`'s 167 unrelated fillers (which alone print `No close relatives are
+inferred.`) plus exactly one candidate pair, and a pair whose kinship one cloned marker set
+tunes continuously. `--facts` re-measures all of the following in about two minutes; none of
+it is read off `bigish`'s own answer.
+
+* **The stage is per-pair.** Run the 47 candidate pairs one at a time and the count is 0 or 1
+  each time; it is 1 on **36** of them — the whole fileset's number. So it is not a budget, a
+  cap, a ranking or a per-block bound, and six sample permutations do not move it.
+* **It is not a marker prefix, stride or decimation**, which is what this repo implements. A
+  10 000-marker clone window at `[40000, 50000)`, where the first-32 768 estimate reads
+  0.0020, is accepted at the same true kinship as one at `[0, 10000)`; stride-2/3/4 clone
+  sets at every offset agree.
+* **It is a threshold on kinship that sits above the printed cutoff** — 0.0700 against 0.0625
+  at *n* = 167, *m* = 50 000, lossy in exactly the direction that turns 50 into 36. Written
+  `k_screen = 0.5 + R*(k − 0.5)`, one `R` fits both degrees (1.0186 at cutoff 0.1250, 1.0176
+  at 0.0625); an additive offset disagrees by 18 % between them, a plain multiplicative one by
+  a factor of two.
+* **`R` is exactly 1 while *m* ≤ 32 768** (0.99995 at 32 768, 0.99993 at 33 280), grows with
+  the map (1.0106 / 1.0128 / 1.0204 / 1.0176 at 36 864 / 40 000 / 45 000 / 50 000) and *falls*
+  with the sample count (1.033 at *n* = 100 to 1.018 at *n* = 167, smoothly, no 16/32-sample
+  step), and varies pair to pair (1.018…1.026 over six filler pairs). It was never below 1.
+* **The screening statistic reads the other samples' genotypes.** Drive the fillers to one
+  homozygote at 17 232 random markers and a pair related *only* there is rejected at kinship
+  0.154, while the same pair related on the rest is accepted at 0.062; replace the whole
+  background with HWE-consistent random genotypes and the threshold passes 0.25. No marker
+  subset can do that — a uniformly spread clone set meets any subset in its own proportion —
+  so the stage is estimating with **sample-level allele frequencies**, which is also what the
+  *n* dependence is.
+
+**A lead, not landed.** A frequency-standardised estimate over a MAF-selected subset —
+`mean(z_i z_j)/2` with `z = (x − 2p)/√(2p(1−p))` over the 32 768 highest-MAF markers — gives
+**36** on `bigish` at degree 2 with the fileset's own 200-sample frequencies, and agrees with
+48 of the 50 per-pair labels. It fails out of sample: recomputed with each single-pair run's
+own 169-sample frequencies, which is what the reference saw in those runs, it predicts 44,
+agrees with 42 of 50, and gives 16 at degree 1 where the reference gives 18. Landing it would
+be fitting to `bigish`, so **no rule is fitted to this line** and the placeholder prefix
+stays: it reproduces the degree-1 count (18) on every map tried, and swapping it for the whole
+map would lose that for nothing at degree 2 (47 against 36).
 
 ### 5.8 `--ibs` and `.seg` do not share a segment rule
 
@@ -715,7 +856,7 @@ Both were found by driving the reference over a fixture whose sample and family 
 13 corpus datasets do not cover, and both were **re-measured for this release** on a fresh
 6-sample fixture, 12 runs per binary per condition, deterministic every time. **Neither costs
 a parity case**, and neither is a segment-caller problem. They are recorded here because they
-are the only known differences a *user* could hit while the suite stays at 464/480.
+are the only known differences a *user* could hit while the suite stays at 472/480.
 
 The one fixture shows both at once. One autosome, 10 000 markers at 10 kb spacing, six
 samples in singleton families — usable total `D` = 99 990 000 bp, just under the floor; and
@@ -763,26 +904,70 @@ that reaches the segment pass has a family of at least 4 members (`unrelated` 10
 The obvious hypothesis — *the reference writes it only when some family has more than one
 member* — is consistent with every observation above but rests on **one** fixture shape, so
 it is a hypothesis and not a rule. Bisect it with `fixlab.py`: hold the sample count fixed and
-vary only the largest family size across 1, 2 and 3.
+vary only the largest family size across 1, 2 and 3. It gained independent support from the
+X.seg work: `--related`'s `<prefix>X.kin` obeys exactly that rule (twelve singleton families
+write none; add one two-member family and it appears), which is now implemented.
+
+### 5.11 Three more divergences the corpus cannot see
+
+All three were found while validating `<prefix>X.seg` out of sample (§6.1) on built filesets.
+**None costs a parity case**, and none is in the X.seg writer — each is in a shared component
+that X.seg merely exercises harder than the corpus does.
+
+**1. The `.seg` acceptance gate admits a pair the reference omits.** On a built 8-sample
+single-family fileset the reference's `king.seg` has no row for one brother–sister pair while
+open-king writes `IBD1Seg 0.0260  IBD2Seg 0.0893  PropIBD 0.1023  3rd`. It is the *acceptance*
+gate, not the `--degree` filter: the row is absent from the reference at `--degree 0` as well,
+and present in ours at −1, 0, 1, 3 and 4 (at 2 the `PropIBD` cutoff removes it anyway). This
+is the first observed counterexample to `inf1/inf2 >= 10` — the corpus has **0 extra and 0
+missing** `.seg` rows — and it propagates into `X.seg`, which mirrors `.seg`'s rows.
+*Reproduce:* `probes/xseg_probe.py -v`, case `onefam/x1000#0` — an 8-member nuclear family
+(3 sons, 3 daughters) with 1 000 X markers. It is the only default-floor case in that probe's
+1 040 runs whose `X.seg` differs, and it differs because `king.seg` does.
+
+**2. `.fam` SEX fields outside {0,1,2} are read differently.** `king-io::fam::parse_sex` maps
+everything but `1` and `2` to `0`; the reference does not. Measured by sweeping 43 spellings
+through `X.seg`'s raw `Sex` column:
+
+| reference prints | `.fam` field |
+| --- | --- |
+| `0` | `0` `00` `0.0` `-0` `-9` `-9.0` `x` `?` `NA` `na` `b2` |
+| `1` | `1` `-1` `-2` `3` `9` `10` `12` `02` `002` `0002` `007` `+2` `1.9` `1e0` `M` `m` `male` `MALE` |
+| `2` | `2` `20` `21` `22` `2.5` `2.9` `2x` `20x` `2e0` `F` `f` `female` `FEMALE` |
+
+i.e. a leading `2`/`F`/`f` is female, a leading `M`/`m` is male, an otherwise-numeric field is
+male unless it evaluates to `0` or `-9`, and anything else is unknown. Deliberately **not
+implemented**: `parse_sex` is shared with `--autoQC`'s `updatesex`, `--bysample`, `splitped`
+and `--kinship`'s X classification, none of which the corpus exercises with a field outside
+`{0,1,2}`, so the change could not be regression-tested where it matters. Every corpus `.fam`
+uses only `0`/`1`/`2`, where the two rules agree.
+
+**3. The reference reads past the end of a marker array whose length is an exact multiple of
+64.** On such an array it adds an *absolute* coordinate — `pos[last]`, not a difference — to a
+pair's IBD2 total, so `IBD2Seg` comes out larger than 1. Swept at 320/384/448 markers (anomaly
+on some pairs, always exactly `+pos[last]/D`) against 319/321/383/385/449 (no anomaly on any
+pair, any seed). It shows identically in `X.kin` and `X.seg`, so it is the shared caller, and
+it is unreachable from the corpus, whose arrays all end mid-word. Not emulated: it is an
+uninitialised read, not a rule.
 
 ---
 
-## 6. The two structural gaps, in detail
+## 6. The remaining structural gap, in detail
 
-### 6.1 `<prefix>X.seg`
+### 6.1 `<prefix>X.seg` — **implemented, both cases pass**
 
-**Not implemented.** What is measured about it, from the reference:
+Rules, gate and evidence: `crate::analysis::xseg`. What was measured against the reference,
+including the corrections this section previously got wrong:
 
 * **When it is written.** `--ibdseg` writes `<prefix>X.seg` exactly when `--degree` is
   non-zero *and* the fileset has usable X-chromosome segments. Bare `--ibdseg`,
   `--ibdseg --degree 0` and `--ibdseg --seglength 5` write none; `--degree` (bare, = 1),
   `--degree 1`, `--degree 2`, `--degree 3` and `--degree -1` all do. Of the 13 corpus datasets
-  only `sexchr` has usable X segments, so only 2 of the 480 cases are affected. **Both of
-  them now fail on this file and nothing else**: their autosomal `king.seg`, `king.kin`,
-  `kingX.kin`, `kingallsegs.txt` and `kingsplitped.txt` are all byte-identical, and the only
-  other difference either one has is the stdout line announcing the missing file. Writing it
-  correctly would flip both — which makes this, and not the segment caller, the largest
-  single win left in the corpus.
+  only `sexchr` has usable X segments, so only 2 of the 480 cases were affected; **both now
+  pass**. Two things the corpus could not decide, settled on built filesets: there is **no
+  512-marker threshold** (that belongs to `--kinship`'s X pass alone — 320 X markers over
+  30 Mb write `X.seg`, 319 do not, and 640 markers inside 5 Mb do not), and there is **no
+  family-count condition** (a single-family fileset writes it).
 * **Which rows.** Exactly the pairs the autosomal `<prefix>.seg` carries, in the same order —
   verified at `--degree -1` (0 rows in both), 1, 2 and 3 (14 rows in both; the golden file is
   15 lines, header included).
@@ -794,18 +979,34 @@ vary only the largest family size across 1, 2 and 3.
   `MaxIBD2` and `IBD1Seg` column positions, and the last two columns are never written.
 * **Announced on stdout** as `Additional summary statistics of X-Chr IBD segments saved in
   file <prefix>X.seg`, after the autosomal line.
-* **Its `PropIBD` follows `.seg`'s rule, not `.kin`'s.** Applying the integer test of §4.3
-  to the three numbers each row does carry: 10 rows unambiguous, 4 exact ties (2 up, 2 down),
-  **0 refutations**, in both captures. Small, but consistent with `seg_prop_ibd` and with
-  nothing else — the tie directions rule out both half-up and half-even.
+* **Its `PropIBD` follows `.kin`'s rule, not `.seg`'s** — this section previously said the
+  opposite, and building it both ways settled it: `seg_prop_ibd` fails both captures
+  (`kingX.seg!=(num)`), full-precision `IBD2Seg + IBD1Seg/2` passes both. The integer test of
+  §4.3 does not discriminate here because it treats an exact decimal tie as compatible with
+  either direction; the actual double arithmetic does. Two rows refute the `.seg` rule
+  outright: `S_SON1`/`S_DAU1` at `IBD1Seg 0.4257` prints `0.2128` where `4257 * 5e-5` lands
+  just above the half and renders `0.2129`, and `S_SON1`/`S_DAU2` at `0.9067` prints `0.4533`
+  against `0.4534`. So `X.seg` and `X.kin` carry the same three numbers for the same pair.
 
-**What is missing is the X caller itself**, not the writer: hemizygous males, the X's own
-word grid (already built — `usable_x` feeds the `allsegs.txt` line, which is byte-identical),
-and whatever the reference does with a male–male X pair. The two captures come from a single
-6-sample dataset, so anything fitted to them would be fitted to 28 rows of one family;
-`generate_corpus.py` would want a second X-bearing dataset before this is attempted. But the
-autosomal residual is no longer an obstacle: at the default floor `sexchr`'s `king.seg` is
-byte-identical, and `--degree 2` is a default-floor invocation.
+* **There is no X caller.** The autosomal segment caller runs unchanged over the X marker
+  array and the X bit planes; there is no male/female branch, and none is needed, because a
+  hemizygous male is stored **homozygous** and so is never heterozygous and never IBS0
+  against a heterozygote. That is why a father–son pair scores 0, a father–daughter pair
+  `IBD1Seg 1.0000`, and brothers who drew the same maternal X score `IBD2Seg`.
+* **Samples of unknown sex are not excluded**, unlike in `--kinship`'s `X.kin`; their rows
+  appear with the `.fam` code printed raw.
+
+**Held out** — `python3 tests/parity/probes/xseg_probe.py --impl target/release/king`, which
+prints `presence 1040/1040`, `default 875/880`, `default_given_autosome_ok 625/625`,
+`nondefault 105/160`. The two captures are 28 rows of one 6-sample family, so nothing here was
+fitted to them. 1 040 reference-vs-open-king runs were built from fresh pedigrees
+(4 to 48 samples, one to six families, three-generation, unknown-sex, all-singleton, and one
+below the `< 5` downgrade) crossed with five X maps (one, two and three usable segments; 333
+to 1 500 markers; X alone and X + Y + XY + MT) and thirteen flag combinations: the **emission
+gate agrees on 1 040 of 1 040**, and at the default floor `X.seg` is byte-identical on
+**625 of 625** runs whose autosomal `.seg` is also byte-identical. Every remaining difference
+is inherited: the `--seglength 5`/`10` residual of §5.0, or the one `.seg` row the autosomal
+acceptance gate disagrees about (§5.11).
 
 ### 6.2 `--build` on `bigish`
 
@@ -1024,7 +1225,9 @@ also update the file that says it was broken. CI runs it on every push. Regenera
   (6 416 cached reference answers) and **`ibd1canvas.py` the same canvas built IBD1-side up**
   (1 013); **`gradebinary.py` grades our build on both** without touching either cache;
   `avfs.py` regenerates the `--build` pedigree shapes of §6.2 and `avfs_score.py` scores the
-  `AV.FS` statistic over them. Their `work/` output is gitignored and disposable — the JSON
+  `AV.FS` statistic over them; **`screencanvas.py` is the `--related` screening canvas of
+  §5.7** — the single-pair probe and the clone-fraction boundary, with `--facts` re-measuring
+  every number that section quotes. Their `work/` output is gitignored and disposable — the JSON
   caches are not, and must only ever be written by the reference binary.
 * `tests/parity/fit/` — Python mirrors of the committed engine, kept honest by
   `check_mirror.py`. `chunk.py` keeps the superseded `--ibs` rule alive beside the committed

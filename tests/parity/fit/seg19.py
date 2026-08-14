@@ -29,6 +29,10 @@ import kingdata as kd
 WORD = E.WORD
 PC = np.bitwise_count
 
+#: `engine.py`'s committed geometry with the `20-…` run merge switched **off** — the
+#: IBD1 pass exactly as it stood when this write-up was measured.
+PRE20 = replace(E.BASE, merge=False)
+
 
 @dataclass(frozen=True)
 class R19:
@@ -211,7 +215,11 @@ def call_pair(ds, i, j, p, min_bp=E.SEGLEN):
     pos = ds.pos
     ibd1 = ibd2 = longest = 0
     for seg in ds.segs:
-        sc = E.SegScan(ds, i, j, seg, E.BASE)
+        # This module is the `19-…` era engine: its IBD1 pass is `engine.py`'s, but
+        # pinned **before** the run merge of `20-…`, which is what makes the 5 and 10 Mb
+        # rows of its scorecard the "before" column that write-up is measured against.
+        # Without the pin it would silently track whatever `E.BASE` becomes.
+        sc = E.SegScan(ds, i, j, seg, PRE20)
         if sc.n == 0:
             continue
         c2 = ibd2_19(sc, ds, i, j, p, pos, min_bp)

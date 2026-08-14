@@ -30,6 +30,7 @@ pub mod segments;
 pub mod splitped;
 pub mod unrelated;
 pub mod xkinship;
+pub mod xseg;
 
 use std::cmp::Ordering;
 use std::collections::HashSet;

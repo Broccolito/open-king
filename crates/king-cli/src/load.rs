@@ -289,18 +289,26 @@ impl Ticks {
 pub struct Loaded {
     pub fileset: Fileset,
     pub counts: MapCounts,
-    /// The X-chromosome bit planes, decoded only when the map carries enough X markers
-    /// for the X pass to run at all ([`X_PASS_MIN_SNPS`]).
+    /// The X-chromosome bit planes, decoded whenever the map carries an X marker at all.
+    ///
+    /// Present is not the same as used: each X pass applies its own gate on top of this.
+    /// The kinship one counts markers ([`X_PASS_MIN_SNPS`]); the two segment ones ask
+    /// whether the X map yields a usable segment, which is a *lower* bar — 320 markers
+    /// over 30 Mb run the segment passes and not the kinship one.
     pub x_genotypes: Option<king_io::Genotypes>,
 }
 
-/// Fewest X-chromosome SNPs that will start the X-chromosome pass.
+/// Fewest X-chromosome SNPs that will start the X-chromosome **kinship** pass.
 ///
 /// **512**, bisected against the reference on a fileset whose X marker count was swept:
 /// 511 produces no `X.kin`/`X.kin0` and no `X-chromosome analysis...` block, 512 produces
 /// both. It is a count of *markers*, not of calls — 512 markers of which 200 are missing
 /// in every sample still runs. This is what keeps `--sexchr 24` (300 X SNPs on the
 /// `sexchr` fixture) and `--sexchr 25` (150) silent while `--sexchr 2` (2 000) is not.
+///
+/// It governs `--kinship`'s X pass **only**. `--related`'s `X.kin` and `--ibdseg`'s
+/// `X.seg` are gated on the usable-segment construction instead — see
+/// [`crate::analysis::xseg`].
 pub const X_PASS_MIN_SNPS: usize = 512;
 
 impl Loaded {
@@ -444,10 +452,11 @@ pub fn load(opts: &Options, out: &mut dyn Write) -> Result<Loaded, Fatal> {
     };
     ticks.emit(out);
 
-    // The X planes cost a second pass over the `.bed`, so take it only when the X pass
-    // could run. The autosomal decode has already validated the file's length and header,
-    // so this one cannot introduce a new failure mode.
-    let x_genotypes = (counts.x >= X_PASS_MIN_SNPS)
+    // The X planes cost a second pass over the `.bed`, so take it only when there is an X
+    // marker to decode. Which passes may then *use* them is each pass's own decision. The
+    // autosomal decode has already validated the file's length and header, so this one
+    // cannot introduce a new failure mode.
+    let x_genotypes = (counts.x > 0)
         .then(|| {
             let x_keep: Vec<bool> = variants
                 .iter()

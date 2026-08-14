@@ -19,6 +19,11 @@ import seg17 as S17
 WORD = E.WORD
 IBD2 = S17.R17()
 
+#: `engine.py`'s committed geometry with the `20-…` run merge switched **off** — the
+#: IBD1 pass exactly as it stood when this write-up was measured. Without the pin this
+#: module's 5 and 10 Mb rows would silently track whatever `E.BASE` becomes.
+PRE20 = replace(E.BASE, merge=False)
+
 
 @dataclass(frozen=True)
 class R18:
@@ -58,7 +63,7 @@ def call_pair(ds, i, j, p, min_bp=E.SEGLEN):
     pos = ds.pos
     ibd1 = ibd2 = longest = 0
     for seg in ds.segs:
-        sc = E.SegScan(ds, i, j, seg, E.BASE)
+        sc = E.SegScan(ds, i, j, seg, PRE20)
         if sc.n == 0:
             continue
         c2 = S17.ibd2_17(sc, ds, i, j, IBD2, pos, min_bp)

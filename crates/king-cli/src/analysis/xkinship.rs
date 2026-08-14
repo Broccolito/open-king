@@ -115,7 +115,10 @@ const FEMALE: u8 = 2;
 /// `between_family_ran` is the caller's answer to the third condition in the module
 /// docs; the other two are read from here.
 pub fn runs(opts: &Options, loaded: &Loaded, between_family_ran: bool) -> bool {
-    between_family_ran && opts.int(Opt::Degree) == 0 && loaded.x_genotypes.is_some()
+    between_family_ran
+        && opts.int(Opt::Degree) == 0
+        && loaded.counts.x >= crate::load::X_PASS_MIN_SNPS
+        && loaded.x_genotypes.is_some()
 }
 
 /// Write both X files and print the block.
