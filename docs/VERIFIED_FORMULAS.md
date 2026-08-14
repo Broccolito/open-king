@@ -118,14 +118,24 @@ Verified: `HetHet = 302`, `N_SNP = 1970` → `0.1533`; `IBS0 = 28`, `N_SNP = 196
 
 Formats: `Z0` is `%.3f`, `Phi` is `%.4f`.
 
-### The `Error` column
+### The `Error` column — graded, not a flag
 
-`Error` is `1` when the **inferred** relationship class disagrees with the
-**pedigree-declared** class, else `0`. Verified on the captured `tiny` dataset: the
-pairs flagged `1` were `f2dad`/`f2dup` (pedigree unrelated, inferred 2nd degree,
-`Kinship = 0.1161`) and `f2dup`/`f2kid1` (pedigree unrelated, inferred 3rd degree,
-`Kinship = 0.0741`), while `f2dad`/`f2mom` (`-0.0308`) and `f2dup`/`f2mom` (`0.0090`)
-both infer unrelated and are flagged `0`.
+`Error` measures disagreement between the **inferred** class and the
+**pedigree-declared** class, and it is **not an integer**. It is graded:
+
+| Value | Meaning |
+| --- | --- |
+| `0` | inferred class matches the pedigree |
+| `0.5` | off by exactly one degree |
+| `1` | off by more than one degree |
+
+Confirmed by scanning every `.kin` in the golden corpus: the value set is exactly
+`{0, 0.5, 1}`. An implementation that writes this column with `%d` is wrong — it will
+print `0` for every half-step disagreement.
+
+Worked example from the `tiny` capture: `f2dad`/`f2dup` (pedigree unrelated, inferred 2nd
+degree) and `f2dup`/`f2kid1` (pedigree unrelated, inferred 3rd degree) are flagged, while
+`f2dad`/`f2mom` and `f2dup`/`f2mom` both infer unrelated and are flagged `0`.
 
 ## Relationship inference cutoffs
 
@@ -158,7 +168,7 @@ rather than a hard-coded constant — see [Open questions](#open-questions).
 | `Phi`, `HetHet`, `IBS0`, `Kinship` | `%.4f` |
 | `IBS`, `Dist`, `HetConc`, `Het2\|1`, `Het1\|2`, `HomConc` | `%.4f` |
 | `Concord`, `HomConc`, `HetConc` in `.con` | `%.5f` |
-| `Error` | `%d` |
+| `Error` | **not** `%d` — see below |
 
 Separators: `.kin`, `.kin0`, `.con`, `.ibs`, `.ibs0`, `unrelated.txt` are **tab**
 separated. `bySample.txt` and `bySNP.txt` are **space** separated. This asymmetry is
@@ -225,51 +235,93 @@ plain lexicographic ordering would get wrong (`a10 < a2 < a9`, `10 < 2 < 9`). Us
 
 Pairs are then emitted as the `i < j` upper triangle over that sorted order.
 
-**Unresolved edge case:** zero-padded numeric IDs. For the family `{007, 7, 70}` the
-emitted order is `7`, `70`, `007` under all three `.fam` orders tried, which is neither
-plain natural sort (`007` and `7` would tie) nor lexicographic (`007 < 7 < 70`). Tracked
-as open question 6.
+### The exact comparator
 
-## Single-family behaviour
+"Natural sort" is a good approximation but not the rule. The exact comparator, fitted
+against 44 probe families in `docs/BEHAVIOR.md`, walks the two IDs together:
 
-**When the dataset contains only one family, `.kin` is written as a zero-byte file** —
-not even the header row — even though the console still prints
-`Within-family kinship data saved in file king.kin` and the relationship-summary table
-reports the pairs as correctly inferred. Adding a second family to the same `.bed` makes
-the header and all within-family rows appear.
+* a **run of digits** compares against another digit run by **length first, then bytes**
+  — so `7 < 70 < 007` (lengths 1, 2, 3), which is what the reference emits and what plain
+  natural sort gets wrong (it would tie `007` with `7`);
+* a **non-digit** character compares ASCII with **uppercase folding**;
+* a non-digit sorts **before** a digit;
+* a shorter ID that is a prefix of a longer one sorts first.
 
-Verified with `--kinship` and `--related`, and independently of the phenotype column.
-Reproducing this exactly is required for parity: a single-family dataset is a common
-real-world input, and emitting a populated `.kin` there would be a diff against the
-reference on the very first case a user tries.
+Because digit runs compare by length first, this coincides with numeric ordering for
+IDs without leading zeros — which is why `2 < 9 < 10` and `a2 < a9 < a10` — while also
+explaining the zero-padded case. The same comparator orders the `FID` blocks.
 
 ## Output files are not unconditional
 
-Two effects mean an implementation can compute every number correctly and still fail the
-diff. Both are tracked in `docs/BEHAVIOR.md`.
+An implementation can compute every number correctly and still fail the diff. Full detail
+in `docs/BEHAVIOR.md`; the essentials:
 
-**File existence varies with the input.** Running `--ibs`:
+### Truncation, not emptiness
 
-| Dataset | Families | Samples | `king.ibs` | `king.ibs0` |
-| --- | --- | --- | --- | --- |
-| `trio` | 1 | 3 | not created | not created |
-| `nuclear` | 1 | 6 | not created | not created |
-| `threegen` | 1 | 14 | created | not created |
-| `dups` | 8 | 10 | created | created |
+The single-family `.kin` is **not "empty" as a rule — it is truncated to whole flushed
+64 KiB chunks**, because the reference never closes the file. A zero-byte `.kin` is just
+the small-data case of that: fewer than 64 KiB of rows were buffered, so nothing reached
+disk. Holding the data fixed and padding the `FID` to push past the boundary changes the
+row count while the byte count stays pinned near 65,536.
 
-Note `threegen` is also a single family yet does get a `.ibs`, so family count alone does
-not explain it. **Absent**, **zero-byte**, and **header-only** are three distinct
-outcomes and must each be reproduced as-is.
+Every dataset in this corpus is small enough that the effect always presents as
+zero-byte, so the corpus alone would have led to the wrong rule.
 
-**The `.ibs0` column set varies with the marker map.** Full-genome `dups` emits two extra
-trailing columns, `MaxIBD2` and `Pr_IBD2`; the *same* 8-family fileset subset to
-chromosomes 1–2 emits the short header ending at `Kinship`. The trigger is therefore the
-map, not the samples — presumably whether an IBD2 segment analysis is attempted.
+### Existence rules
+
+| File | Created when |
+| --- | --- |
+| `.kin` | some family has ≥ 2 members (content then subject to the truncation above) |
+| `.kin0` | ≥ 2 distinct `FID`s; for `--related`, additionally **N ≥ 100** |
+| `.ibs` | always — header-only (139 bytes) when no within-family pair exists; never truncated |
+| `.con` | always for N < 100; for N ≥ 100 only if a duplicate is found |
+
+> An earlier note here claimed `--ibs` on `trio`/`nuclear` created neither `.ibs` nor
+> `.ibs0`. **That did not reproduce** in a clean directory — both write a `.ibs`. The
+> original observation came from a run whose fatal-error exit was masked by a redirect
+> (see the A1/major-allele gate below). It has been removed rather than corrected.
+
+### The `.ibs0` column set depends on the marker map
+
+`MaxIBD2` and `Pr_IBD2` are appended to **both** `.ibs` and `.ibs0` iff the total
+*usable* segment length is **≥ 100 Mb**, where a usable segment is a maximal run of SNPs
+with a base-pair gap **≤ 156,250** (= 10 Mb / 64; 156,250 is usable, 156,251 is not). The
+`.bim` cM column is ignored entirely. This is why the same 8-family fileset emits the long
+header genome-wide and the short header when subset to chromosomes 1–2.
 
 ```
 short: ... HetConc Het2|1 Het1|2 HomConc Kinship
 long:  ... HetConc Het2|1 Het1|2 HomConc Kinship MaxIBD2 Pr_IBD2
 ```
+
+Both are the literal `-9` unless `Kinship >= 2^-3.5`. `MaxIBD2` is the longest IBD2
+segment in bp at `%.3f`; `Pr_IBD2` is a genome proportion at `%.4f`. `--related`'s `.kin`
+and `.kin0` gain `IBD1Seg`/`IBD2Seg`/`PropIBD`/`InfType` on the same trigger.
+
+## SNP inclusion — nothing is filtered
+
+Every `.bim` record on chromosome `1`–`22`, `25` or `XY` enters the computation, **in file
+order**. There is **no** monomorphic filter, **no** call-rate threshold, **no** MAF
+threshold; `0`-coded alleles, duplicate IDs and duplicate positions are all kept. A SNP
+called in only 2 of 8 samples still counts for that pair.
+
+Note **chromosome 25 / `XY` is pooled with the autosomes**. Codes `23`/`X`, `24`/`Y` and
+`26`/`MT` are held aside (X gets its own `<prefix>X.kin`), and **any other code — `0`,
+`27`, `M`, `-1`, `chr1` — is dropped at map load** and is not counted in
+`PLINK maps loaded`.
+
+## The A1/major-allele fatal gate
+
+`--related`, `--ibs` and `--build` (but **not** `--kinship`) abort with
+
+```
+FATAL ERROR - Too many first alleles as the major allele (~X%)
+```
+
+when A1 is not the observed minor allele often enough. Any synthetic fixture must
+re-orient alleles per SNP after drawing genotypes, exactly as `--make-bed` does.
+`generate_corpus.py` does this; ad-hoc `p = 0.5` fixtures do not, and the resulting fatal
+exit is easy to mistake for "the file was not created".
 
 ## Open questions
 
