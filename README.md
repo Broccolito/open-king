@@ -13,22 +13,30 @@ king -b study.bed --related --prefix study
 
 ## Status
 
-**365 of the 480 captured reference invocations reproduce byte-identically**, including
+**392 of the 480 captured reference invocations reproduce byte-identically**, including
 all 220 flag-plumbing and error probes. Run the suite yourself:
 
 ```bash
+cargo build --release
 python3 tests/parity/run_parity.py --impl target/release/king
 ```
 
-`docs/PARITY.md` is the authoritative matrix — every case group with its status, and §11
-measures each remaining gap. The one-paragraph version: the relatedness estimators,
-the QC reports and the whole command-line surface are done; the IBD-segment *caller* is
-not, and it is what `--related`, `--ibdseg` and two columns of `--ibs` are waiting on.
+`docs/PARITY.md` is the authoritative claim — the full analysis × dataset matrix, the
+measured size of every remaining gap, and a labelled limitations section. Everything below
+is a summary of it and says nothing it does not support.
+
+The one-paragraph version: the relatedness estimators, the QC reports, duplicate
+detection, auto-QC and the whole command-line surface are byte-identical everywhere. What
+is left is the IBD-segment **caller**, which finds exactly the right set of segments —
+0 spurious and 0 missing pairs across all 4 169 captured `.seg` rows — but places their
+endpoints within ±1 scan word of the reference, so the four segment columns are close
+without being equal on about 30 % of the rows that carry them.
 
 ## Scope (v1)
 
 `byte-identical` below means exactly that — every file, every column, plus stdout, stderr
-and exit status — on every dataset and flag combination the corpus captures.
+and exit status — on every dataset and flag combination the corpus captures. Counts are
+cases, not files.
 
 | Flag | Output files | Status |
 | --- | --- | --- |
@@ -36,23 +44,24 @@ and exit status — on every dataset and flag combination the corpus captures.
 | `--duplicate` | `.con` | **byte-identical** (13/13) |
 | `--bysample` | `bySample.txt`, `allsegs.txt` | **byte-identical** (13/13) |
 | `--bySNP` | `bySNP.txt`, `allsegs.txt` | **byte-identical** (13/13) |
-| `--cluster` | `allsegs.txt`, `updateids.txt`, `cluster.kin` | byte-identical 12/13 — merged-cluster tail missing |
-| `--build` | `updateids.txt`, `updateparents.txt`, `build.log`, `allsegs.txt` | byte-identical 11/13 |
-| `--unrelated` | `unrelated.txt`, `unrelated_toberemoved.txt`, `allsegs.txt` | byte-identical 12/13 — 3 of 84 rows differ on the one merged dataset |
-| `--ibs` | `.ibs`, `.ibs0`, `allsegs.txt` | every column byte-identical **except** `MaxIBD2`/`Pr_IBD2` (57 and 137 of 21 561 rows) |
-| `--ibdseg` | `.seg`, `allsegs.txt`, `splitped.txt` | `allsegs.txt` byte-identical; `.seg` **not** (558 of 982 rows exact, 188 extra); `splitped.txt` unwritten |
-| `--related` | `.kin` (16 col), `.kin0` (14 col), `allsegs.txt` | byte-identical only on the five datasets the reference downgrades to `--kinship`; the 16-column pass is unimplemented |
-| `--autoQC` | `_autoQC_Summary.txt`, `_autoQC_snptoberemoved.txt`, `_autoQC_sampletoberemoved.txt` | unimplemented |
+| `--autoQC` | `_autoQC_Summary.txt`, `_autoQC_snptoberemoved.txt`, `_autoQC_sampletoberemoved.txt`, `_autoQC_updatesex.txt` | **byte-identical** (13/13) |
+| `--cluster` | `allsegs.txt`, `updateids.txt`, `cluster.kin` | 12/13 — `cluster.kin`'s three segment columns differ on 30 of 165 rows on `bigish` |
+| `--build` | `updateids.txt`, `updateparents.txt`, `build.log`, `allsegs.txt` | 12/13 — on `bigish` the pedigree-reconstruction rules are unimplemented, so both files come out empty |
+| `--unrelated` | `unrelated.txt`, `unrelated_toberemoved.txt`, `allsegs.txt` | 24/26 — on `bigish` 6 of 170 and 30 of 234 lines differ, downstream of `PropIBD` |
+| `--related` | `.kin` (16 col), `.kin0` (14 col), `X.kin`, `allsegs.txt` | 35/65 — the six extra columns are the segment ones; `IBD1Seg` differs on 828 of 3 978 `.kin` rows, mean absolute error 0.0196 |
+| `--ibs` | `.ibs`, `.ibs0`, `allsegs.txt` | 4/13 — every column byte-identical **except** `MaxIBD2` (18 of 21 560 rows) and `Pr_IBD2` (156 of 21 560) |
+| `--ibdseg` | `.seg`, `allsegs.txt`, `splitped.txt`, `X.seg` | 20/65 — `allsegs.txt` and `splitped.txt` byte-identical everywhere; `.seg` has the right rows (0 extra, 0 missing of 4 169) with 1 271 differing numerically; `X.seg` is not written |
 
 `--related` is **not** a synonym for `--kinship`: it emits six extra columns
-(`HetConc`, `HomIBS0`, `IBD1Seg`, `IBD2Seg`, `PropIBD`, `InfType`) that come from the
-IBD-segment engine, so full `--related` parity depends on `--ibdseg`. Below 10 samples
+(`HetConc`, `HomIBS0`, `IBD1Seg`, `IBD2Seg`, `PropIBD`, `InfType`), four of which come from
+the IBD-segment engine, so full `--related` parity depends on `--ibdseg`. Below 10 samples
 the reference itself downgrades `--related` to the `--kinship` path and emits the
 10-column form; `--ibdseg` does the same below 5 samples.
 
 X-chromosome kinship **is** implemented: with 512 or more X markers, no `--degree`, and
 more than one family, `--kinship` writes `<prefix>X.kin` and `<prefix>X.kin0` with their
-own three sex-specific estimators. `<prefix>X.seg` (the `--ibdseg` X table) is not.
+own three sex-specific estimators. `<prefix>X.seg` — which `--ibdseg` writes only when
+`--degree` is non-zero and the fileset has usable X segments — is **not** implemented.
 
 Note that `--prefix` is a plain **concatenation**, not a stem plus separator:
 `--prefix ZZ_` yields `ZZ_.kin` and `ZZ_allsegs.txt`. The reference also opens
@@ -67,13 +76,30 @@ byte-exact, then rejected at dispatch rather than silently ignored.
 `.segments.gz` is **not** a target: the reference 2.3.2 build ships without zlib in its
 segment writer, so it never produces that file despite the manual documenting it.
 
+## Two things the reference itself gets wrong
+
+Both are measured, and both are why a handful of captures cannot be graded normally.
+`docs/PARITY.md` §5 has the evidence.
+
+* **`<prefix>X.kin0` is written by racing threads.** Six identical reference runs produced
+  six different files, one truncated to 187 of 662 bytes, with records torn mid-number.
+  `--cpus 1` makes it deterministic. The harness diffs only the `--cpus 1` captures.
+* **The four small datasets do not grade the segment caller.** They each report the 14
+  within-family pairs of one six-person nuclear family over 5 000–10 000 markers, against
+  `bigish`'s 50 000. On `monomorphic` the
+  reference reports two full siblings as `IBD1Seg 0.9800 / IBD2Seg 0.0000`, labels them
+  `PO`, and its own `--kinship` puts the same pair at 0.3384 where those segment numbers
+  imply 0.2450. open-king is no closer to the truth there. That row is the 0.2109
+  worst-case error quoted above.
+
 ## Building
 
 ```bash
 cargo build --release
 ```
 
-The binary is emitted as `target/release/king`.
+The binary is emitted as `target/release/king`. Contributing, regenerating the corpus and
+re-capturing goldens: `docs/MAINTAINING.md`.
 
 ## Relationship to the original KING
 

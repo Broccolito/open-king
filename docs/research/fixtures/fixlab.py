@@ -45,6 +45,8 @@ class Fixture:
         self.maf_of = None        # optional per-marker maf override list
         self.pat = {}             # global marker idx -> (g0, g1) exact pair genotypes
         self.pat_all = {}         # global marker idx -> full list of genotypes, all samples
+        self.noflip = set()       # markers exempt from the A1-minor re-orientation, so a
+                                  # fixture can put the MAJOR allele in the A1 column
 
     # ---- span helpers -------------------------------------------------
     def chrom_span(self, k):
@@ -113,7 +115,7 @@ class Fixture:
             called = sum(1 for s in range(ns) if geno[s][m] != 3)
             if a1 * 2 > called * 2:  # a1 count > a2 count
                 pass
-            if a1 > (2 * called - a1):
+            if a1 > (2 * called - a1) and m not in self.noflip:
                 flipped[m] = True
                 for s in range(ns):
                     if geno[s][m] != 3:

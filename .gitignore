@@ -4,6 +4,9 @@
 
 # Parity-test scratch: generated filesets and captured reference output.
 /tests/parity/work/
+# Fixture-rig scratch: filesets built on the fly by docs/research/fixtures/*.py.
+/docs/research/fixtures/work/
+__pycache__/
 /tests/parity/golden/**/*.bed
 /tests/parity/golden/**/*.bim
 /tests/parity/golden/**/*.fam

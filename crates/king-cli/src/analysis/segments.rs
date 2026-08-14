@@ -1,18 +1,18 @@
 //! The IBD-segment pre-pass: which stretches of the map are usable, and the IBD2
 //! sharing the `--ibs` writers report on top of them.
 //!
-//! Two very different confidence levels live in this file, and the split matters:
+//! [`usable`] and [`Segments::total_length`] are **established**: they reproduce
+//! `<prefix>allsegs.txt` byte for byte on all 13 corpus datasets — every column, every
+//! row, including the two datasets whose kept-chromosome set is not monotone in SNP
+//! count — and the `Total length of …` console figure on all 13.
 //!
-//! * [`usable`] and [`Segments::total_length`] are **established**. They reproduce
-//!   `<prefix>allsegs.txt` byte for byte on all 13 corpus datasets — every column, every
-//!   row, including the two datasets whose kept-chromosome set is not monotone in SNP
-//!   count — and the `Total length of …` console figure on all 13.
-//! * [`Segments::ibd2`] is **fitted, not established**. The IBD2 calling rule is
-//!   unpublished (`docs/SPEC.md` §8 item 16); what is proven here is its *shape* (see
-//!   below), not its constants. Read the doc comment before trusting a number.
+//! [`Segments::ibd2`] no longer carries a caller of its own. It delegates to
+//! [`king_core::ibdseg`], the engine `--ibdseg` and `--related` use, and only *measures*
+//! the calls differently — see its doc comment.
 
 use std::fmt::Write as _;
 
+use king_core::ibdseg::{self, Usable};
 use king_io::{Genotypes, Variant};
 
 use crate::load;
@@ -159,90 +159,71 @@ impl Segments {
     /// IBD2 sharing for one pair: the longest IBD2 segment in base pairs and the
     /// proportion of `D` called IBD2.
     ///
-    /// # What is established
+    /// # One caller, two rulers
     ///
-    /// * **The reported endpoints are word-aligned.** Searching every marker pair in a
-    ///   dataset for the exact `MaxIBD2` value the reference printed locates a unique
-    ///   pair every time, and it is always `(64·a, 64·(b+1) − 1)` for some words `a ≤ b`
-    ///   — first marker of a word to last marker of a word. Six independent hits in
-    ///   `nuclear` alone (e.g. `108752454 = bp[2303] − bp[128]`, words 2..35).
+    /// The calls are [`king_core::ibdseg::Scan::ibd2`]'s — the very segments `--ibdseg`
+    /// sums into `IBD2Seg`. All that differs is how they are **measured**: `.seg` measures
+    /// a call to the usable segment's own ends, while `--ibs` measures it **word-aligned**,
+    /// from `64u` through `64e + 63` over the same words.
+    ///
+    /// For a long time that looked like two callers, because the two columns disagree in
+    /// the reference's own output — on `nuclear`, `N_C1`/`N_C2` is `Pr_IBD2 0.2173` in
+    /// `king.ibs` and `IBD2Seg 0.2626` in `king.seg`, `.ibs` smaller every time. The
+    /// `dups` MZ pair rules that reading out: the reference prints `IBD2Seg 1.0000` **and**
+    /// `Pr_IBD2 0.8984` for it, and no *caller* can be simultaneously exhaustive and
+    /// tighter. The word-aligned total over that fileset's usable segments is
+    /// 357 701 908 bp, and 357 701 908 / 398 163 465 — the same denominator `D` — is
+    /// 0.8984 to the last digit. The ruler is the whole difference.
+    ///
+    /// # The rest, unchanged
+    ///
     /// * **The denominator is `D`**, [`Segments::total_length`], not the genome span and
     ///   not a marker count: the marker-count form misprints every value.
     /// * **The gate is [`IBD2_KINSHIP_GATE`]**, and un-gated pairs print `-9`/`-9` in
     ///   `.ibs0` but `0.000`/`0.0000` in `.ibs`.
-    ///
-    /// # `--ibs` does not share `--ibdseg`'s caller, and must not be made to
-    ///
-    /// The two disagree **in the reference's own output**. On `nuclear`, the pair
-    /// `N_C1`/`N_C2` is `Pr_IBD2 0.2173` in `king.ibs` and `IBD2Seg 0.2626` in
-    /// `king.seg`; all six of that dataset's IBD2-sharing pairs differ the same way, and
-    /// `.ibs` is the smaller every time (0.2749/0.3144, 0.4669/0.5095, 0.4604/0.5194,
-    /// 0.2942/0.3531, 0.2812/0.3108). Same binary, same fileset, same denominator `D` —
-    /// so `--ibs` runs a *different*, tighter IBD2 rule than `--ibdseg` does. Wiring this
-    /// function to `king_core::ibdseg` is the obvious tidy-up, and it is wrong: it would
-    /// make `Pr_IBD2` systematically too large. The duplication is the finding.
-    ///
-    /// # Alternatives already measured, so they need not be tried again
-    ///
-    /// Scored over the 152 gated, non-zero `MaxIBD2` rows of the golden `.ibs`/`.ibs0`
-    /// corpus (`monomorphic` and `sexchr` are the two datasets the rule below already
-    /// reproduces byte for byte, and any replacement has to keep them):
-    ///
-    /// | word test | run rule | right end | exact `MaxIBD2` |
-    /// | --- | --- | --- | ---: |
-    /// | no IBS0, ≤4 het mismatches | maximal runs | into the next word | **83** |
-    /// | no IBS0, ≤3 / ≤5 / ≤8 | maximal runs | into the next word | 80 / 78 / 62 |
-    /// | no IBS0, ≤4 | maximal runs | word-aligned | 46 |
-    /// | `king_core::ibdseg`'s het-break test | maximal runs | word-aligned | 45 |
-    /// | no IBS0, any het count | maximal runs | word-aligned | 35 |
-    ///
-    /// The top row scores nearly twice the rule below on `MaxIBD2` and still **fails the
-    /// two datasets that currently pass**, so it is not an improvement in the only
-    /// metric that counts. It also reproduces `Pr_IBD2` on zero rows, which localises
-    /// the residual: the reference sometimes reports one segment where every variant
-    /// here reports two (`nuclear`'s `N_C1`/`N_C4` is 108 752 454 bp against a longest
-    /// run of 57 547 501), and a sum over runs feels every such split while a maximum
-    /// does not. Whatever bridges those runs is the missing rule.
-    ///
-    /// # What is fitted and unverified
-    ///
-    /// The word-compatibility test and the run state machine below. A grid search over
-    /// eight datasets and 171 gated pairs puts the best setting at "a word is IBD2 iff it
-    /// carries no het/hom mismatch and at most one opposite-homozygote call; a run opens
-    /// on three consecutive compatible words, survives up to two consecutive
-    /// incompatible ones, and ends one word past its last compatible word". That
-    /// reproduces `MaxIBD2` on 159/171 and `Pr_IBD2` on 143/171 — good enough to show
-    /// the shape is right and **not** good enough for byte parity.
-    ///
-    /// Known-wrong classes, each a lead for whoever finishes this: `monomorphic` and
-    /// `missing` pairs where uninformative words (all-homozygous or all-missing) look
-    /// compatible and the reference still calls no segment, and long runs where the
-    /// reference's boundary sits one word further out than the fitted rule puts it. Until
-    /// those are explained, `--ibs` parity holds only for datasets in which no pair
-    /// reaches the gate.
+    /// * `--seglength` never reaches here: `--ibs` has no such option, and the calls are
+    ///   taken unfiltered (`min_bp = 0`).
     pub fn ibd2(&self, g: &Genotypes, i: usize, j: usize) -> Ibd2 {
-        let mut lengths: Vec<i64> = Vec::new();
+        let mut max_bp = 0i64;
+        let mut called_bp = 0i64;
         for seg in &self.list {
-            let Some((first_word, last_word)) = seg.word_span() else {
-                continue;
+            let usable = Usable {
+                chr: seg.chrom,
+                lo: seg.first,
+                hi: seg.last,
             };
-            let compatible: Vec<bool> = (first_word..=last_word)
-                .map(|w| word_is_ibd2(g, i, j, w))
-                .collect();
-            for (a, b) in runs(&compatible) {
-                let (a, b) = (first_word + a, first_word + b);
-                let start = self.positions[a * SNPS_PER_WORD];
-                let stop = self.positions[(b + 1) * SNPS_PER_WORD - 1];
-                lengths.push(stop - start);
+            if usable.words() == 0 {
+                continue;
+            }
+            let (w0, w1) = (usable.first_word(), usable.last_word());
+            let mut prev_word: Option<usize> = None;
+            for c in ibdseg::Scan::new(g, i, j, usable).ibd2(&self.positions, 0) {
+                // `Called` carries the `.seg` ruler; recover the words it was cut from.
+                // A call reaching the usable segment's own first/last marker started on
+                // `w0` / ended on `w1`; every other endpoint lies inside the word it
+                // names, so integer division recovers that word exactly.
+                let e = (c.hi / SNPS_PER_WORD).min(w1);
+                let mut u = (c.lo / SNPS_PER_WORD).max(w0);
+                if let Some(p) = prev_word {
+                    u = u.max(p + 1);
+                }
+                if u > e {
+                    continue;
+                }
+                prev_word = Some(e);
+                let len = self.positions[SNPS_PER_WORD * e + SNPS_PER_WORD - 1]
+                    - self.positions[SNPS_PER_WORD * u];
+                max_bp = max_bp.max(len);
+                called_bp += len;
             }
         }
         let total = self.total_length();
         Ibd2 {
-            max_bp: lengths.iter().copied().max().unwrap_or(0) as f64,
+            max_bp: max_bp as f64,
             proportion: if total == 0 {
                 0.0
             } else {
-                lengths.iter().sum::<i64>() as f64 / total as f64
+                called_bp as f64 / total as f64
             },
         }
     }
@@ -255,75 +236,6 @@ pub struct Ibd2 {
     pub max_bp: f64,
     /// `Pr_IBD2` — IBD2 length over `D`, printed `%.4lf`.
     pub proportion: f64,
-}
-
-/// Words a run must open on, and consecutive incompatible words it survives.
-///
-/// Fitted; see [`Segments::ibd2`].
-const RUN_OPEN_WORDS: usize = 3;
-const RUN_BREAK_WORDS: usize = 3;
-
-/// Whether one 64-marker word looks IBD2 for a pair.
-///
-/// IBD2 means the two share both alleles, so *any* het/hom mismatch or opposite
-/// homozygote contradicts it; the single tolerated opposite homozygote is the fitted
-/// allowance for genotyping error. Missing calls contribute to neither count, which is
-/// the known weakness recorded in [`Segments::ibd2`].
-fn word_is_ibd2(g: &Genotypes, i: usize, j: usize, w: usize) -> bool {
-    let (x0, x1) = (g.plane0[i][w], g.plane1[i][w]);
-    let (y0, y1) = (g.plane0[j][w], g.plane1[j][w]);
-    let nm_i = x0 | x1;
-    let nm_j = y0 | y1;
-    let het_i = !x0 & x1;
-    let het_j = !y0 & y1;
-    let both_hom = x0 & y0;
-    let mismatch = ((het_i & nm_j) | (het_j & nm_i)) & !(het_i & het_j);
-    let ibs0 = both_hom & (x1 ^ y1);
-    mismatch == 0 && ibs0.count_ones() <= 1
-}
-
-/// Maximal IBD2 runs over a segment's compatibility flags, as inclusive word indices.
-///
-/// A run opens on [`RUN_OPEN_WORDS`] consecutive compatible words, survives up to
-/// `RUN_BREAK_WORDS - 1` consecutive incompatible ones, and stops one word past its last
-/// compatible word — the asymmetry is what the reference's boundaries show, not a
-/// simplification.
-fn runs(compatible: &[bool]) -> Vec<(usize, usize)> {
-    let n = compatible.len();
-    let mut out = Vec::new();
-    let mut start: Option<usize> = None;
-    let mut last_ok = 0usize;
-    let mut broken = 0usize;
-    for k in 0..n {
-        match start {
-            None => {
-                let opens = compatible[k]
-                    && k + RUN_OPEN_WORDS <= n
-                    && compatible[k..k + RUN_OPEN_WORDS].iter().all(|&c| c);
-                if opens {
-                    start = Some(k);
-                    last_ok = k;
-                    broken = 0;
-                }
-            }
-            Some(a) => {
-                if compatible[k] {
-                    last_ok = k;
-                    broken = 0;
-                } else {
-                    broken += 1;
-                    if broken >= RUN_BREAK_WORDS {
-                        out.push((a, (last_ok + 1).min(n - 1)));
-                        start = None;
-                    }
-                }
-            }
-        }
-    }
-    if let Some(a) = start {
-        out.push((a, (last_ok + 1).min(n - 1)));
-    }
-    out
 }
 
 /// Cut the retained map into usable segments.
@@ -491,17 +403,48 @@ mod tests {
         assert!(!usable(&variants, &kept, 23).informative());
     }
 
+    /// A pair with no genotype at all calls nothing, and the columns are zero rather
+    /// than `nan` — the `.ibs` writer prints these verbatim for a pair under the gate.
     #[test]
-    fn runs_open_late_and_close_one_word_past_the_last_match() {
-        let f = |s: &str| -> Vec<bool> { s.bytes().map(|c| c == b'.').collect() };
-        // Neither of the two lone compatible words can open a run; the third position
-        // with three in a row does, and the trailing mismatch is inside the run.
-        assert_eq!(runs(&f("x.x...........x")), [(3, 14)]);
-        // Up to two consecutive mismatching words are bridged.
-        assert_eq!(runs(&f("....xx.....")), [(0, 10)]);
-        // Three end the run one word past its last match, and a new one may open after.
-        assert_eq!(runs(&f("....xxx....")), [(0, 4), (7, 10)]);
-        // Nothing at all when the segment never gets three consecutive matches.
-        assert!(runs(&f("..x..x..x")).is_empty());
+    fn an_empty_pair_reports_no_ibd2() {
+        let (variants, kept) = map(&[("1", 1_000_000, 2001)]);
+        let segs = usable(&variants, &kept, 23);
+        let words = variants.len().div_ceil(SNPS_PER_WORD);
+        let g = Genotypes {
+            plane0: vec![vec![0u64; words]; 2],
+            plane1: vec![vec![0u64; words]; 2],
+            n_samples: 2,
+            n_variants: variants.len(),
+        };
+        assert_eq!(segs.ibd2(&g, 0, 1), Ibd2::default());
+    }
+
+    /// Two samples homozygous for the same allele everywhere are IBD2 across the board,
+    /// and `--ibs` measures that on the word grid: `64·w0` through `64·w1 + 63`, not the
+    /// usable segment's own first and last marker.
+    #[test]
+    fn a_full_ibd2_pair_is_measured_on_the_word_grid() {
+        let (variants, kept) = map(&[("1", 1_000_000, 2001)]);
+        let segs = usable(&variants, &kept, 23);
+        let words = variants.len().div_ceil(SNPS_PER_WORD);
+        let g = Genotypes {
+            plane0: vec![vec![u64::MAX; words]; 2],
+            plane1: vec![vec![u64::MAX; words]; 2],
+            n_samples: 2,
+            n_variants: variants.len(),
+        };
+        let seg = &segs.list[0];
+        let (w0, w1) = (
+            seg.first.div_ceil(SNPS_PER_WORD),
+            (seg.last + 1) / SNPS_PER_WORD - 1,
+        );
+        let want = segs.positions[SNPS_PER_WORD * w1 + SNPS_PER_WORD - 1]
+            - segs.positions[SNPS_PER_WORD * w0];
+        let got = segs.ibd2(&g, 0, 1);
+        assert_eq!(got.max_bp, want as f64);
+        // Strictly under 1.0: `D` is measured to the segment's own ends, the call to the
+        // word grid inside them.
+        assert!(got.proportion < 1.0);
+        assert_eq!(got.proportion, want as f64 / segs.total_length() as f64);
     }
 }

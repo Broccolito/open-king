@@ -246,11 +246,13 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
 
     // ---- the analysis itself -------------------------------------------
     let seglen = seglength_bp(opts);
-    let cutoff = if opts.was_given(Opt::Degree) {
-        Some(ibdseg::degree_cutoff(opts.int(Opt::Degree)))
-    } else {
-        None
-    };
+    // An integer option carries its own "unset": `--degree 0` is not echoed in the banner
+    // and does not filter, exactly as an unmentioned `--degree` does not. Asking
+    // [`Options::was_given`] instead is silently always-false — it is only ever set for a
+    // `Kind::Double`, which is why this filter did nothing at all until it was measured:
+    // `--ibdseg --degree 2` on `bigish` reported all 763 pairs against the reference's
+    // 442. The rule itself is [`ibdseg::reported_at_degree`].
+    let degree = opts.int(Opt::Degree);
     let samples = &loaded.fileset.samples;
     let g = &loaded.fileset.genotypes;
     let mut rows = Vec::new();
@@ -265,10 +267,8 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
                 seg.ibd2_seg(denom),
                 seg.prop_ibd(denom),
             );
-            if let Some(c) = cutoff {
-                if prop <= c {
-                    continue;
-                }
+            if !ibdseg::reported_at_degree(degree, pi2, prop) {
+                continue;
             }
             rows.push(Row {
                 fid1: samples[i].fid.clone(),
