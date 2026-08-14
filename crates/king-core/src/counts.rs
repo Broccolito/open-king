@@ -108,6 +108,7 @@ pub fn pair_counts(g: &Genotypes, i: usize, j: usize) -> PairCounts {
     let mut het_het: u32 = 0;
     let mut hom_hom: u32 = 0;
     let mut ibs0: u32 = 0;
+    let mut hom_a1_union: u32 = 0;
 
     for (((&x0, &x1), &y0), &y1) in a0.iter().zip(a1).zip(b0).zip(b1) {
         let nm_i = x0 | x1; // called in i
@@ -122,6 +123,10 @@ pub fn pair_counts(g: &Genotypes, i: usize, j: usize) -> PairCounts {
         het_het += (het_bits_i & het_bits_j).count_ones();
         hom_hom += both_hom.count_ones();
         ibs0 += (both_hom & (x1 ^ y1)).count_ones();
+        // `plane0 & plane1` is the A1/A1 code; each operand already implies its own
+        // sample's callability, so masking by the other sample's puts the union inside
+        // `M_ij` without a third term.
+        hom_a1_union += (((x0 & x1) & nm_j) | ((y0 & y1) & nm_i)).count_ones();
     }
 
     PairCounts {
@@ -131,6 +136,7 @@ pub fn pair_counts(g: &Genotypes, i: usize, j: usize) -> PairCounts {
         het_het,
         ibs0,
         hom_hom,
+        hom_a1_union,
     }
 }
 
@@ -268,11 +274,15 @@ mod tests {
                     c.ibs0 += 1;
                 }
             }
+            if decode(g, i, m) == HomA1 || decode(g, j, m) == HomA1 {
+                c.hom_a1_union += 1;
+            }
             c.n_snp += 1;
         }
         c
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn counts(
         n_snp: u32,
         het_i: u32,
@@ -280,6 +290,7 @@ mod tests {
         het_het: u32,
         ibs0: u32,
         hom_hom: u32,
+        hom_a1_union: u32,
     ) -> PairCounts {
         PairCounts {
             n_snp,
@@ -288,6 +299,7 @@ mod tests {
             het_het,
             ibs0,
             hom_hom,
+            hom_a1_union,
         }
     }
 
@@ -299,17 +311,17 @@ mod tests {
     fn expected_single(gi: Geno, gj: Geno) -> PairCounts {
         //                                  n_snp het_i het_j hh ibs0 homhom
         match (gi, gj) {
-            (HomA1, HomA1) => counts(1, 0, 0, 0, 0, 1),
-            (HomA1, Het) => counts(1, 0, 1, 0, 0, 0),
-            (HomA1, HomA2) => counts(1, 0, 0, 0, 1, 1),
-            (Het, HomA1) => counts(1, 1, 0, 0, 0, 0),
-            (Het, Het) => counts(1, 1, 1, 1, 0, 0),
-            (Het, HomA2) => counts(1, 1, 0, 0, 0, 0),
-            (HomA2, HomA1) => counts(1, 0, 0, 0, 1, 1),
-            (HomA2, Het) => counts(1, 0, 1, 0, 0, 0),
-            (HomA2, HomA2) => counts(1, 0, 0, 0, 0, 1),
+            (HomA1, HomA1) => counts(1, 0, 0, 0, 0, 1, 1),
+            (HomA1, Het) => counts(1, 0, 1, 0, 0, 0, 1),
+            (HomA1, HomA2) => counts(1, 0, 0, 0, 1, 1, 1),
+            (Het, HomA1) => counts(1, 1, 0, 0, 0, 0, 1),
+            (Het, Het) => counts(1, 1, 1, 1, 0, 0, 0),
+            (Het, HomA2) => counts(1, 1, 0, 0, 0, 0, 0),
+            (HomA2, HomA1) => counts(1, 0, 0, 0, 1, 1, 1),
+            (HomA2, Het) => counts(1, 0, 1, 0, 0, 0, 0),
+            (HomA2, HomA2) => counts(1, 0, 0, 0, 0, 1, 0),
             // A missing call on either side removes the site from M_ij entirely.
-            (Missing, _) | (_, Missing) => counts(0, 0, 0, 0, 0, 0),
+            (Missing, _) | (_, Missing) => counts(0, 0, 0, 0, 0, 0, 0),
         }
     }
 
@@ -353,7 +365,7 @@ mod tests {
         }
         let g = planes(&[ri, rj]);
         let got = pair_counts(&g, 0, 1);
-        assert_eq!(got, counts(9, 3, 3, 1, 2, 4));
+        assert_eq!(got, counts(9, 3, 3, 1, 2, 4, 5));
         assert_eq!(got, naive(&g, 0, 1));
         assert_eq!(got.ibs1(), 3 + 3 - 2, "IBS1 = het_i + het_j - 2*het_het");
         assert_eq!(got.ibs2(), 9 - 2 - 4);
@@ -375,7 +387,7 @@ mod tests {
             let g = planes(&[ri, rj]);
             assert_eq!(
                 pair_counts(&g, 0, 1),
-                counts(9, 3, 3, 1, 2, 4),
+                counts(9, 3, 3, 1, 2, 4, 5),
                 "counts changed at offset {offset}"
             );
         }
@@ -388,7 +400,7 @@ mod tests {
         // the single most likely way to get kinship subtly wrong.
         let g = planes(&[vec![Het, Het, Het, Het], vec![Het, HomA1, Missing, Missing]]);
         let got = pair_counts(&g, 0, 1);
-        assert_eq!(got, counts(2, 2, 1, 1, 0, 0));
+        assert_eq!(got, counts(2, 2, 1, 1, 0, 0, 1));
         assert_eq!(got, naive(&g, 0, 1));
     }
 

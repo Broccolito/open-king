@@ -168,17 +168,18 @@ impl Pedigree {
 /// carry.
 ///
 /// `Loaded::fileset.genotypes` holds the autosomal bit planes alone, because that is what
-/// the relatedness kernels want. `bySNP.txt` reports X, Y and MT as well, so this reads
-/// the `.bed` a second time under [`VariantFilter::All`] and keeps the classification
-/// beside it. The re-read cannot fail: the same file loaded moments ago.
-struct Calls {
+/// the relatedness kernels want. `bySNP.txt` reports X, Y and MT as well — and so does
+/// `--autoQC`, which shares this reader — so this reads the `.bed` a second time under
+/// [`VariantFilter::All`] and keeps the classification beside it. The re-read cannot fail:
+/// the same file loaded moments ago.
+pub(crate) struct Calls {
     planes: Genotypes,
     /// Class of every `.bim` row, parallel to `variants`.
-    class: Vec<Class>,
+    pub(crate) class: Vec<Class>,
 }
 
 impl Calls {
-    fn read(opts: &Options, loaded: &Loaded) -> Option<Self> {
+    pub(crate) fn read(opts: &Options, loaded: &Loaded) -> Option<Self> {
         let (bed_path, _, _) = load::paths(opts);
         let sexchr = i64::from(opts.int(Opt::Sexchr));
         let variants = &loaded.fileset.variants;
@@ -201,7 +202,7 @@ impl Calls {
     /// Dosage of the `.bim` A1 allele at `(sample, variant)`, or `None` when uncalled.
     ///
     /// The planes encode `(1,1)` hom-A1, `(0,1)` het, `(1,0)` hom-A2, `(0,0)` missing.
-    fn get(&self, sample: usize, variant: usize) -> Option<u8> {
+    pub(crate) fn get(&self, sample: usize, variant: usize) -> Option<u8> {
         let (word, bit) = (variant / 64, variant % 64);
         let p0 = (self.planes.plane0[sample][word] >> bit) & 1;
         let p1 = (self.planes.plane1[sample][word] >> bit) & 1;
@@ -214,7 +215,7 @@ impl Calls {
     }
 
     /// Indices of every `.bim` row in the class, in file order.
-    fn rows(&self, want: impl Fn(Class) -> bool) -> Vec<usize> {
+    pub(crate) fn rows(&self, want: impl Fn(Class) -> bool) -> Vec<usize> {
         (0..self.class.len())
             .filter(|&i| want(self.class[i]))
             .collect()

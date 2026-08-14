@@ -775,3 +775,107 @@ followed by `rs23` on chr 1), the console prints
 `Chromosomes unsorted: rs22 on chr 22, rs23 on chr 1.` and falls back to
 `Relationship inference will be based on kinship estimation only.` — i.e. an unsorted map
 disables IBD-segment analysis entirely and therefore changes the column sets of Q8.
+
+---
+
+## Q9 — `--related`'s between-family stage: which of three flows runs
+
+### Experiment design
+
+`--related` prints one of three tails after `Relationship inference across families starts
+at`. The corpus alone cannot separate them: nine of its thirteen datasets are unrelated
+across families, and only `bigish` has 100 samples. So the flows were separated by
+constructing filesets — marker-count and sample-count ladders cut from `unrelated`,
+`admixed` and `bigish`, plus synthetic 100-sample sets from
+`tests/parity/probes/mkpairs.py` with one pair's IBD sharing swept — and reading the
+reference's tail on each.
+
+### The three tails
+
+```
+(K)  <41sp>ends at <ctime>
+     No close relatives are inferred.
+                                                 -- and no .kin0 is written
+
+(S)    Stages 1&2 (with <s> SNPs): <d> pairs of relatives are detected (with kinship > <t>)
+     <31sp>Screening ends at <ctime>
+       Final Stage (with <m> SNPs): <c> pairs of relatives (up to <k>-degree) are confirmed
+     <31sp>Inference ends at <ctime>
+
+(E)  <31sp>Inference ends at <ctime>
+       <c> pairs of relatives (up to <k>-degree) are identified
+```
+
+### Raw results
+
+`--degree 0` behaves as `--degree 1` throughout.
+
+| fileset | n | m | d1 | d2 | d3 | d4 |
+| --- | ---: | ---: | --- | --- | --- | --- |
+| `unrelated` | 30 | 20 000 | K | K | K | E |
+| `unrelated` (m = 8 800) | 30 | 8 800 | K | K | **E** | E |
+| `admixed` | 40 | 20 000 | K | K | E | E |
+| `admixed` first 34 samples | 34 | 20 000 | K | K | **K** | – |
+| `bigish` | 200 | 50 000 | **S** | **S** | E | E |
+| `bigish` first 99 samples | 99 | 50 000 | K | – | – | – |
+| `bigish` first 100 samples | 100 | 50 000 | **S** | – | – | – |
+
+### Fitting
+
+Three independent rules, each bracketed:
+
+1. **The `A subset of informative SNPs will be used to screen close relatives.` /
+   `Sorting autosomes...` header appears iff the effective degree is ≤ 2.** It is printed
+   before any decision about what to do, so K and S both carry it and E never does.
+2. **S needs 100 samples.** Bisected on `bigish` prefixes: 99 → K, 100 → S, with the same
+   genotypes. The gate is unconditional, so below it `--related --degree 1` reports
+   `No close relatives are inferred.` on a fileset holding a duplicate pair, an MZ pair and
+   a parent–offspring pair across families — every one of which `--kinship --degree 1`
+   lists in its `.kin0`. This is a reference bug and we reproduce it.
+3. **E runs iff some between-family pair exceeds `2^-(degree + 2.5)`**, and otherwise K.
+   Seventeen marker subsets of `unrelated` at degree 3 separate perfectly on the maximum
+   between-family kinship: 0.0209 and below → K, 0.0228 and above → E, bracketing
+   `2^-5.5 = 0.02210`. The candidate threshold is thus one degree looser than the
+   `.kin0` reporting threshold `2^-(degree + 1.5)`; `admixed --degree 3` admits a 0.0254
+   pair as a candidate, prints E, and then writes a **header-only** `.kin0` because 0.0254
+   is under the 0.04419 reporting threshold.
+
+### The screening counts
+
+`Stages 1&2 (with <s> SNPs)` prints `s = min(m, 32768)`: 5 000 / 10 000 / 20 000 / 30 000
+on `bigish` truncated to those maps, then 32 768 at both 40 000 and 50 000. `Final Stage`
+always prints `m`.
+
+Where `m <= 32768` there is no subsetting and `<d>` is exactly the number of
+between-family pairs whose kinship exceeds `2^-(degree + 2)` — `bigish` truncated to 32 768
+markers prints 18 at degree 1 and 50 at degree 2, and its own `.kin0` holds 18 and 50 pairs
+over `2^-3` and `2^-4`. Above that the subset matters and **which 32 768 markers is
+unresolved**: the reference prints 18 and 36 on the full 50 000-marker `bigish`, while the
+first 32 768 markers give 18 and 50, the last give 22 and 46, evenly spaced give 21 and 50,
+and the 32 768 highest-MAF give 23 and 45. No candidate reproduces both degrees.
+
+The `Final Stage … <c> … confirmed` and `<c> … identified` counts are the same number: the
+between-family summary table's total, which tallies `InfType` over the `.kin0` rows and
+**never increments its own `4th` column** — `bigish --degree 4` writes 60 rows and reports
+59.
+
+---
+
+## Q10 — `--ibs`'s `Pr_IBD2` is not `--ibdseg`'s `IBD2Seg`
+
+Both are "the share of the usable genome called IBD2", both divide by the same `D`, and the
+reference prints different numbers for the same pair in the same fileset. On `nuclear`:
+
+| pair | `king.ibs` `Pr_IBD2` | `king.seg` `IBD2Seg` |
+| --- | ---: | ---: |
+| `N_C1`/`N_C2` | 0.2173 | 0.2626 |
+| `N_C1`/`N_C3` | 0.2749 | 0.3144 |
+| `N_C1`/`N_C4` | 0.4669 | 0.5095 |
+| `N_C2`/`N_C3` | 0.4604 | 0.5194 |
+| `N_C2`/`N_C4` | 0.2942 | 0.3531 |
+| `N_C3`/`N_C4` | 0.2812 | 0.3108 |
+
+`.ibs` is the smaller on every pair. So KING runs **two** IBD2 callers, and the tempting
+cleanup — pointing `--ibs` at the `--ibdseg` engine — is wrong in a direction that is easy
+to miss, because `MaxIBD2` (a maximum) tolerates the difference far better than `Pr_IBD2`
+(a sum) does.

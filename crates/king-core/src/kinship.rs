@@ -179,6 +179,7 @@ mod tests {
                 het_het: 302,
                 ibs0: 0,
                 hom_hom: 1075,
+                hom_a1_union: 0,
             },
             ibs: 1.6990,
             dist: 0.3010,
@@ -200,6 +201,7 @@ mod tests {
                 het_het: 269,
                 ibs0: 0,
                 hom_hom: 1079,
+                hom_a1_union: 0,
             },
             ibs: 1.6941,
             dist: 0.3059,
@@ -221,6 +223,7 @@ mod tests {
                 het_het: 337,
                 ibs0: 28,
                 hom_hom: 1144,
+                hom_a1_union: 0,
             },
             ibs: 1.7270,
             dist: 0.3015,
@@ -242,6 +245,7 @@ mod tests {
                 het_het: 221,
                 ibs0: 110,
                 hom_hom: 909,
+                hom_a1_union: 0,
             },
             ibs: 1.5047,
             dist: 0.6173,
@@ -292,6 +296,7 @@ mod tests {
                     het_het: 2756,
                     ibs0: 1313,
                     hom_hom: 8663,
+                    hom_a1_union: 0,
                 },
                 "1.4396",
                 "1.4397",
@@ -305,6 +310,7 @@ mod tests {
                     het_het: 2788,
                     ibs0: 1350,
                     hom_hom: 8699,
+                    hom_a1_union: 0,
                 },
                 "1.4394",
                 "1.4393",
@@ -318,6 +324,7 @@ mod tests {
                     het_het: 2676,
                     ibs0: 1376,
                     hom_hom: 8747,
+                    hom_a1_union: 0,
                 },
                 "1.4335",
                 "1.4336",
@@ -331,6 +338,7 @@ mod tests {
                     het_het: 2734,
                     ibs0: 1326,
                     hom_hom: 8795,
+                    hom_a1_union: 0,
                 },
                 "1.4438",
                 "1.4439",
@@ -371,6 +379,7 @@ mod tests {
             het_het: 0,
             ibs0: 0,
             hom_hom: 100,
+            hom_a1_union: 0,
         };
         assert_eq!(ibs_mean(&same), 2.0);
         let opposite = PairCounts { ibs0: 100, ..same };
@@ -407,6 +416,7 @@ mod tests {
             het_het: 500,
             ibs0: 37,
             hom_hom: 2600,
+            hom_a1_union: 0,
         };
         let within = kinship(&k, Scope::WithinFamily);
         let between = kinship(&k, Scope::BetweenFamily);
@@ -425,6 +435,7 @@ mod tests {
             het_het: 640,
             ibs0: 0,
             hom_hom: 1360,
+            hom_a1_union: 0,
         };
         assert_eq!(kinship(&k, Scope::WithinFamily), 0.5);
         assert_eq!(kinship(&k, Scope::BetweenFamily), 0.5);
@@ -446,6 +457,7 @@ mod tests {
             het_het: 2000,
             ibs0: 0,
             hom_hom: 0,
+            hom_a1_union: 0,
         };
         assert!(hom_concordance(&k).is_nan());
         assert_eq!(kinship(&k, Scope::WithinFamily), 0.5);
@@ -467,6 +479,7 @@ mod tests {
             het_het: 0,
             ibs0: 1000,
             hom_hom: 2000,
+            hom_a1_union: 0,
         };
         assert_eq!(kinship(&k, Scope::WithinFamily), f64::NEG_INFINITY);
         assert!(het_concordance(&k).is_nan());
@@ -489,6 +502,7 @@ mod tests {
             het_het: 0,
             ibs0: 0,
             hom_hom: 2000,
+            hom_a1_union: 0,
         };
         assert!(kinship(&k, Scope::WithinFamily).is_nan());
     }
@@ -505,6 +519,7 @@ mod tests {
             het_het: 0,
             ibs0: 0,
             hom_hom: 2000,
+            hom_a1_union: 0,
         };
         // famA A1 / famB B1: opposite homozygotes at every site.
         let opposite_homs = PairCounts {
@@ -514,6 +529,7 @@ mod tests {
             het_het: 0,
             ibs0: 2000,
             hom_hom: 2000,
+            hom_a1_union: 0,
         };
         // famA A1 / famD D1: only one of the two has heterozygotes.
         let one_sided = PairCounts {
@@ -523,6 +539,7 @@ mod tests {
             het_het: 0,
             ibs0: 0,
             hom_hom: 0,
+            hom_a1_union: 0,
         };
         // famX X1 / famY Y2: no overlapping calls at all.
         let no_overlap = PairCounts::default();
@@ -541,6 +558,7 @@ mod tests {
             het_het: 0,
             ibs0: 1000,
             hom_hom: 1998,
+            hom_a1_union: 0,
         };
         assert_eq!(kinship(&one_het, Scope::BetweenFamily), -1000.0);
     }
@@ -575,6 +593,7 @@ mod tests {
             het_het: 0,
             ibs0: 0,
             hom_hom: 0,
+            hom_a1_union: 0,
         };
         assert!(het_2given1(&k).is_nan());
         assert_eq!(het_1given2(&k), 0.0);
@@ -593,6 +612,7 @@ mod tests {
             het_het: 0,
             ibs0: 1000,
             hom_hom: 1998,
+            hom_a1_union: 0,
         };
         assert_eq!(kinship(&k, Scope::WithinFamily), -1000.0);
         assert_eq!(kinship(&k, Scope::BetweenFamily), -1000.0);
@@ -613,6 +633,7 @@ mod tests {
             het_het: 1_000_000_000,
             ibs0: 0,
             hom_hom: 1_000_000_000,
+            hom_a1_union: 0,
         };
         assert_eq!(kinship(&k, Scope::WithinFamily), 0.25);
         assert_eq!(kinship(&k, Scope::BetweenFamily), 0.25);

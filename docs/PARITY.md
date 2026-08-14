@@ -221,20 +221,20 @@ output — every file, every column, plus stdout, stderr and exit status under t
 and nothing weaker. `FAIL` is any difference at all, however small; §11 says how large each
 one actually is.
 
-**Overall: 365 / 480 PASS** in the default suite, and **367 / 490** with `--include-analysis`.
+**Overall: 378 / 480 PASS** in the default suite, and **380 / 490** with `--include-analysis`.
 
 ```
 $ python3 tests/parity/run_parity.py --impl target/release/king -q
-parity: 365 PASS, 115 FAIL, 480 total (1.3s wall, 670 output file(s) byte-compared, 6 diff-excluded)
+parity: 378 PASS, 102 FAIL, 480 total (1.5s wall, 871 output file(s) byte-compared, 8 diff-excluded)
 ```
 
 | group | PASS | cases | what is missing |
 | --- | ---: | ---: | --- |
 | `core` | 57 | 104 | `--related` above the downgrade, `MaxIBD2`/`Pr_IBD2` in `--ibs` |
-| `apps` | 73 | 91 | `--autoQC` entirely; the merged-cluster tail of `--build`/`--cluster`/`--unrelated` |
-| `ibdseg` | 15 | 65 | the `.seg` estimates and `splitped.txt` |
+| `apps` | 86 | 91 | the merged-cluster tail of `--build`/`--cluster`/`--unrelated` |
+| `ibdseg` | 15 | 65 | the `.seg` estimates (`allsegs.txt` and `splitped.txt` are exact) |
 | `params` | **220** | **220** | — |
-| **total** | **365** | **480** | |
+| **total** | **378** | **480** | |
 
 The ten supplementary `core/_analysis/` runs are skipped by default because their output files
 were pruned at capture time; **the reference binary itself scores only 4/10 on them**, so
@@ -267,19 +267,19 @@ never reach the `MaxIBD2` gate.
 
 | dataset | `unrelated` | `unrelated_degree2` | `build` | `bysample` | `bySNP` | `autoQC` | `cluster` |
 |---|---|---|---|---|---|---|---|
-| `trio` | PASS | PASS | PASS | PASS | PASS | FAIL | PASS |
-| `nuclear` | PASS | PASS | PASS | PASS | PASS | FAIL | PASS |
-| `threegen` | PASS | PASS | PASS | PASS | PASS | FAIL | PASS |
-| `multifam` | PASS | PASS | PASS | PASS | PASS | FAIL | PASS |
-| `dups` | PASS | PASS | PASS | PASS | PASS | FAIL | PASS |
-| `missing` | PASS | PASS | PASS | PASS | PASS | FAIL | PASS |
-| `monomorphic` | PASS | PASS | FAIL | PASS | PASS | FAIL | PASS |
-| `sexchr` | PASS | PASS | PASS | PASS | PASS | FAIL | PASS |
-| `unrelated` | PASS | PASS | PASS | PASS | PASS | FAIL | PASS |
-| `admixed` | PASS | PASS | PASS | PASS | PASS | FAIL | PASS |
-| `singleton` | PASS | PASS | PASS | PASS | PASS | FAIL | PASS |
-| `pair` | PASS | PASS | PASS | PASS | PASS | FAIL | PASS |
-| `bigish` | FAIL | FAIL | FAIL | PASS | PASS | FAIL | FAIL |
+| `trio` | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `nuclear` | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `threegen` | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `multifam` | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `dups` | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `missing` | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `monomorphic` | PASS | PASS | FAIL | PASS | PASS | PASS | PASS |
+| `sexchr` | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `unrelated` | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `admixed` | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `singleton` | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `pair` | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `bigish` | FAIL | FAIL | FAIL | PASS | PASS | PASS | FAIL |
 
 `bigish` is the only fileset with the hundred samples the reference requires before it will
 join two families, so it is the only one that reaches the merged-cluster code path in all
@@ -345,17 +345,17 @@ The short version, for anyone deciding whether to trust an output file:
 | `--cluster` | **byte-identical** on 12 of 13; the merged-cluster tail is unimplemented |
 | `--build` | **byte-identical** on 11 of 13 |
 | `--unrelated` | **byte-identical** on 12 of 13; `bigish` differs by 3 of 84 kept individuals |
-| `--related` | **byte-identical** only on the five datasets the reference downgrades to `--kinship`; the sixteen-column pass is unimplemented |
-| `--ibs` | `.ibs`/`.ibs0` are byte-identical in **every column except `MaxIBD2` and `Pr_IBD2`** |
+| `--related` | every column except `IBD1Seg`/`IBD2Seg`/`PropIBD`/`InfType`/`Error` is byte-identical; those five are §11.1's |
+| `--ibs` | `.ibs`/`.ibs0` are byte-identical in **every column except `MaxIBD2` and `Pr_IBD2`**, and `--ibs` runs its *own* IBD2 rule — see §11.1 |
 | `--ibdseg` | `allsegs.txt` byte-identical on all 10; `.seg` **is not** — see §11.2 |
-| `--autoQC` | **unimplemented** |
+| `--autoQC` | **byte-identical** on all 13 datasets, all four report files included |
 
 ## 11. The gaps, measured
 
 Nothing below is a rounding difference. Each entry states what is wrong, how big it is, and
 what is known about the missing rule.
 
-### 11.1 The IBD-segment engine — 97 of the 115 failures
+### 11.1 The IBD-segment engine — 97 of the 102 failures
 
 One unsolved problem accounts for `--ibdseg` (50 cases), the full `--related` pass (40) and
 the two trailing `--ibs` columns (7). The parts that *are* solved are solved exactly:
@@ -370,6 +370,24 @@ the two trailing `--ibs` columns (7). The parts that *are* solved are solved exa
   notice, the extra X-chromosome segment line, the `--seglength` clamp, and the silent
   downgrade of `--ibdseg` to `--kinship` below five samples.
 
+* The **boundary convention** is verified, and now on real data: segments sit on the word
+  grid and are refined by the flanking word's *last* IBS0. Where the reference calls a
+  segment at all, our length matches it to about 4 kb — under a tenth of a marker
+  (`docs/research/13-segment-acceptance.md` §4).
+* **`<prefix>splitped.txt` is byte-identical** on all ten datasets, under every
+  `--degree`/`--seglength`/`--related` variant.
+* **`InfType` is verified**: computing it from a row's own printed columns reproduces all
+  8 722 `InfType` values across every `.seg`, `.kin` and `.kin0` in the corpus.
+
+**`--ibs` does not share this engine, and must not be made to.** The reference's own two
+outputs disagree: on `nuclear`, `N_C1`/`N_C2` is `Pr_IBD2 0.2173` in `king.ibs` and
+`IBD2Seg 0.2626` in `king.seg`, and all six of that dataset's IBD2-sharing pairs differ the
+same way with `.ibs` the smaller every time (0.2749/0.3144, 0.4669/0.5095, 0.4604/0.5194,
+0.2942/0.3531, 0.2812/0.3108). Same binary, same fileset, same denominator `D` — so KING runs
+a second, tighter IBD2 rule inside `--ibs`. `analysis/segments.rs` keeps that rule separate on
+purpose and its doc comment carries the alternatives already scored against the corpus's 152
+gated rows, so the search need not be repeated.
+
 What is wrong is the **IBD1 run-acceptance rule**. Measured on `king.seg`, default flags,
 all ten datasets that emit one:
 
@@ -379,36 +397,56 @@ all ten datasets that emit one:
 | rows we emit | 1 170 |
 | reference rows we **miss** | **0** |
 | rows we emit that the reference does not | 188 (182 of them in `bigish`) |
-| reference rows we reproduce **byte for byte** | 558 (56.8 %) |
-| rows differing in `IBD1Seg` | 357 |
-| rows differing in `IBD2Seg` | 160 |
-| rows differing in `PropIBD` | 424 |
+| reference rows we reproduce **byte for byte** | 626 (63.7 %) |
+| rows differing in `IBD1Seg` | 356 |
+| rows differing in `IBD2Seg` | 158 |
+| rows differing in `PropIBD` | 423 |
 | rows differing in `InfType` | 9 |
 
 `FID1`/`ID1`/`FID2`/`ID2` and the row order are exact on every row. The error is
 **systematic over-calling of IBD1**: a word is treated as IBD1-eligible iff it contains no
 IBS0 at all, which is demonstrably the reference's word test (forcing a single opposite
 homozygote anywhere in a word splits the reported segment, swept over 2 000 marker
-positions), but the reference then accepts far fewer *runs* of such words than any run-length
-or physical-length filter explains. `nuclear`'s `N_C3`/`N_C4` is the clearest case: the pair's
-genome is 73 % IBS0-free by word, the reference reports `IBD1Seg 0.0939`, and we report
-`0.4548`. `king_core::ibdseg::MIN_RUN1 = 2` is a constant **fitted to the corpus**, not
-derived, and it is labelled as such in the source; a grid over (IBS0 tolerance, open, close,
-head, tail, minimum words, minimum length) never got a third dataset entirely right, so the
-missing rule is structurally different rather than mis-tuned.
+positions), but the reference then accepts far fewer *runs* of such words than any
+run-length or physical-length filter explains. `king_core::ibdseg::MIN_RUN1 = 2` is an
+approximation fitted to the corpus and is labelled as such in the source.
 
-Two hypotheses have been tested and **refuted**; do not spend time on them again.
+The gap is now localised to a single decision. Cross-tabulating run length against the
+reference's verdict on `bigish`:
 
-* *A longer fixed run.* Raising `MIN_RUN1` to 3 starts losing reference rows outright
-  (−257), so no uniform run-length threshold can be right: the reference reports pairs
-  whose only runs are short while rejecting most of a sibling pair's long ones.
-* *A per-pair run length scaled by the pair's own IBS0 rate.* The natural "positive
-  evidence" test — require a run of `L` IBS0-free words where `L` is the smallest length
-  whose chance probability `((1-r)^64)^L` falls below `α`, with `r` the pair's genome-wide
-  IBS0 rate — was implemented and swept over `α ∈ {0.5, 0.2, 0.05, 0.01, 0.001, 0.0001}`.
-  Its best score is **524** exact rows at `α = 0.01`, worse than the fitted constant's 558
-  at every value, and by `α = 0.0001` it starts dropping 233 reference rows. The
-  criterion is not a function of the pair's aggregate IBS0 rate in this form.
+| IBS0-free words in the run | reported | refused |
+| ---: | ---: | ---: |
+| 2 | 255 | 182 |
+| ≥ 3 | 508 | 0 |
+
+Every run of three or more words is accepted; runs of exactly two are accepted 58 % of the
+time, and **that split is the whole of the 188 extra rows**. Three instruments built for
+this (`tests/parity/fit/{subset,probe_seg,sweepdata}.py`, documented in
+`docs/research/13-segment-acceptance.md`) establish:
+
+* the verdict is carried by the pair's **own genotypes** — a 30-sample subset of `bigish`
+  reproduces it 20/20, so it is not a sample-wide screen or an allele-frequency effect;
+* a refusal is **not a short call**: with the map stretched ×2 so that any call would clear
+  the 10 Mb pair filter, the reference emits nothing for those pairs;
+* the verdict **moves with the 64-marker word grid**. Deleting `m` markers from the front
+  of the fileset flips individual verdicts in both directions while the run's word count
+  and both refined boundaries stay bit-identical. So the missing rule reads the *positions
+  of IBS0 markers inside their words*, which is why no count separates the two groups.
+
+Hypotheses tested and **refuted**; do not spend time on them again.
+
+* *A longer fixed run.* Raising `MIN_RUN1` to 3 loses 257 reference rows outright.
+* *A per-pair run length scaled by the pair's own IBS0 rate.* Require a run of `L`
+  IBS0-free words where `L` is the smallest length whose chance probability
+  `((1-r)^64)^L` falls below `α`, `r` the pair's genome-wide IBS0 rate; swept over
+  `α ∈ {0.5 … 0.0001}`. Worse than the fitted constant at every value.
+* *Marker informativeness.* Mean MAF, the count of markers above MAF 0.05/0.10/0.20 and
+  the expected IBS0 count under IBD0 are all indistinguishable between the reported and
+  the refused two-word runs.
+* *Any other summary of the run.* A decision stump over 25 features of the borderline runs
+  reaches 0.648 accuracy against a 0.583 majority baseline.
+* *A separate pair-level threshold* on `PropIBD`, total IBD length or segment count.
+* *IBS0 tolerance per word*, and *bridging* an isolated bad word.
 
 The same engine drives `--ibs`'s last two columns. There the damage is small and precisely
 bounded — over the 21 561 rows of every `.ibs`/`.ibs0` the corpus compares:
@@ -422,17 +460,14 @@ bounded — over the 21 561 rows of every `.ibs`/`.ibs0` the corpus compares:
 Only rows above the `kinship ≥ 2^-3.5` gate can differ; below it both columns are the
 literal `-9`/`0.0000` fillers, and those are exact.
 
-Two other `--ibdseg` items are open and independent of the estimator:
+One other `--ibdseg` item is open and independent of the estimator:
 
-* **`<prefix>splitped.txt` is announced but never written.** It is a pedigree-splitting
-  artefact — renaming disconnected families `POOL_S1`…, importing a founder's genotyped
-  parents into the referencing family, dropping uninformative families — and it is byte-
-  identical under every `--degree`/`--seglength`/`--related` variant, so it can be added
-  without touching a single number above. It is a `missing:` note on all 50 failing
-  `ibdseg` cases and on none of them is it the only note.
-* **`<prefix>X.seg` and its console line are absent.** One case (`sexchr__ibdseg_degree2`)
-  is one line short because of it; the X segments themselves are already in `allsegs.txt`
-  and that part is exact.
+* **`<prefix>X.seg` and its console line are absent.** The reference emits that file only
+  under `--degree`, and it is visibly a half-finished writer there — an 11-column header
+  over 9 written fields, every row ending `\t\n`. One case (`sexchr__ibdseg_degree2`) is
+  one line and one file short because of it; that case also fails on `king.seg`, so the
+  file is worth nothing until the run-acceptance rule is closed. The X segments themselves
+  are already in `allsegs.txt` and that part is exact.
 
 Finally, one `--ibdseg` behaviour is **not reproducible by construction**: the fatal
 `Too many first alleles as the major allele (~%.1lf%%)` fires or not on identical input
@@ -444,21 +479,92 @@ triggers it and we do not implement it.
 
 Under ten samples the reference replaces `--related` with `--kinship`, and that path is
 byte-identical (`trio`, `nuclear`, `missing`, `pair`, `singleton`, on all five `--degree`
-variants and under `--ibdseg`). At ten samples and up it writes a **sixteen-column** `.kin`,
-a **fourteen-column** `.kin0` and `allsegs.txt`; six of those columns (`HetConc`, `HomIBS0`,
-`IBD1Seg`, `IBD2Seg`, `PropIBD`, `InfType`) come from the engine of §11.1. That pass is
-**unimplemented**: the run prints its preamble and writes no files, so the harness reports
-`missing:` rather than a numeric difference. Implementing it before the IBD1 rule is settled
-would replace one honest failure with a subtler one.
+variants and under `--ibdseg`). At ten samples and up the pass is **implemented**
+(`analysis/related.rs`): the sixteen-column `.kin`, the fourteen-column `.kin0`, the X-chr
+`X.kin`/`X.kin0`, `allsegs.txt`, the three between-family control flows and every console
+line. What remains wrong is only what §11.1 owns.
 
-### 11.3 `--autoQC` — 13 cases
+Measured over the 50 cases (`core/*__related*`, `ibdseg/*__related_degree2_ibdseg`), the
+columns that still differ are **`IBD1Seg`, `IBD2Seg`, `PropIBD`, `InfType` and `Error`** and
+nothing else; the ten kinship-side columns, the row sets, the row order, the headers, the
+`.kin` truncation bug and the file-presence rules all match. `InfType` and `Error` are pure
+functions of the three proportions, and the one `Kinship` difference the harness reports is a
+`.kin0` row-set misalignment (55 rows against 54) downstream of `PropIBD`, not an estimator
+error. Every remaining `--related` failure is therefore the IBD-segment caller.
 
-**Unimplemented.** The pass is a fixed filter pipeline (SNP call rate < 80 %, monomorphic
-SNPs, sample call rate < 95 %, SNP call rate < 95 %, then a gender-QC step that only
-`sexchr` reaches) writing `<prefix>_autoQC_Summary.txt`,
-`<prefix>_autoQC_snptoberemoved.txt`, `<prefix>_autoQC_sampletoberemoved.txt` and, when
-X and Y markers are present, `<prefix>_autoQC_updatesex.txt`. It shares nothing with the
-relatedness engines and is the largest self-contained piece of work left.
+What the pass now encodes, all bracketed against the reference binary:
+
+* **`HomIBS0`** = `N_IBS0` over `|{i hom-A1} ∪ {j hom-A1}|` on the pairwise non-missing set —
+  not `IBS0/HomHom` and not `1 − HomConc`. Re-derived from raw `.bed` on 727 rows, 0 misses.
+* **`InfType`** needs a *second* `FS` clause (`PropIBD > 0.32` and `IBD2Seg > 0.15`) that
+  `docs/research/02-ibdseg.md` misses; validated on all 4 550 `InfType` rows of the corpus.
+* **`Error`** is **not** `--kinship`'s rule. It compares the pedigree's *label* against
+  `InfType` — computed with the first `FS` clause's `IBD2Seg >= 0.08` guard **dropped** — and
+  scores 0 for a match, 0.5 when the degrees differ by one and both are 2nd or more distant,
+  1 otherwise. Zero mismatches over the same 4 550 rows.
+* **The within-family summary's `Inference` row is a tally of `InfType`**, not of the kinship
+  estimate, which is why `--related`'s summary differs from `--kinship`'s on five of the seven
+  datasets that reach both.
+* **`.kin0` inclusion is a disjunction**: `Kinship >= 2^-(d+1.5)` **or** `PropIBD > 2^-(d+0.5)`.
+* **The between-family stage has three flows.** With effective degree ≤ 2 it prints the
+  `A subset of informative SNPs …` header; the two-stage `Stages 1&2 …` block then runs only
+  at **100 samples or more** — below that the stage always ends `No close relatives are
+  inferred.` and writes no `.kin0`, however related the samples are (a reference bug: a
+  ten-sample fileset with a duplicate, an MZ and a PO pair across families reports nothing).
+  With degree ≥ 3 there is no header and no sample gate, and the stage runs iff some pair
+  exceeds `2^-(degree + 2.5)` — one degree looser than the reporting threshold, bracketed to
+  `(0.0209, 0.0228]` at degree 3.
+
+**The one gap that is ours, not §11.1's:** the `Stages 1&2 (with <s> SNPs): <d> pairs …`
+count. The reference screens on `min(m, 32768)` markers; where the whole map is that short the
+count is exactly `#{pairs with kinship > 2^-(degree+2)}` and we reproduce it (`bigish`
+truncated to 32 768 markers prints 18 and 50, matching that count exactly). On the full
+50 000-marker `bigish` we take the map's first 32 768, which gives the reference's 18 at
+degree 1 and 50 against its 36 at degree 2 — so `core/bigish__related_degree2` and
+`ibdseg/bigish__related_degree2_ibdseg` differ by that line. Which 32 768 markers the
+reference picks is unresolved: first, last, evenly spaced and highest-MAF subsets were each
+built and scored, and none reproduces both degrees.
+
+### 11.3 `--autoQC` — closed
+
+All 13 cases pass, all four report files included. The rules and the experiments that fix
+them live in `crates/king-cli/src/analysis/autoqc.rs`; the three a reimplementation will
+not guess are worth repeating here:
+
+* **The dropped word.** `--autoQC` packs 16 markers to a word — it reports `ceil(m/16)`
+  words where every other analysis reports `ceil(m/64)` — and its scan loops walk
+  `16 * (words - 1) + m % 16` markers. A class whose marker count is a multiple of 16
+  therefore never examines its last 16 markers: they are not filtered, not listed, and not
+  counted in the final tally, which is why `bigish` loses 16 SNPs it never reports
+  removing. Autosomes, X and Y each drop their own; MT is exempt because nothing scans it.
+  Step 5's two *per-sample* statistics walk the dropped word anyway and count its 16 slots
+  as called and homozygous, so on a 32-marker Y panel a female with no Y calls at all
+  scores 16.
+* **The thresholds are missing-rate tests.** `missing / n > 1 - threshold`, not
+  `call_rate < threshold`; the two disagree at exact boundaries because `1 - 0.9` is
+  `0.09999999999999998`. Step 1 uses its own looser threshold,
+  `min(0.8, 0.1 * (trunc(callrateM * 10) - 1))` — and the multiplication by `0.1` rather
+  than a division by 10 is observable, on a Y marker called in exactly 70 % of the males.
+* **The gender check is two-tiered.** A reported sex is *mislabeled* when the sample falls
+  on the wrong side of `panel / 2` Y markers, and *suspicious* when its share of the panel
+  is not strictly above 2/3 (males) or strictly below 1/3 (females), or when its X
+  heterozygosity is on the wrong side of a cut that starts at 0.10, is lowered by any
+  reported female between 0.05 and 0.10, and is then truncated to whole percent. Unreported
+  sexes are inferred from the Y count alone (`count >= panel / 2` is male) and the inferred
+  value goes into `<prefix>_autoQC_updatesex.txt` and nowhere else — step 6 still filters on
+  the reported sexes only.
+
+Verified beyond the corpus by a differential fuzz against the reference: 300 random filesets
+(1–40 samples, random sex mixes including unreported, random X/Y/XY/MT panels sized to
+straddle the word boundary, random missingness and monomorphism) plus 189 hand-built probe
+filesets x 4 option sets, all byte-identical on stdout and on every file produced.
+
+One interaction is **not** implemented: in a multi-analysis run (`--kinship --autoQC`) the
+reference converts the genotypes with `--autoQC`'s denser packing for the *whole* run, so
+the other pass's preamble reports `ceil(m/16)` words too and its results change with it —
+`trio --kinship` alone writes a 0-byte `king.kin`, while `trio --kinship --autoQC` writes
+three rows. Every captured `--autoQC` case is a single-flag run, so nothing in the corpus
+exercises it.
 
 ### 11.4 The merged-cluster tail — 5 cases
 
@@ -509,3 +615,6 @@ than guessed at.
   one before chasing a `STRUCTURAL` failure — the answer for row order, silent flag
   downgrades at small *n*, and empty-file conventions is usually already there.
 * `tests/parity/golden/<group>/NONDETERMINISTIC.txt` — the raw observations behind §4.
+* `docs/research/13-segment-acceptance.md` — the remaining IBD-segment gap: what it is,
+  the three instruments that localise it, and the six hypotheses they rule out. Read it
+  before touching `king_core::ibdseg`.

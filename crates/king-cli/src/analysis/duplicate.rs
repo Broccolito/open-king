@@ -198,6 +198,7 @@ mod tests {
             het_het,
             ibs0,
             hom_hom,
+            hom_a1_union: 0,
         }
     }
 

@@ -35,6 +35,12 @@ pub struct PairCounts {
     pub ibs0: u32,
     /// Variants where both are homozygous (printed as `NHomHom`).
     pub hom_hom: u32,
+    /// Variants at which **either** sample is homozygous for A1 — the union, not the
+    /// intersection. It is the denominator of `--related`'s `HomIBS0` column and of
+    /// nothing else, which is why it has no `.ibs` counterpart to check it against;
+    /// `docs/VERIFIED_FORMULAS.md` records the re-derivation from raw `.bed` that fixed
+    /// it.
+    pub hom_a1_union: u32,
 }
 
 impl PairCounts {

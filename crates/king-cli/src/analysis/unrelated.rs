@@ -64,6 +64,38 @@
 //! generating rule is a sort of the relative-count array whose exact algorithm remains
 //! unresolved, and probe fixtures with two distinct counts show the scramble is not
 //! confined to each tied run. See the note on [`visit_order`].
+//!
+//! # How to interrogate the order directly
+//!
+//! Two facts make the reference's visit order fully observable, which is worth knowing
+//! before anyone re-derives any of the above by hand:
+//!
+//! * a family of mutually unrelated members keeps everybody, so the emitted list **is**
+//!   the visit order — build one family per size and read the table straight off;
+//! * a run of members that all share one count can be totally ordered even when the
+//!   greedy drops most of them: realise the run as a perfect matching (each member
+//!   related to exactly one other, so every member's count is 1 whatever the pairing is),
+//!   and the count array — hence the visit order — is the same for every pairing. Pair
+//!   *a* with *b* and the survivor of that pair names which of the two is visited first.
+//!
+//! Both work on filesets whose relatedness comes from the `.fam` alone, so the genotypes
+//! can be independent random draws: a group of *m* declared half-sibs is a clique of *m*,
+//! and a lone founder is an isolated vertex, which is enough to realise any count array
+//! that is a disjoint union of cliques.
+//!
+//! # What that rules out
+//!
+//! The order is a tie-break inside a sort, not anything data- or environment-dependent:
+//! it is unchanged by `--cpus 1/2/4/8/16`, by the genotypes, and by the rest of the
+//! dataset. But it is not a sort anyone has yet named. Checked against the measured table
+//! for *n* = 2…20 and rejected: libc++'s `std::sort`, `stable_sort`, `make_heap` +
+//! `sort_heap`, `partial_sort`, `priority_queue` and `qsort` (the reference is a macOS
+//! arm64 binary linked against libc++), and some three thousand parameterised
+//! quicksort/heapsort variants over pivot choice, partition scheme, insertion cut-off and
+//! recursion order. The one structural regularity found: for even *n* ≥ 10 the first half
+//! of `TIE_ORDER(n)` is `TIE_ORDER(n/2)` applied to the array
+//! `[n/2-1, n/2-2, …, 2, n-1, n]` — verified at *n* = 10, 12, 14, 16, 32 and 64, and
+//! false at *n* = 6 and 8.
 
 use std::io::Write;
 
@@ -187,6 +219,23 @@ const TIE_ORDER: &[&[u8]] = &[
 /// nevertheless reproduces every `*__unrelated` capture in the golden corpus except the
 /// three merged clusters of `bigish`, where a two-member tie at ranks 4 and 10 of an
 /// eleven-member cluster comes out in the opposite order.
+///
+/// The two obvious repairs are both **wrong**, measured rather than argued, so neither is
+/// worth trying again. Writing a count array as its per-rank counts and the visit order
+/// as ranks:
+///
+/// | count array (n = 8, 10) | reference order | this function | `TIE_ORDER(n)` re-sorted |
+/// | --- | --- | --- | --- |
+/// | `0 0 0 0 1 1 1 1 1 1` | `4 3 1 2` ‖ `9 10 5 8 6 7` | `1 2 4 3` ‖ … | `4 3 2 1` ‖ `10 9 5 8 6 7` |
+/// | `0 0 0 0 1 1 1 1` | `3 2 4 1` ‖ `8 7 5 6` | `1 2 4 3` ‖ `5 6 8 7` | `3 2 4 1` ‖ `8 7 5 6` |
+/// | `1 1 1 1 0 0 0 0` | `5 6 8 7` ‖ `1 2 4 3` | `5 6 8 7` ‖ `1 2 4 3` | `8 7 5 6` ‖ `3 2 4 1` |
+///
+/// so pre-permuting by `TIE_ORDER(n)` and stably sorting by count (the last column) is
+/// exact where this function is wrong and wrong where it is exact. Neither model fixes
+/// `bigish`: its merged clusters are `[9, 9, 9, 8, 3, 9, 9, 9, 9, 8, 4]`, both models put
+/// rank 4 ahead of rank 10 in the two-member tie at count 8, and the reference visits 10
+/// first. The dependence really is on *n* — the same two ranks tied inside a ten-member
+/// family come out 4 then 10.
 fn visit_order(degree: &[usize]) -> Vec<usize> {
     let mut counts: Vec<usize> = degree.to_vec();
     counts.sort_unstable();
@@ -509,6 +558,37 @@ pub struct Clustering {
     groups: Vec<Cluster>,
 }
 
+impl Clustering {
+    /// The clusters that absorbed more than one family, in the order the console table
+    /// lists them: `(KING<k>, its members in ID order)`.
+    ///
+    /// The unmerged families are not here. `--cluster` and `--build` only ever rename,
+    /// re-analyse and reconstruct the *newly clustered* ones.
+    pub fn merged(&self) -> impl Iterator<Item = (&str, &[usize])> {
+        self.groups
+            .iter()
+            .filter(|c| c.original.len() > 1)
+            .map(|c| (c.key.as_str(), c.members.as_slice()))
+    }
+
+    /// `<prefix>updateids.txt` — `OLDFID OLDIID NEWFID NEWIID`, tab separated, no header.
+    ///
+    /// Only the merged clusters get a row; the IID never changes, so the fourth column
+    /// repeats the second and the file is really the FID rename map. Rows follow the
+    /// cluster order and, inside a cluster, the ID comparator — which for `bigish` is
+    /// also original-family order, the two being indistinguishable there.
+    pub fn updateids_text(&self, samples: &[Sample]) -> String {
+        let mut s = String::new();
+        for (key, members) in self.merged() {
+            for &i in members {
+                let (fid, iid) = (&samples[i].fid, &samples[i].iid);
+                s.push_str(&format!("{fid}\t{iid}\t{key}\t{iid}\n"));
+            }
+        }
+        s
+    }
+}
+
 /// Run the `--unrelated` pass: console body plus the two lists.
 pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
     let samples = &loaded.fileset.samples;
@@ -778,6 +858,41 @@ mod tests {
             id_uniqueness(&samples),
             "  Individual IDs are not unique (e.g., A_F), and family IDs will be used as well.\n"
         );
+    }
+
+    /// `bigish`'s `KING1`: two families renamed, the IID carried through unchanged.
+    #[test]
+    fn updateids_names_only_the_merged_clusters() {
+        let samples = [
+            sample("BF01", "B01_F", "0", "0"),
+            sample("BF02", "B02_F", "0", "0"),
+            sample("BF03", "B03_F", "0", "0"),
+        ];
+        let clustering = Clustering {
+            tiny: false,
+            any_merged: true,
+            graph: Graph {
+                n: 3,
+                edge: vec![false; 9],
+            },
+            groups: vec![
+                Cluster {
+                    key: "KING1".to_string(),
+                    original: vec!["BF01".to_string(), "BF02".to_string()],
+                    members: vec![0, 1],
+                },
+                Cluster {
+                    key: "BF03".to_string(),
+                    original: vec!["BF03".to_string()],
+                    members: vec![2],
+                },
+            ],
+        };
+        assert_eq!(
+            clustering.updateids_text(&samples),
+            "BF01\tB01_F\tKING1\tB01_F\nBF02\tB02_F\tKING1\tB02_F\n"
+        );
+        assert_eq!(clustering.merged().count(), 1);
     }
 
     #[test]

@@ -27,16 +27,9 @@
 //! when they are wrong: the `(<3Mb)` still says `3` under `--seglength 10`, and the
 //! `(>10Mb)` pair filter is not tunable at all.
 //!
-//! # Known gap
-//!
-//! `<prefix>splitped.txt` is **announced but not written**. It is a pedigree-splitting
-//! artefact, not a segment artefact: it renames families that turn out to be several
-//! disconnected pedigrees (`POOL` → `POOL_S1`, `POOL_S2`, …), imports a founder's
-//! genotyped parents into the family that references them, drops families that contribute
-//! no informative pair, and reorders members. Reproducing it is a pedigree-reconstruction
-//! task shared with `--build`, and it is byte-identical under every `--degree` /
-//! `--seglength` / `--related` variant, so it can be added later without touching this
-//! module's numbers.
+//! `<prefix>splitped.txt` is written from [`crate::analysis::splitped`] before any
+//! segment work; it depends only on the `.fam`, which is why it is byte-identical under
+//! every `--degree` / `--seglength` / `--related` variant.
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -44,6 +37,7 @@ use std::path::PathBuf;
 use king_core::ibdseg::{self, Usable};
 use king_io::Variant;
 
+use crate::analysis::splitped;
 use crate::cli::{Opt, Options};
 use crate::console;
 use crate::load::{self, Class, Loaded};
@@ -187,6 +181,12 @@ struct Row {
 pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
     let prefix = opts.string(Opt::Prefix).to_string();
     let sexchr = i64::from(opts.int(Opt::Sexchr));
+    // Announced before `Options in effect:` and written before any segment work, so it
+    // survives even the `No informative IBD segments.` early exit below.
+    write_file(
+        &format!("{prefix}splitped.txt"),
+        &splitped::text(&loaded.fileset.samples),
+    );
     let a = arrays(&loaded.fileset.variants, sexchr);
     let auto = ibdseg::usable_segments(&a.auto_chr, &a.auto_pos);
     let xseg = ibdseg::usable_segments(&a.x_chr, &a.x_pos);
@@ -326,6 +326,55 @@ const FILTER_NOTE: &str = concat!(
 /// *before* the `Options in effect:` block, unlike everything else this pass says.
 pub fn splitped_notice(prefix: &str) -> String {
     format!("{prefix}splitped.txt is generated for certain pedigree plot applications.\n\n")
+}
+
+/// The autosomal segment estimates for one pair at a time.
+///
+/// `--ibdseg` sweeps every pair and writes `<prefix>.seg`; `--build` and `--cluster` want
+/// the same three numbers for a handful of named pairs and write no `.seg` at all, so the
+/// usable-segment construction is done once here and each pair scanned on demand.
+pub struct Segments {
+    pos: Vec<i64>,
+    segs: Vec<Usable>,
+    denom: i64,
+    seglen: i64,
+}
+
+impl Segments {
+    /// `None` when the map yields no usable autosomal segment — the case in which the
+    /// reference computes nothing either and `--ibdseg` prints `No informative IBD
+    /// segments.`.
+    pub fn new(opts: &Options, loaded: &Loaded) -> Option<Self> {
+        let a = arrays(&loaded.fileset.variants, i64::from(opts.int(Opt::Sexchr)));
+        let segs = ibdseg::usable_segments(&a.auto_chr, &a.auto_pos);
+        if segs.is_empty() {
+            return None;
+        }
+        let denom = ibdseg::denominator(&segs, &a.auto_pos);
+        Some(Segments {
+            pos: a.auto_pos,
+            segs,
+            denom,
+            seglen: seglength_bp(opts),
+        })
+    }
+
+    /// `(IBD1Seg, IBD2Seg, PropIBD)` for one pair, unrounded.
+    pub fn of(&self, loaded: &Loaded, i: usize, j: usize) -> (f64, f64, f64) {
+        let s = ibdseg::pair_segments(
+            &loaded.fileset.genotypes,
+            &self.pos,
+            &self.segs,
+            i,
+            j,
+            self.seglen,
+        );
+        (
+            s.ibd1_seg(self.denom),
+            s.ibd2_seg(self.denom),
+            s.prop_ibd(self.denom),
+        )
+    }
 }
 
 /// `--cpus` when given, otherwise however many cores are visible.

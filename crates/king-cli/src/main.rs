@@ -115,9 +115,12 @@ fn main() {
             analysis::kinship::run(&plain, &loaded, &mut std::io::stdout());
             ran = true;
         } else {
-            // SEAM: the full sixteen-column `--related` pass is unimplemented; it needs
-            // the IBD-segment columns, which `docs/PARITY.md` §11 records as open.
             emit(&loaded.preamble());
+            emit(&console::options_in_effect(
+                &analysis::related::options_in_effect(opts),
+            ));
+            analysis::related::run(opts, &loaded, &mut std::io::stdout());
+            ran = true;
         }
     }
     if opts.flag(cli::Opt::Kinship) {
@@ -126,6 +129,18 @@ fn main() {
             &analysis::kinship::options_in_effect(opts),
         ));
         analysis::kinship::run(opts, &loaded, &mut std::io::stdout());
+        ran = true;
+    }
+    // `--autoQC` follows `--kinship` in the reference's own pass order, and opens with a
+    // line of the loader's preamble's shape but not its arithmetic: its word count is
+    // `ceil(m / 16)`, the denser packing the QC pipeline uses.
+    if opts.flag(cli::Opt::AutoQc) {
+        emit(&analysis::autoqc::preamble(&loaded));
+        emit(&console::options_in_effect(&analysis::options_in_effect(
+            opts,
+            cli::Opt::AutoQc,
+        )));
+        analysis::autoqc::run(opts, &loaded, &mut std::io::stdout());
         ran = true;
     }
     for (opt, body) in [

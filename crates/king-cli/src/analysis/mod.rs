@@ -17,6 +17,7 @@
 //! the three row orders, the `Options in effect` list and the C-compatible number
 //! formatting. Anything used by exactly one analysis lives in that analysis's module.
 
+pub mod autoqc;
 pub mod build;
 pub mod cluster;
 pub mod duplicate;
@@ -26,6 +27,7 @@ pub mod kinship;
 pub mod qc;
 pub mod related;
 pub mod segments;
+pub mod splitped;
 pub mod unrelated;
 pub mod xkinship;
 

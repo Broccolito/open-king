@@ -322,12 +322,12 @@ fn imputed_male_het(
 // ---------------------------------------------------------------------------
 
 /// Pedigree plus the sexes it needs, phantom founders included.
-struct XPedigree {
+pub(crate) struct XPedigree {
     ped: Pedigree,
     sex: Vec<u8>,
 }
 
-fn pedigree_of(samples: &[Sample]) -> XPedigree {
+pub(crate) fn pedigree_of(samples: &[Sample]) -> XPedigree {
     let augmented = with_phantom_parents(samples);
     XPedigree {
         sex: augmented.iter().map(|s| s.sex).collect(),
@@ -339,7 +339,7 @@ fn pedigree_of(samples: &[Sample]) -> XPedigree {
 ///
 /// Expansion always picks the individual whose ancestry is deeper, which terminates
 /// because `Pedigree` has already broken any cycles and a parent is strictly shallower.
-fn phi_x(p: &XPedigree, a: usize, b: usize) -> f64 {
+pub(crate) fn phi_x(p: &XPedigree, a: usize, b: usize) -> f64 {
     fn go(p: &XPedigree, a: usize, b: usize, fuel: u32) -> f64 {
         if fuel == 0 {
             return 0.0;

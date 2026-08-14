@@ -171,6 +171,39 @@ impl Segments {
     /// * **The gate is [`IBD2_KINSHIP_GATE`]**, and un-gated pairs print `-9`/`-9` in
     ///   `.ibs0` but `0.000`/`0.0000` in `.ibs`.
     ///
+    /// # `--ibs` does not share `--ibdseg`'s caller, and must not be made to
+    ///
+    /// The two disagree **in the reference's own output**. On `nuclear`, the pair
+    /// `N_C1`/`N_C2` is `Pr_IBD2 0.2173` in `king.ibs` and `IBD2Seg 0.2626` in
+    /// `king.seg`; all six of that dataset's IBD2-sharing pairs differ the same way, and
+    /// `.ibs` is the smaller every time (0.2749/0.3144, 0.4669/0.5095, 0.4604/0.5194,
+    /// 0.2942/0.3531, 0.2812/0.3108). Same binary, same fileset, same denominator `D` —
+    /// so `--ibs` runs a *different*, tighter IBD2 rule than `--ibdseg` does. Wiring this
+    /// function to `king_core::ibdseg` is the obvious tidy-up, and it is wrong: it would
+    /// make `Pr_IBD2` systematically too large. The duplication is the finding.
+    ///
+    /// # Alternatives already measured, so they need not be tried again
+    ///
+    /// Scored over the 152 gated, non-zero `MaxIBD2` rows of the golden `.ibs`/`.ibs0`
+    /// corpus (`monomorphic` and `sexchr` are the two datasets the rule below already
+    /// reproduces byte for byte, and any replacement has to keep them):
+    ///
+    /// | word test | run rule | right end | exact `MaxIBD2` |
+    /// | --- | --- | --- | ---: |
+    /// | no IBS0, ≤4 het mismatches | maximal runs | into the next word | **83** |
+    /// | no IBS0, ≤3 / ≤5 / ≤8 | maximal runs | into the next word | 80 / 78 / 62 |
+    /// | no IBS0, ≤4 | maximal runs | word-aligned | 46 |
+    /// | `king_core::ibdseg`'s het-break test | maximal runs | word-aligned | 45 |
+    /// | no IBS0, any het count | maximal runs | word-aligned | 35 |
+    ///
+    /// The top row scores nearly twice the rule below on `MaxIBD2` and still **fails the
+    /// two datasets that currently pass**, so it is not an improvement in the only
+    /// metric that counts. It also reproduces `Pr_IBD2` on zero rows, which localises
+    /// the residual: the reference sometimes reports one segment where every variant
+    /// here reports two (`nuclear`'s `N_C1`/`N_C4` is 108 752 454 bp against a longest
+    /// run of 57 547 501), and a sum over runs feels every such split while a maximum
+    /// does not. Whatever bridges those runs is the missing rule.
+    ///
     /// # What is fitted and unverified
     ///
     /// The word-compatibility test and the run state machine below. A grid search over
