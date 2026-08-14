@@ -254,6 +254,19 @@ static SEPARATE_ANALYSES: &[(Opt, &str)] = &[
     (Opt::Gdt, "gdt"),
 ];
 
+/// The name the reference echoes for an analysis under `Options in effect:`.
+///
+/// Three analyses are echoed under a different spelling from the one that invokes them —
+/// `--bySNP` prints as `--bysnp`, `--makeGRM` as `--grm` and `--lmm` as `--mtscore` —
+/// exactly as they are listed in the "will run separately" line.
+pub fn echo_name(opt: Opt) -> &'static str {
+    SEPARATE_ANALYSES
+        .iter()
+        .find(|(o, _)| *o == opt)
+        .map(|(_, name)| *name)
+        .unwrap_or_else(|| opt.name())
+}
+
 /// Every option, in print order.
 pub fn all() -> impl Iterator<Item = Opt> {
     GROUPS.iter().flat_map(|(_, opts)| opts.iter().copied())
@@ -413,6 +426,20 @@ impl Options {
             .filter(|(o, _)| self.flags[*o as usize])
             .map(|(_, name)| format!("--{name}"))
             .collect()
+    }
+
+    /// A copy of this command line with `--degree` unset.
+    ///
+    /// The two "too few samples" downgrades — `--related` below ten samples and
+    /// `--ibdseg` below five — hand the run to the `--kinship` pass, and the reference
+    /// runs that pass as if `--degree` had never been typed: `--ibdseg --degree 2` on
+    /// `singleton` prints the unfiltered `Between-family kinship data saved in file
+    /// king.kin0` plus the `Note --kinship --degree <n> …` hint, not the filtered form.
+    /// The echoed `Options in effect:` block is a bare `--kinship` for the same reason.
+    pub fn without_degree(&self) -> Options {
+        let mut o = self.clone();
+        o.ints[Opt::Degree as usize] = 0;
+        o
     }
 
     fn toggle_flag(&mut self, o: Opt) {

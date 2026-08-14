@@ -71,6 +71,7 @@ RE_TS = re.compile(
 RE_PROGRESS_ONLY = re.compile(r"^(?:\d{1,3}%\r?)+$")
 RE_PROGRESS_HEAD = re.compile(r"^(?:\d{1,3}%\r?)+")
 RE_NCPU = re.compile(r"^(\s*)\d+(\s*CPU cores are used)")
+RE_NCPU_MID = re.compile(r"(with )\d+( CPU cores)")
 RE_PATH = re.compile(r"/(?:[^\s()\[\],]+/)+([^/\s()\[\],]+\.(?:bed|bim|fam))")
 RE_NOSCREEN = re.compile(r"(--noscreen \[)-?\d+(\])")
 
@@ -86,7 +87,7 @@ def _n_timestamp(line: str) -> str:
 
 def _n_ncpu(line: str) -> str:
     """R3: host/thread-count dependent 'N CPU cores are used' -> <NCPU>."""
-    return RE_NCPU.sub(r"\1<NCPU>\2", line)
+    return RE_NCPU_MID.sub(r"\1<NCPU>\2", RE_NCPU.sub(r"\1<NCPU>\2", line))
 
 
 def _n_paths(line: str) -> str:

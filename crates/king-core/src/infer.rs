@@ -198,6 +198,15 @@ impl Pedigree {
         (self.pat[i], self.mat[i])
     }
 
+    /// Longest path from an individual down to a founder.
+    ///
+    /// Any kinship recurrence has to expand the *deeper* of the two individuals to
+    /// terminate; this exposes the same measure [`pedigree_kinship`] uses internally so
+    /// the X-chromosome recurrence in `king-cli` can do it too.
+    pub fn depth_of(&self, i: usize) -> u32 {
+        self.depth[i]
+    }
+
     /// Whether two distinct individuals declare the *same two known* parents.
     ///
     /// Both parents must be known: the reference treats a pair that shares only a father,

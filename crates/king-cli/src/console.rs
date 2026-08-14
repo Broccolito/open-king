@@ -247,6 +247,17 @@ pub fn map_file_unopenable(path: &str) -> String {
     format!("Map file {path} cannot be opened")
 }
 
+/// `Cannot open <prefix>$TMP$.ped to write.`
+///
+/// The reference converts the PLINK pedigree through a temporary `.ped` named off
+/// `--prefix`, and it opens that file for writing while loading the `.fam` — so an
+/// unwritable prefix is fatal *there*, between `Read in PLINK fam file …` and
+/// `PLINK pedigrees loaded`, long before any analysis runs. Unlike every other fatal in
+/// the loader this one ends in a period, which is the reference's own inconsistency.
+pub fn cannot_open_tmp_ped(prefix: &str) -> String {
+    format!("Cannot open {prefix}$TMP$.ped to write.")
+}
+
 /// Body of the FATAL ERROR raised when `-b` names a file that exists but is not `.bed`.
 ///
 /// The suffix test is on the literal argument and is case sensitive: a readable
@@ -499,6 +510,20 @@ pub fn autosome_words(words: usize, individuals: usize) -> String {
     format!("Autosome genotypes stored in {words} words for each of {individuals} individuals.\n")
 }
 
+/// The blank line and the heading that open the X-chromosome pass.
+pub const X_CHROMOSOME_ANALYSIS: &str = "\nX-chromosome analysis...\n";
+
+/// `X-chromosome genotypes stored in <w> 64-bit words for each of <n> individuals.`
+///
+/// Not the same sentence as [`autosome_words`]: this one says "64-bit words", and its
+/// individual count is the whole `.fam` even though samples of unknown sex take no part
+/// in the analysis that follows.
+pub fn x_chromosome_words(words: usize, individuals: usize) -> String {
+    format!(
+        "X-chromosome genotypes stored in {words} 64-bit words for each of {individuals} individuals.\n"
+    )
+}
+
 /// The tab-indented `Options in effect:` block, ending with a blank line.
 pub fn options_in_effect(flags: &[String]) -> String {
     let mut s = String::from("Options in effect:\n");
@@ -570,6 +595,234 @@ pub fn relationship_summary(pedigree: RelationshipCounts, inference: Relationshi
     s.push_str(&row("Inference", inference));
     s.push('\n');
     s
+}
+
+// ---------------------------------------------------------------------------
+// --kinship body
+// ---------------------------------------------------------------------------
+
+/// `Within-family kinship data saved in file <path>`
+pub fn within_family_kinship_saved(path: &str) -> String {
+    format!("Within-family kinship data saved in file {path}\n")
+}
+
+/// The line that replaces the whole between-family stage when the `.fam` names a single
+/// family.
+///
+/// Printed only when the within-family stage ran at all: a one-sample, one-family
+/// `.fam` skips it and goes on to write a header-only `.kin0`, which is what the
+/// `singleton` capture shows.
+pub const ONLY_ONE_FAMILY: &str = "There is only one family.\n";
+
+/// `Relationship inference across families starts at <ctime>`
+pub fn relationship_inference_starts(unix_secs: i64) -> String {
+    format!(
+        "Relationship inference across families starts at {}\n",
+        ctime(unix_secs)
+    )
+}
+
+/// Indent that lines the between-family `ends at` up under its `starts at`.
+pub const RELATIONSHIP_INFERENCE_INDENT: usize = 41;
+
+/// `Between-family kinship data saved in file <path>` — the unfiltered form.
+pub fn between_family_kinship_saved(path: &str) -> String {
+    format!("Between-family kinship data saved in file {path}\n")
+}
+
+/// The `--degree`-filtered form, which reports how many pairs survived the filter.
+///
+/// The reference prints the row count even when it is zero, and still writes the
+/// header-only file.
+pub fn between_family_kinship_saved_degree(degree: i32, pairs: u64, path: &str) -> String {
+    format!(
+        "Between-family kinship data (up to degree {degree}, {pairs} pairs in total) saved in file {path}\n"
+    )
+}
+
+/// The advertisement that follows an unfiltered `.kin0`. It is **not** printed on the
+/// `--degree` path.
+pub const KINSHIP_DEGREE_NOTE: &str =
+    "Note --kinship --degree <n> can filter & speed up the kinship computing.\n";
+
+/// The sample-exclusion notice that precedes the between-family stage.
+///
+/// Reproduces the reference's own display bug: the count is the number of samples
+/// actually dropped, but the names listed are the **first `count` rows of the `.fam` in
+/// file order**, which are generally not the samples that were dropped. Passing the
+/// `.fam`-order prefix is therefore the caller's job.
+///
+/// No capture in the parity corpus reaches this line — every dataset there has far more
+/// calls per sample than the screen wants — so the layout was probed directly: a 30-sample
+/// fileset with 25 samples at 100 calls each emits
+///
+/// ```text
+/// The following 25 samples are excluded from the kinship analysis (M<512):
+/// →(LONGFAM00 SAMPLE00)→(LONGFAM01 SAMPLE01)→…→(LONGFAM24 SAMPLE24)
+///
+/// ```
+///
+/// — one unwrapped line however long it gets, and a blank line under it. The same probe
+/// is what proves the names are the `.fam` prefix: the samples actually dropped there
+/// were `SAMPLE03`, `SAMPLE07` and `SAMPLE08`, and the reference named `SAMPLE00..02`.
+pub fn samples_excluded_from_kinship(count: usize, names: &[(&str, &str)]) -> String {
+    let mut s =
+        format!("The following {count} samples are excluded from the kinship analysis (M<512):\n");
+    for (fid, iid) in names {
+        let _ = write!(s, "\t({fid} {iid})");
+    }
+    s.push_str("\n\n");
+    s
+}
+
+// ---------------------------------------------------------------------------
+// The IBD-segment pre-pass
+// ---------------------------------------------------------------------------
+
+/// `Total length of <n> chromosomal segments usable for IBD segment analysis is <x> Mb.`
+///
+/// The figure is the sum of the usable segments' lengths in Mb at one decimal, and it is
+/// exactly the denominator of `Pr_IBD2`; matched on all 13 corpus datasets, from 42.6 Mb
+/// to 2498.9 Mb.
+pub fn segments_usable(count: usize, total_bp: i64) -> String {
+    format!(
+        "Total length of {count} chromosomal segments usable for IBD segment analysis is {:.1} Mb.\n",
+        total_bp as f64 / 1e6
+    )
+}
+
+/// `  In addition to autosomes, <n> segments of length <x> Mb on X-chr can be further used.`
+///
+/// Printed between the total and the file note, and only when the map carries usable X
+/// segments. Those segments go into `allsegs.txt` with the autosomal ones but are not
+/// part of the autosomal total.
+pub fn x_segments_usable(count: usize, total_bp: i64) -> String {
+    format!(
+        "  In addition to autosomes, {count} segments of length {:.1} Mb on X-chr can be further used.\n",
+        total_bp as f64 / 1e6
+    )
+}
+
+/// `  Information of these chromosomal segments can be found in file <path>`, and the
+/// blank line that closes the pre-pass block.
+pub fn segments_file(path: &str) -> String {
+    format!("  Information of these chromosomal segments can be found in file {path}\n\n")
+}
+
+/// What the pre-pass prints when no run of markers is dense enough to use.
+///
+/// No corpus dataset reaches this on `--ibs`; the wording is the reference's own string,
+/// seen on the `--build` path, and the surrounding blank line is unverified.
+pub const NO_INFORMATIVE_SEGMENTS: &str = "No informative IBD segments.\n\n";
+
+/// The notice that the usable segments, while present, do not add up to enough genome
+/// for IBD-segment work — and, equivalently, that `MaxIBD2`/`Pr_IBD2` will be missing
+/// from `.ibs`/`.ibs0`.
+///
+/// The two are one decision, not two: every capture with this line has the short
+/// 19-/20-column headers and every capture without it has the long ones.
+pub const SEGMENTS_TOO_SHORT: &str = "Segments too short.\n";
+
+// ---------------------------------------------------------------------------
+// --ibs body
+// ---------------------------------------------------------------------------
+
+/// The line that replaces the within-family stage when no family has two members.
+pub const EACH_FAMILY_ONE_INDIVIDUAL: &str = "Each family consists of one individual.\n";
+
+/// `Within-family IBS data saved in file <path>`
+pub fn within_family_ibs_saved(path: &str) -> String {
+    format!("Within-family IBS data saved in file {path}\n")
+}
+
+/// `IBS and relationship inference across families starts at <ctime>`
+pub fn ibs_across_families_starts(unix_secs: i64) -> String {
+    format!(
+        "IBS and relationship inference across families starts at {}\n",
+        ctime(unix_secs)
+    )
+}
+
+/// Indent of the `ends at` line that closes the between-family IBS stage.
+///
+/// 41 spaces — which does **not** line the timestamp up under the `starts at` above it
+/// (that would need 47). Measured, not derived.
+pub const IBS_ACROSS_FAMILIES_INDENT: usize = 41;
+
+/// `Between-family IBS data saved in file <path>`
+pub fn between_family_ibs_saved(path: &str) -> String {
+    format!("Between-family IBS data saved in file {path}\n")
+}
+
+// ---------------------------------------------------------------------------
+// --duplicate body
+// ---------------------------------------------------------------------------
+
+/// `Sorting autosomes...` — the line that opens the `--duplicate` body.
+pub const SORTING_AUTOSOMES: &str = "Sorting autosomes...\n";
+
+/// `Computing pairwise genotype concordance starts at <ctime>`
+pub fn concordance_starts(unix_secs: i64) -> String {
+    format!(
+        "Computing pairwise genotype concordance starts at {}\n",
+        ctime(unix_secs)
+    )
+}
+
+/// Indent of the concordance stage's `ends at` lines — the column the two `Stage N …`
+/// labels also put `ends at` in.
+pub const CONCORDANCE_INDENT: usize = 42;
+
+/// `        Stage 1 (with <n> SNPs) screening ends at <ctime>`
+///
+/// Printed only when the screening stage ran *and* kept at least one pair: a 200-sample
+/// run at `--minConc 0.8` screens nothing out of 19 900 pairs and prints neither stage
+/// line, only the bare `ends at`.
+pub fn stage1_screening_ends(snps: usize, unix_secs: i64) -> String {
+    format!(
+        "        Stage 1 (with {snps} SNPs) screening ends at {}\n",
+        ctime(unix_secs)
+    )
+}
+
+/// `        Stage 2 (with all SNPs) inference ends at <ctime>`
+pub fn stage2_inference_ends(unix_secs: i64) -> String {
+    format!(
+        "        Stage 2 (with all SNPs) inference ends at {}\n",
+        ctime(unix_secs)
+    )
+}
+
+/// `<n> pairs of duplicates with heterozygote concordance rate > <p>% are saved in file
+/// <path>`, with the blank line that follows it.
+///
+/// The percentage is `round(minConc * 100)` with no decimals — `0.8` prints `80`, `1`
+/// prints `100`, `0.99` prints `99`.
+pub fn duplicates_saved(pairs: usize, min_conc: f64, path: &str) -> String {
+    format!(
+        "{pairs} pairs of duplicates with heterozygote concordance rate > {}% are saved in file {path}\n\n",
+        percent(min_conc)
+    )
+}
+
+/// The same line when nothing passed the threshold. The `.con` file is still written,
+/// with its header only.
+pub fn no_duplicates_found(min_conc: f64) -> String {
+    format!(
+        "No duplicates are found with heterozygote concordance rate > {}%.\n\n",
+        percent(min_conc)
+    )
+}
+
+/// `  <n> additional pairs from screening stage not confirmed in the final stage`, with
+/// the blank line under it. Omitted entirely when the count is zero.
+pub fn additional_pairs_unconfirmed(pairs: usize) -> String {
+    format!("  {pairs} additional pairs from screening stage not confirmed in the final stage\n\n")
+}
+
+/// `minConc` as the reference prints it in those two messages: a whole-number percentage.
+fn percent(min_conc: f64) -> i64 {
+    (min_conc * 100.0).round() as i64
 }
 
 // ---------------------------------------------------------------------------

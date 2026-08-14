@@ -10,6 +10,7 @@
 #![forbid(unsafe_code)]
 
 pub mod counts;
+pub mod ibdseg;
 pub mod infer;
 pub mod kinship;
 

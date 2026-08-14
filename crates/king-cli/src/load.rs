@@ -289,7 +289,19 @@ impl Ticks {
 pub struct Loaded {
     pub fileset: Fileset,
     pub counts: MapCounts,
+    /// The X-chromosome bit planes, decoded only when the map carries enough X markers
+    /// for the X pass to run at all ([`X_PASS_MIN_SNPS`]).
+    pub x_genotypes: Option<king_io::Genotypes>,
 }
+
+/// Fewest X-chromosome SNPs that will start the X-chromosome pass.
+///
+/// **512**, bisected against the reference on a fileset whose X marker count was swept:
+/// 511 produces no `X.kin`/`X.kin0` and no `X-chromosome analysis...` block, 512 produces
+/// both. It is a count of *markers*, not of calls — 512 markers of which 200 are missing
+/// in every sample still runs. This is what keeps `--sexchr 24` (300 X SNPs on the
+/// `sexchr` fixture) and `--sexchr 25` (150) silent while `--sexchr 2` (2 000) is not.
+pub const X_PASS_MIN_SNPS: usize = 512;
 
 impl Loaded {
     /// Words per sample in the autosomal bit planes.
@@ -300,16 +312,33 @@ impl Loaded {
     /// `Autosome genotypes stored in <w> words for each of <n> individuals.` plus the
     /// blank line under it.
     ///
-    /// The reference reprints this ahead of **every** analysis pass, not once per load: a
-    /// `--kinship --ibs` run emits it twice, each time immediately before that analysis's
-    /// own `Options in effect:` block. It therefore belongs to the dispatcher, and the
-    /// loader only supplies it.
+    /// This is **per analysis pass, not per load**, and only for the analyses in
+    /// [`prints_preamble`]. A `--kinship --ibs` run emits it twice — once before each
+    /// pass's own `Options in effect:` block — while a `--build` run never emits it at
+    /// all. Rendering it unconditionally after the load looks right on `--kinship` and is
+    /// wrong on five of the analyses.
     pub fn preamble(&self) -> String {
         format!(
             "{}\n",
             console::autosome_words(self.words(), self.fileset.samples.len())
         )
     }
+}
+
+/// Whether an analysis opens its pass with [`Loaded::preamble`].
+///
+/// Probed one flag at a time against the reference on the same fileset:
+///
+/// | Prints it | Does not |
+/// | --- | --- |
+/// | `--related` `--kinship` `--ibs` `--duplicate` | `--ibdseg` `--mds` `--pca` `--cluster` `--build` `--bysample` `--bysnp` `--tdt` `--unrelated` `--roh` `--gdt` `--makeGRM` `--lmm` `--risk` `--rplot` `--pngplot` |
+///
+/// `--autoQC` prints a line of the same shape but **not this one**: its word count is
+/// `ceil(m / 16)`, not `ceil(m / 64)` — 313 against 79 on a 5 000-SNP map, 625 against
+/// 157 on 10 000 — so it is reporting its own denser packing and must render the line
+/// itself rather than borrow the loader's.
+pub fn prints_preamble(opt: Opt) -> bool {
+    matches!(opt, Opt::Related | Opt::Kinship | Opt::Ibs | Opt::Duplicate)
 }
 
 /// Whether the reference probes the `.bed` before it starts loading.
@@ -361,6 +390,13 @@ pub fn load(opts: &Options, out: &mut dyn Write) -> Result<Loaded, Fatal> {
     // with no `Read in PLINK fam file …` line above it.
     openable(&fam_path).map_err(|_| console::pedigree_file_unopenable(&display(&fam_path)))?;
     write(out, &console::read_fam(&display(&fam_path)));
+    // The reference rewrites the pedigree through `<prefix>$TMP$.ped` and opens that file
+    // here, before it has parsed a single row: with `--prefix sub/pre` and a duplicated
+    // sample in the `.fam`, the unwritable-prefix fatal is what comes out, so the open
+    // precedes even the duplicate check. It is a real writability test rather than a
+    // "does the directory exist" one — a read-only directory fails it too — and the
+    // reference removes the file again, leaving nothing behind on a successful run.
+    probe_tmp_ped(opts.string(Opt::Prefix))?;
     let samples = fam::read_fam(&fam_path).map_err(io_fatal)?;
     if let Err(IoError::DuplicateSample { fid, iid }) = fam::check_duplicates(&samples) {
         // Printed before the fatal, and `PLINK pedigrees loaded` never appears.
@@ -408,6 +444,21 @@ pub fn load(opts: &Options, out: &mut dyn Write) -> Result<Loaded, Fatal> {
     };
     ticks.emit(out);
 
+    // The X planes cost a second pass over the `.bed`, so take it only when the X pass
+    // could run. The autosomal decode has already validated the file's length and header,
+    // so this one cannot introduce a new failure mode.
+    let x_genotypes = (counts.x >= X_PASS_MIN_SNPS)
+        .then(|| {
+            let x_keep: Vec<bool> = variants
+                .iter()
+                .map(|v| classify(&v.chrom, sexchr) == Class::X)
+                .collect();
+            decode(&bed_path, samples.len(), &variants, &x_keep)
+                .ok()
+                .map(|(g, _)| g)
+        })
+        .flatten();
+
     Ok(Loaded {
         fileset: Fileset {
             samples,
@@ -416,6 +467,7 @@ pub fn load(opts: &Options, out: &mut dyn Write) -> Result<Loaded, Fatal> {
             kept,
         },
         counts,
+        x_genotypes,
     })
 }
 
@@ -525,6 +577,23 @@ fn keep_list(keep: &[bool]) -> Vec<Variant> {
 /// before it announces the file.
 fn openable(path: &Path) -> std::io::Result<()> {
     File::open(path).map(|_| ())
+}
+
+/// Reproduce the reference's `<prefix>$TMP$.ped` writability probe.
+///
+/// Create the file the reference creates, then remove it. Creating rather than merely
+/// testing the directory is what makes `--prefix ../read-only-dir/x` fail the way the
+/// reference fails it; removing it again is what keeps a successful run from leaving an
+/// output file the reference never leaves.
+fn probe_tmp_ped(prefix: &str) -> Result<(), Fatal> {
+    let path = format!("{prefix}$TMP$.ped");
+    match File::create(&path) {
+        Ok(_) => {
+            let _ = std::fs::remove_file(&path);
+            Ok(())
+        }
+        Err(_) => Err(console::cannot_open_tmp_ped(prefix)),
+    }
 }
 
 /// A path as the reference prints it: the string it was given, unresolved.

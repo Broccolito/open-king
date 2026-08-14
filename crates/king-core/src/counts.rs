@@ -148,6 +148,30 @@ pub fn all_pairs(g: &Genotypes, pairs: &[(usize, usize)]) -> Vec<PairCounts> {
         .collect()
 }
 
+/// Counts for a **single** sample: `(called, heterozygous)` over its own non-missing set.
+///
+/// Distinct from the `het_i` of [`pair_counts`], which is restricted to the *pairwise*
+/// non-missing set. Both are needed: the pairwise form drives every printed estimator,
+/// while this one is what the X-chromosome pass medians over to impute a heterozygosity
+/// for hemizygous males (`analysis::xkinship`).
+///
+/// # Panics
+///
+/// Panics if `i` is not a valid sample index or if its planes are shorter than
+/// [`Genotypes::words_per_sample`].
+pub fn sample_counts(g: &Genotypes, i: usize) -> (u32, u32) {
+    let w = g.words_per_sample();
+    let p0 = &g.plane0[i][..w];
+    let p1 = &g.plane1[i][..w];
+    let mut called: u32 = 0;
+    let mut het: u32 = 0;
+    for (&x0, &x1) in p0.iter().zip(p1) {
+        called += (x0 | x1).count_ones();
+        het += (!x0 & x1).count_ones();
+    }
+    (called, het)
+}
+
 /// Whether the unused high bits of the last plane word are zero, as the [`Genotypes`]
 /// contract requires. Used only by `debug_assert!`.
 fn tail_is_clean(p0: &[u64], p1: &[u64], n_variants: usize) -> bool {

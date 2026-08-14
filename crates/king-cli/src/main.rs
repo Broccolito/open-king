@@ -22,7 +22,7 @@
 
 use std::io::Write;
 
-use king_cli::{cli, console, load};
+use king_cli::{analysis, cli, console, load};
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -93,19 +93,125 @@ fn main() {
     };
 
     // ------------------------------------------------------------------
-    // SEAM: the analysis engines plug in here.
+    // Analysis dispatch. Each pass emits, in order: `loaded.preamble()` when
+    // `load::prints_preamble` says that analysis opens with it, then that pass's
+    // `console::options_in_effect`, then its body — so a `--kinship --ibs` run will
+    // show the preamble twice and a `--build` run not at all.
     //
-    // TODO(engine): dispatch the analyses named by `opts.analyses_in_effect()` into
-    // `king_core`. The reference reprints `loaded.preamble()` — the
-    // "Autosome genotypes stored in …" line and the blank line under it — ahead of
-    // *each* pass, then that pass's `console::options_in_effect`, then its body; a
-    // `--kinship --ibs` run shows the pair twice. `console::king_ends_at` closes the run.
-    //
-    // The single-analysis preamble below is what the loader is obliged to print and no
-    // more; the per-analysis loop replaces it.
+    // SEAM: `--kinship`, `--ibs` and `--duplicate` are implemented. Every other analysis
+    // still falls through to the bare preamble, which is as far as the loader's own
+    // obligation reaches.
     // ------------------------------------------------------------------
 
-    emit(&loaded.preamble());
+    let mut ran = false;
+    // `--related` leads the dispatch because it leads `SEPARATE_ANALYSES`: a
+    // `--related --ibdseg` run prints the `--related` pass first.
+    if opts.flag(cli::Opt::Related) {
+        if analysis::related::downgrades_to_kinship(loaded.fileset.samples.len()) {
+            let plain = opts.without_degree();
+            emit(&analysis::related::small_sample_notice());
+            emit(&loaded.preamble());
+            emit(&console::options_in_effect(&["--kinship".to_string()]));
+            analysis::kinship::run(&plain, &loaded, &mut std::io::stdout());
+            ran = true;
+        } else {
+            // SEAM: the full sixteen-column `--related` pass is unimplemented; it needs
+            // the IBD-segment columns, which `docs/PARITY.md` §11 records as open.
+            emit(&loaded.preamble());
+        }
+    }
+    if opts.flag(cli::Opt::Kinship) {
+        emit(&loaded.preamble());
+        emit(&console::options_in_effect(
+            &analysis::kinship::options_in_effect(opts),
+        ));
+        analysis::kinship::run(opts, &loaded, &mut std::io::stdout());
+        ran = true;
+    }
+    for (opt, body) in [
+        (
+            cli::Opt::Duplicate,
+            analysis::duplicate::run as fn(&cli::Options, &load::Loaded, &mut dyn Write),
+        ),
+        (cli::Opt::Ibs, analysis::ibs::run),
+    ] {
+        if !opts.flag(opt) {
+            continue;
+        }
+        if load::prints_preamble(opt) {
+            emit(&loaded.preamble());
+        }
+        emit(&console::options_in_effect(&analysis::options_in_effect(
+            opts, opt,
+        )));
+        body(opts, &loaded, &mut std::io::stdout());
+        ran = true;
+    }
+    // The five passes that open with no preamble: `--unrelated`, `--build` and
+    // `--cluster` run their own family clustering, and the two QC reports write
+    // `allsegs.txt` silently before their body.
+    for (opt, body) in [
+        (
+            cli::Opt::Unrelated,
+            analysis::unrelated::run as fn(&cli::Options, &load::Loaded, &mut dyn Write),
+        ),
+        (cli::Opt::Build, analysis::build::run),
+        (cli::Opt::Bysample, analysis::qc::run_bysample),
+        (cli::Opt::BySnp, analysis::qc::run_bysnp),
+        (cli::Opt::Cluster, analysis::cluster::run),
+    ] {
+        if !opts.flag(opt) {
+            continue;
+        }
+        // The two QC reports write `allsegs.txt` silently before their body; the three
+        // clustering passes emit it themselves, inside their own console block.
+        if matches!(opt, cli::Opt::Bysample | cli::Opt::BySnp) {
+            let _ = analysis::ibdseg::segment_prepass(opts, &loaded);
+        }
+        // None of the three opens with the preamble, so the blank line that always
+        // precedes `Options in effect:` has to come from here rather than from it.
+        emit("\n");
+        emit(&console::options_in_effect(&analysis::options_in_effect(
+            opts, opt,
+        )));
+        body(opts, &loaded, &mut std::io::stdout());
+        ran = true;
+    }
+    if opts.flag(cli::Opt::Ibdseg) {
+        // Under five samples the reference quietly becomes a `--kinship` run: it says so,
+        // prints the preamble `--ibdseg` never prints, and takes the kinship path whole.
+        if analysis::ibdseg::downgrades_to_kinship(loaded.fileset.samples.len()) {
+            let plain = opts.without_degree();
+            emit(&analysis::ibdseg::small_sample_notice());
+            emit(&loaded.preamble());
+            emit(&console::options_in_effect(&["--kinship".to_string()]));
+            analysis::kinship::run(&plain, &loaded, &mut std::io::stdout());
+        } else {
+            // The splitped line is the one console line that precedes `Options in
+            // effect:` rather than following it.
+            emit(&analysis::ibdseg::splitped_notice(
+                opts.string(cli::Opt::Prefix),
+            ));
+            emit(&console::options_in_effect(
+                &analysis::ibdseg::options_in_effect(opts),
+            ));
+            analysis::ibdseg::run(opts, &loaded, &mut std::io::stdout());
+        }
+        ran = true;
+    }
+    if !ran
+        && cli::all()
+            .any(|o| o.kind() == cli::Kind::Flag && opts.flag(o) && load::prints_preamble(o))
+    {
+        emit(&loaded.preamble());
+    }
+
+    // The reference closes a completed run with the timestamp and a blank line; a fatal
+    // exit never reaches it.
+    if ran {
+        emit(&console::king_ends_at(console::now_local()));
+        emit("\n");
+    }
 
     std::process::exit(0);
 }
