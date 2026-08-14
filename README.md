@@ -13,7 +13,7 @@ king -b study.bed --related --prefix study
 
 ## Status
 
-**397 of the 480 captured reference invocations reproduce byte-identically (82.7 %)**,
+**403 of the 480 captured reference invocations reproduce byte-identically (84.0 %)**,
 including all 220 flag-plumbing and error probes. Run the suite yourself:
 
 ```bash
@@ -26,16 +26,21 @@ measured size of every remaining gap, and a labelled limitations section. Everyt
 is a summary of it and says nothing it does not support.
 
 The one-paragraph version: the relatedness estimators, the QC reports, duplicate
-detection, auto-QC, unrelated-set selection and the whole command-line surface are
-byte-identical everywhere. What is left is the IBD-segment **caller**, which finds exactly
-the right set of segments — **0 spurious and 0 missing rows on every output file in the
-corpus** — but places their endpoints within about one 64-marker scan word of the
+detection, auto-QC, unrelated-set selection, `--ibs` and the whole command-line surface are
+byte-identical everywhere. What is left is the `.seg` IBD-segment **caller**, which finds
+exactly the right set of segments — **0 spurious and 0 missing rows on every output file in
+the corpus** — but places their endpoints within about one 64-marker scan word of the
 reference. So the segment columns are close without being equal: **69.5 %** of `.seg` rows
 and **93.1 %** of `--related`'s `.kin` rows are exact, and the residual is concentrated
 entirely in the IBD2 half of the caller.
 
-Of the 83 cases that are not byte-identical, 82 are that one cause; the remaining one is
+Of the 77 cases that are not byte-identical, 76 are that one cause; the remaining one is
 `--build`'s pedigree reconstruction, which is unimplemented.
+
+`--ibs` left that list when its IBD2 caller was solved outright: both of its IBD2 columns,
+`MaxIBD2` and `Pr_IBD2`, are exact on every row of every dataset. It is a *different* caller
+from `.seg`'s, which is why solving it moved six cases and not sixty
+(`docs/research/16-segment-extension.md`, `docs/PARITY.md` §5.8).
 
 ## Scope (v1)
 
@@ -54,7 +59,7 @@ cases, not files.
 | `--build` | `updateids.txt`, `updateparents.txt`, `build.log`, `allsegs.txt` | 12/13 — on `bigish` the pedigree-reconstruction rules are unimplemented, so both files come out empty |
 | `--unrelated` | `unrelated.txt`, `unrelated_toberemoved.txt`, `allsegs.txt` | **byte-identical** (26/26) |
 | `--related` | `.kin` (16 col), `.kin0` (14 col), `X.kin`, `allsegs.txt` | 35/65 — four of the six extra columns come from the segment engine; `IBD1Seg` differs on 828 of 3 978 `.kin` rows, mean absolute error 0.0196. `HetConc`, `HomIBS0` and the ten `--kinship` columns are exact on every row, and no row's `PropIBD`, `InfType` or `Error` differs unless its segment estimates already do |
-| `--ibs` | `.ibs`, `.ibs0`, `allsegs.txt` | 7/13 — every column byte-identical **except** `MaxIBD2` (13 of 21 560 rows) and `Pr_IBD2` (61 of 21 560) |
+| `--ibs` | `.ibs`, `.ibs0`, `allsegs.txt` | **13/13** — every column byte-identical, `MaxIBD2` and `Pr_IBD2` included, on all 21 561 rows |
 | `--ibdseg` | `.seg`, `allsegs.txt`, `splitped.txt`, `X.seg` | 20/65 (16/52 alone, 4/13 with `--related`) — `allsegs.txt` and `splitped.txt` byte-identical everywhere; `.seg` has the right rows (0 extra, 0 missing) with 1 271 of 4 172 differing numerically; `X.seg` is not written |
 
 `--related` is **not** a synonym for `--kinship`: it emits six extra columns

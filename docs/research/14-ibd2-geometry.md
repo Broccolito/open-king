@@ -54,9 +54,17 @@ Four graders, in increasing sharpness, all in `tests/parity/fit/`:
 | instrument | what it grades | resolution | script |
 | --- | --- | --- | --- |
 | `.seg` `IBD1Seg`/`IBD2Seg`/`PropIBD` | two totals per pair | 4 dp | `engine.score_seg` |
-| `--ibs` `Pr_IBD2` | the word-aligned IBD2 **total**, no length filter | 4 dp | `engine.score_pr` |
-| `--ibs` `MaxIBD2` | one exact segment length per pair, word-aligned | 1 bp | `invert.py` |
+| ~~`--ibs` `Pr_IBD2`~~ | the word-aligned IBD2 **total**, no length filter | 4 dp | `engine.score_pr` |
+| ~~`--ibs` `MaxIBD2`~~ | one exact segment length per pair, word-aligned | 1 bp | `invert.py` |
 | **`--seglength` bisection** | the **length of every individual segment under 10 Mb** | 1 bp | `seglen_probe.py` |
+
+> **Two of these four are spent.** `docs/research/16-segment-extension.md` solved the
+> `--ibs` caller, so `Pr_IBD2` and `MaxIBD2` are now exact — and a grader that every
+> candidate passes grades nothing. Worse, they were never grading *this* function: they are
+> produced by `Scan::ibd2_words`, a different caller over the same masks (§3 of `15-…`).
+> What is left for `.seg` work is a bad total-based gradient and one sharp instrument that
+> costs a reference invocation per bisection step. §10 of `16-…` argues the next campaign's
+> first job is building a `.seg`-native canvas out of opposite homozygotes.
 
 ### 3.1 `MaxIBD2` inversion — now 157 of 158 localised
 
@@ -252,6 +260,14 @@ are a genuine sub-printing-resolution difference in the called base pairs, of or
 marker interval, and 92 of them are `bigish`.
 
 ## 8. What is still unexplained, precisely
+
+> **Items 3, 4 and 5 below were `--ibs` observations, and all three are now explained** —
+> they are chunk refusals under the confirmation scan of
+> `docs/research/16-segment-extension.md` §8.1, which reproduces `MaxIBD2` 158/158 and
+> `Pr_IBD2` 158/158. They are kept here as written because the *reasoning* about them (that
+> no per-word statistic separates the exceptions from the rest) was correct and is the
+> reason the answer turned out to be a rule about chunks rather than about words. Items 1
+> and 2 are `.seg` observations and remain open.
 
 1. **§6.2's 510.** An IBS0 in an interior word of an otherwise fully-IBD2 chromosome costs
    two words and one marker of IBD2 coverage, and costs one word when it is in the first or

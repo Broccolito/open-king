@@ -18,7 +18,12 @@ import subprocess
 import struct
 import sys
 
-KING = "/Users/wgu/Desktop/GeneQuire Project/GeneQuire/software/king/king"
+# The binary every fixture in this directory drives. Defaults to the KING 2.3.2
+# reference; set `$KING` to point a fixture family at *our* build instead, which is how
+# a rule fitted against the reference is then checked against the Rust port.
+KING = os.environ.get(
+    "KING", "/Users/wgu/Desktop/GeneQuire Project/GeneQuire/software/king/king"
+)
 BED_MAGIC = bytes((0x6C, 0x1B, 0x01))
 # index by A1 dosage 0,1,2 ; 3 == missing
 BED_CODE = (0b11, 0b10, 0b00, 0b01)

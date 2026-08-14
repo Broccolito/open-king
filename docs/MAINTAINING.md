@@ -127,17 +127,32 @@ cargo fmt --check
 ```
 
 CI (`.github/workflows/ci.yml`) runs exactly these four on Linux, macOS and Windows. All
-four must be clean before the parity suite is worth looking at. CI does **not** run the
-parity suite; it could, since the goldens are committed and the corpus is generated from a
-seed, and only the 480/480 self-check needs the reference binary.
+four must be clean before the parity suite is worth looking at.
+
+CI does **not** run the parity suite, and there are two separate reasons — only the first
+of which is usually remembered:
+
+1. **It cannot gate as-is.** `run_parity.py` exits 1 whenever any case fails, and the suite
+   sits at 403/480 by design, so a bare invocation would fail every build. Gating it needs
+   a regression *floor* (`--json`, then assert the pass count has not dropped), not a
+   pass/fail.
+2. **It has only ever been run on macOS.** The goldens were captured there. Nothing in them
+   is obviously host-dependent — timestamps, thread counts, progress tokens and absolute
+   paths are all normalized (`docs/PARITY.md` §7) — but that is an argument, not a
+   measurement. Run the suite on Linux and confirm 403/480 *before* wiring it into CI, and
+   restrict the step to one OS until Windows is checked too (the binary is `king.exe`
+   there).
+
+The goldens are committed and the corpus regenerates from a seed, so neither reason is
+about missing inputs; only the 480/480 self-check needs the reference binary.
 
 ### Before tagging a release
 
 ```bash
-cargo build --release                       # must work from a clean checkout, offline
+cargo clean && cargo build --release --offline   # must work from a clean checkout, offline
 python3 tests/parity/run_parity.py --impl target/release/king     # record the exact count
 python3 tests/parity/run_parity.py --impl "<reference>"           # must be 480/480
-git ls-files | grep -E '\.(bed|bim|fam|vcf)$'                     # must print nothing
+git ls-files | grep -E '\.(bed|bim|fam|vcf|bcf)$'                 # must print nothing
 ```
 
 The last one is not decoration. `.gitignore` excludes `/docs/research/fixtures/work/` and

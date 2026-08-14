@@ -4,21 +4,31 @@ This is open-king's authoritative statement of what it reproduces and what it do
 Every number in it was produced by the commands in §1, against the reference binary `king`
 2.3.2. Nothing here is an estimate, and nothing is rounded in our favour.
 
-> **Headline: 397 of the 480 captured reference invocations are byte-identical (82.7 %).**
+> **Headline: 403 of the 480 captured reference invocations are byte-identical (84.0 %).**
 >
-> **82 of the 83 that are not** trace to one cause: the IBD-segment caller places a called
-> segment's endpoints within about one 64-marker scan word of the reference, so the segment
-> columns (`IBD1Seg`, `IBD2Seg`, `PropIBD`, and the `InfType`/`Error` derived from them) are
-> close but not equal on a minority of the rows that carry them. The *set* of pairs reported
-> is exactly right everywhere: **0 extra and 0 missing rows** on every output file in the
-> corpus. **The remaining 1** is structural: `--build`'s pedigree reconstruction is
-> unimplemented (§6.2). `<prefix>X.seg`, also unwritten (§6.1), costs 2 further cases that
-> are already inside the 82 — both fail on the segment columns as well.
+> **76 of the 77 that are not** trace to one cause: the `.seg` IBD-segment caller places a
+> called segment's endpoints within about one 64-marker scan word of the reference, so the
+> segment columns (`IBD1Seg`, `IBD2Seg`, `PropIBD`, and the `InfType`/`Error` derived from
+> them) are close but not equal on a minority of the rows that carry them. The *set* of
+> pairs reported is exactly right everywhere: **0 extra and 0 missing rows** on every output
+> file in the corpus. **The remaining 1** is structural: `--build`'s pedigree reconstruction
+> is unimplemented (§6.2) — and it is *also* segment-blocked, now that its one missing
+> statistic has been identified and measured, so it is not an independent second problem.
+> `<prefix>X.seg`, also unwritten (§6.1), costs 2 further cases that are already inside the
+> 76 — both fail on the segment columns as well.
 >
-> Nine analyses are byte-identical on all 13 datasets: `--kinship`, `--duplicate`,
-> `--bysample`, `--bySNP`, `--autoQC`, `--unrelated`, plus the whole 220-case `params`
-> group. `<prefix>allsegs.txt` — the per-segment listing that underlies everything above —
-> is byte-identical in all 163 cases that produce it.
+> Ten analyses are byte-identical on all 13 datasets: `--kinship`, `--duplicate`,
+> `--bysample`, `--bySNP`, `--autoQC`, `--unrelated`, **`--ibs`**, plus the whole 220-case
+> `params` group. `<prefix>allsegs.txt` — the per-segment listing that underlies everything
+> above — is byte-identical in all 163 cases that produce it.
+>
+> `--ibs` joined that list when `Scan::ibd2_words` was replaced by the **chunk scan** of
+> `docs/research/16-segment-extension.md`: its two IBD2 columns, `MaxIBD2` and `Pr_IBD2`,
+> are now exact on all 21 561 `.ibs`/`.ibs0` rows, where the rule it replaced scored 148 of
+> the 158 `MaxIBD2` and 100 of the 158 `Pr_IBD2` values the reference grades
+> (`tests/parity/fit/chunk.py`, which keeps both rules alive side by side). **This closes
+> the `--ibs` IBD2 caller and nothing else** — `--ibdseg`'s `.seg` caller is a *different*
+> caller (§5.8) and is untouched, which is why the `ibdseg` group did not move.
 
 ---
 
@@ -28,7 +38,7 @@ Every number in it was produced by the commands in §1, against the reference bi
 cd /path/to/open-king
 cargo build --release
 
-# pass/fail for all 480 cases  -> "397 PASS, 83 FAIL, 480 total"
+# pass/fail for all 480 cases  -> "403 PASS, 77 FAIL, 480 total"
 python3 tests/parity/run_parity.py --impl ./target/release/king
 
 # how big each remaining gap is: rows, columns, mean and worst absolute error
@@ -43,6 +53,9 @@ python3 tests/parity/run_parity.py --impl "/path/to/reference/king"
 # the two differential probes that are not part of the capture corpus
 python3 tests/parity/probes/degree_filter.py --ref "/path/to/reference/king"
 cd docs/research/fixtures && python3 gate8.py
+
+# the Python engine mirror must still reproduce the binary's own output
+cd tests/parity/fit && python3 check_mirror.py     # -> "MIRROR OK"
 ```
 
 `run_parity.py` and `measure_gaps.py` are Python 3 standard library only, regenerate the
@@ -54,11 +67,12 @@ Measured on the tree this document describes:
 
 | command | result |
 | --- | --- |
-| `run_parity.py --impl target/release/king` | **397 PASS, 83 FAIL, 480 total**, 874 output files byte-compared, 8 diff-excluded |
+| `run_parity.py --impl target/release/king` | **403 PASS, 77 FAIL, 480 total**, 874 output files byte-compared, 8 diff-excluded |
 | `run_parity.py --impl <reference>` | **480 PASS, 0 FAIL** — the normalization is complete and the goldens are self-consistent |
 | `probes/degree_filter.py --ref <reference>` | 38 298 cases, **0 false-keep, 0 false-drop** |
-| `docs/research/fixtures/gate8.py` | brackets the `--degree 1` IBD2 clause to (0.0789, 0.0812] |
-| `cargo test --workspace` | **277 passed, 0 failed, 1 ignored** |
+| `docs/research/fixtures/gate8.py` | brackets the `--degree 1` IBD2 clause to (0.0789, 0.0829] — its ladder refuses at `PropIBD` 0.0789 and accepts at 0.0829 |
+| `tests/parity/fit/check_mirror.py` | **MIRROR OK** — the mirror reproduces the binary's `.seg` columns and every printed `MaxIBD2`, 13 datasets |
+| `cargo test --workspace` | **281 passed, 0 failed, 1 ignored** |
 | `cargo clippy --workspace --all-targets -- -D warnings` | clean |
 | `cargo fmt --all --check` | clean |
 | `cargo build --release` from a clean tree, offline | succeeds (~8 s, 12 dependencies) |
@@ -86,11 +100,11 @@ plus stdout, stderr and exit status.
 | `--related` | **5/5** | **5/5** | **5/5** | 0/5 | 0/5 | **5/5** | 0/5 | 0/5 | **5/5** | 0/5 | **5/5** | **5/5** | 0/5 | 35/65 |
 | `--ibdseg` | **4/4** | 0/4 | 0/4 | 0/4 | 0/4 | 0/4 | 0/4 | 0/4 | **4/4** | 0/4 | **4/4** | **4/4** | 0/4 | 16/52 |
 | `--related --ibdseg` | **1/1** | 0/1 | 0/1 | 0/1 | 0/1 | 0/1 | 0/1 | 0/1 | **1/1** | 0/1 | **1/1** | **1/1** | 0/1 | 4/13 |
-| `--ibs` | **1/1** | 0/1 | **1/1** | 0/1 | **1/1** | 0/1 | 0/1 | 0/1 | **1/1** | **1/1** | **1/1** | **1/1** | 0/1 | 7/13 |
+| `--ibs` | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **13/13** |
 | flag plumbing + error probes (`params`) | \- | \- | \- | \- | \- | \- | \- | \- | \- | \- | \- | \- | \- | **220/220** |
-| | | | | | | | | | | | | | | **397/480** |
+| | | | | | | | | | | | | | | **403/480** |
 
-By capture group: `apps` **89/91**, `core` **68/104**, `ibdseg` **20/65**, `params`
+By capture group: `apps` **89/91**, `core` **74/104**, `ibdseg` **20/65**, `params`
 **220/220**.
 
 The `params` group is 220 invocations that exercise the command-line surface rather than one
@@ -106,8 +120,8 @@ Where `--related` and `--ibdseg` pass, it is for one of two reasons, both real:
   `--related` even though stdout announces the file. `--ibdseg` takes the same downgrade
   below 5 samples, which is why `trio` (3), `singleton` (1) and `pair` (2) pass it.
 * **The caller is exactly right on that dataset.** `unrelated` reports one pair and gets it
-  exact; `threegen` and `dups` now pass `--ibs`, and `threegen` passes `--related` (empty
-  `.kin`) while failing `--ibdseg`.
+  exact, and `threegen` passes `--related` (empty `.kin`) while failing `--ibdseg`. `--ibs`
+  is now in this second category on **all thirteen** datasets.
 
 ---
 
@@ -132,11 +146,11 @@ narrower denominator §4 uses.
 | `<prefix>unrelated.txt` | 26 | **all** | — | 0 | **100 %** |
 | `<prefix>unrelated_toberemoved.txt` | 26 | **all** | — | 0 | **100 %** |
 | `<prefix>X.kin0` | 5 diffable of 13 (§5.2) | **all 5** | 39 | 0 | **100 %** |
+| `<prefix>.ibs` | 13 | **all** | 807 | 0 | **100 %** |
+| `<prefix>.ibs0` | 8 | **all** | 20 754 | 0 | **100 %** |
 | `<prefix>.kin0` | 168 | 160 | 207 986 | 28 | **99.99 %** |
-| `<prefix>.ibs0` | 8 | 7 | 20 754 | 2 | **99.99 %** |
 | `<prefix>.kin` | 187 | 151 | 12 081 | 834 | 93.10 % |
 | `<prefix>X.kin` | 15 | 9 | 195 | 12 | 93.85 % |
-| `<prefix>.ibs` | 13 | 7 | 807 | 59 | 92.69 % |
 | `<prefix>cluster.kin` | 1 | 0 | 165 | 30 | 81.82 % |
 | `<prefix>.seg` | 50 | 5 | 4 172 | 1 271 | 69.53 % |
 | `<prefix>build.log` | 8 | 7 | 19 | 19 | see §6.2 |
@@ -167,7 +181,7 @@ Row counts in this section use `measure_gaps.py`'s denominator, which is **rows 
 cases that differ**, not rows corpus-wide — it is the tighter, less flattering number. §3
 gives the corpus-wide view of the same data.
 
-### 4.1 The segment columns — 82 of the 83 failures
+### 4.1 The segment columns — 76 of the 77 failures
 
 Every one of these is `IBD1Seg` / `IBD2Seg` / `PropIBD` (and the `InfType` / `Error` that
 follow from them) being close but not equal.
@@ -188,17 +202,18 @@ follow from them) being close but not equal.
 | | | | | | `PropIBD` 28 rows | 0.00331 | 0.0179 |
 | `kingX.kin` (`--related`) | 12 | 90 | **0** | **0** | `IBD2Seg` 12 rows | 0.07905 | 0.1460 |
 | | | | | | `IBD1Seg` 12 rows | 0.06815 | 0.1236 |
+| | | | | | `PropIBD` 12 rows | 0.04495 | 0.0842 |
 | `kingcluster.kin` | 30 | 165 | **0** | **0** | `IBD2Seg` 30 rows | 0.00600 | 0.0195 |
 | | | | | | `IBD1Seg` 29 rows | 0.00880 | 0.0180 |
-| `king.ibs` | 59 | 673 | **0** | **0** | `Pr_IBD2` 59 rows | 0.02447 | 0.5116 |
-| | 13 | 673 | | | `MaxIBD2` (bp) | 1.60 × 10⁷ | 5.75 × 10⁷ |
-| `king.ibs0` | 2 | 19 327 | **0** | **0** | `Pr_IBD2` 2 rows | 0.00895 | 0.0115 |
+| | | | | | `PropIBD` 29 rows | 0.00323 | 0.0115 |
 
-`MaxIBD2` — the length in base pairs of the single longest IBD2 segment, and the sharpest
-per-segment grader available — is exact on **21 547 of 21 560** `.ibs`/`.ibs0` rows. All 13
-differing values are in `.ibs`; `.ibs0`'s 20 753 rows are exact on `MaxIBD2` throughout.
-Restricted to the rows that actually grade the IBD2 caller — the **149** `.ibs` rows where
-the reference reports a non-zero `MaxIBD2` — **139 are exact** and 10 differ.
+`king.ibs` and `king.ibs0` are **no longer in this table**: since the chunk scan of §5.8
+they are byte-identical in all 13 and all 8 cases. That removes the sharpest per-segment
+grader from the toolbox as well as from the gap — `MaxIBD2`, the length in base pairs of a
+*single* IBD2 segment, is now exact on all **21 561** `.ibs`/`.ibs0` rows and on all **149**
+`.ibs` rows where the reference reports a non-zero one, and so has no residual left to point
+at. Anything that grades the remaining gap has to be read off `.seg`, whose caller is a
+different one (§5.8).
 
 `kingcluster.kin` fails only on `bigish`, and only on its three segment columns: the pair
 set, the ordering and the other eleven columns are exact. `--cluster` is `--related` re-run
@@ -295,8 +310,11 @@ six-person nuclear family, over 5 000 to 10 000 markers against `bigish`'s 50 00
 with §5.1 in hand.
 
 **The residual is two-sided**, which is why it reads as a boundary problem rather than a
-missing rule: of the 277 inexact rows, `IBD1Seg` is too high on 139 and too low on 21,
-`IBD2Seg` too low on 121 and too high on 39.
+missing rule: of the **162** rows whose `IBD1Seg` or `IBD2Seg` differs (982 − 820, not the
+277 of the all-four-columns count above), `IBD1Seg` is too high on 139 and too low on 21
+(exact on the other 2), `IBD2Seg` too low on 121 and too high on 39 (exact on the other 2).
+A missing rule would push one way; a boundary that is sometimes short and sometimes long
+does this.
 
 **And it is entirely the IBD2 caller.** Splitting the same 982 rows by whether the reference
 reports any IBD2 at all (`docs/research/14-ibd2-geometry.md` §2):
@@ -307,19 +325,90 @@ reports any IBD2 at all (`docs/research/14-ibd2-geometry.md` §2):
 | `IBD2Seg > 0` | 159 | **1** |
 
 The four exceptions in the first line are all `monomorphic` (§5.1). The IBD1 caller and its
-boundary refinement are finished; every failing `ibdseg/*__ibdseg` case fails on IBD2. Two
-measurements bound what is wrong, and neither is an offset: `--ibs`'s `Pr_IBD2` — the *same*
-usable segments and masks under a word-aligned ruler — is biased **too high** where `.seg`'s
-`IBD2Seg` is too **low** (`docs/research/14-ibd2-geometry.md` §3); and on `nuclear`
-`N_C1`/`N_C2` the reference's own `.seg` total exceeds its own `Pr_IBD2` total by 22.64 Mb
-where the widest the current "word-aligned plus usable-segment fringe" model can reach on
-that fileset is 13.58 Mb. Grade IBD2 work with `Pr_IBD2` and `MaxIBD2`, never with the
-exact-row count above, which the 823 IBD2-free rows pin to 705 ± 1 under every rule variant
-tried.
+boundary refinement are finished; every failing `ibdseg/*__ibdseg` case fails on IBD2. One
+measurement bounds what is wrong and it is not an offset: on `nuclear` `N_C1`/`N_C2` the
+reference's own `.seg` total exceeds its own `Pr_IBD2` total by 22.64 Mb where the widest the
+current "word-aligned plus usable-segment fringe" model can reach on that fileset is 13.58 Mb
+(`docs/research/14-ibd2-geometry.md` §5).
+
+**The grading advice that used to be here has expired, and this is the awkward part.** It
+read "grade IBD2 work with `Pr_IBD2` and `MaxIBD2`, never with the exact-row count, which the
+823 IBD2-free rows pin to 705 ± 1 under every rule variant tried." Both halves were right,
+and the first half is now spent: the chunk scan of §5.8 made `Pr_IBD2` and `MaxIBD2` exact, so
+they no longer discriminate between candidate `.seg` rules — every one of them scores the same
+158/158 on columns that a *different* caller produces. The second half still holds. So the
+`.seg` campaign starts with **no sharp grader at all**, and building one is the first job, not
+an afterthought: `16-…` §10.1 spells out how — a canvas of opposite homozygotes (the mask
+`.seg` actually splits on), one marker spacing per word, `IBD2Seg` read back through the
+`--seglength` bisection of `14-…` §3.2 so an aggregate inverts to individual segment lengths.
 
 ---
 
 ## 5. Known limitations
+
+### 5.0 The segment residual: what is solved, what is not
+
+Everything in §4 says the same thing from different angles, so here it is once, as a ledger.
+Numbered 5.0 rather than 5.1 on purpose: §5.1…§5.9 are cross-referenced from the crates and
+from `docs/research/`, so their numbers must not move.
+
+**Solved, and not worth re-deriving** (each measured, with the experiment named):
+
+| piece | status | where |
+| --- | --- | --- |
+| **The acceptance gate** — a run is called iff popcount over its own *complete* 64-marker words of `inf1 = p1_i & p1_j & (p0_i \| p0_j)` (IBD1) or `inf2 = p1_i & p1_j` (IBD2) is **≥ 10** | exact **and unique** | `13-informativeness-gate.md`, `tests/parity/fit/gate_*.py` |
+| **Which pairs are reported** (`--degree` inclusion, the `.kin0` `N ≥ 100` gate, the `< 10` and `< 5` sample downgrades) | **0 extra, 0 missing rows on every output file in the corpus**; the degree filter itself **0 false-keep, 0 false-drop over 38 298 cases** | §3, §4.2, `probes/degree_filter.py`, `fixtures/gate8.py` |
+| **The per-segment listing itself** — `allsegs.txt` | byte-identical in **all 163** cases (+2 custom) | §3 |
+| **Denominators and thresholds** — `D` = sum over autosomal `allsegs.txt` rows; `--seglength` inclusive; nothing merges across a gap | exact at 3, 5 and 10 Mb | §4.4 |
+| **The aggregate** — `PropIBD = IBD2Seg + IBD1Seg/2` in `f64` | 0 differences on all 3 901 rows whose segments are exact | §4.2 |
+| **The entire non-segment surface** — `N_SNP`, `Z0`, `Phi`, `HetHet`, `IBS0`, `HetConc`, `HomIBS0`, `Kinship` | **no row anywhere differs**, over 4 805 rows | §4.2 |
+| **The derived columns** — `PropIBD`, `InfType`, `Error` | **0** differences wherever the segments are exact | §4.2 |
+| **The IBD1 caller and its boundary refinement** | **819 of the 823** IBD2-free rows exact | §4.4 |
+| **The `--ibs` IBD2 caller** (`Scan::ibd2_words`, the chunk scan) | exact on all **21 561** rows | §5.8 |
+
+**Not solved — one thing:** `Scan::ibd2` places the **endpoints of an IBD2 segment** in the
+marginal region, where a run is neither clean enough to extend nor dirty enough to stop.
+It is *boundary extension*, not detection: the run is found, the gate agrees, the pair is
+reported, and the interval is off by roughly one 64-marker word.
+
+**The precise shape of what is unexplained** (so the next person can recognise it):
+
+* **It is entirely the IBD2 half.** Split the 982 primary rows by whether the reference
+  reports any IBD2: `IBD2Seg == 0` → **819 of 823** exact; `IBD2Seg > 0` → **1 of 159**.
+* **It is two-sided, by roughly a word.** 139 rows too high and 21 too low on `IBD1Seg`;
+  121 too low and 39 too high on `IBD2Seg` (§4.4).
+* **It is not an off-by-one.** Sweeping `{last,first} × {−1,0,+1}` over all five
+  marker-level rules leaves the committed choice best or tied-best on every axis, with the
+  nearest alternatives costing 20–400 rows (§5.9).
+* **Interior boundaries are word-quantised, not marker-refined.** `ibd2gap.py` measures a
+  forced interior IBS0 as costing exactly 2 words + 1 marker **independent of bit
+  position**, i.e. 510; the committed rule predicts 595. Read-back resolution is ±6
+  markers and the gap is 64 — one whole word. This is the sharpest open measurement in the
+  project (§5.9).
+* **The magnitude is bounded and the current model cannot reach it.** On `nuclear`
+  `N_C1`/`N_C2` the reference's own `.seg` total exceeds its own `Pr_IBD2` total by
+  **22.64 Mb**, where the widest the "word-aligned plus usable-segment fringe" model can
+  reach is **13.58 Mb** (`14-ibd2-geometry.md` §5). Whatever is missing is bigger than a
+  fringe.
+* **Six specific decisions have no separating statistic.** 4 declined right extensions and
+  2 denied bridges that no per-word feature distinguishes from the 91 and 14 that do
+  extend/absorb; the only correlate over 16 observations is left-run length. Deliberately
+  not fitted (§5.9).
+* **The `--ibs` solution does not port, and that is measured, not assumed.** `.seg`'s IBD2
+  word predicate refuses a word carrying *any* het-vs-hom mismatch where `--ibs` tolerates
+  four, so the whole fixture family that pinned the chunk constants reports
+  `IBD2Seg 0.0000` under `--ibdseg` and cannot measure them. Porting the geometry unchanged
+  moves exact rows 705 → 709 and the worst row 0.2109 → 0.1490 but nearly triples mean
+  `PropIBD` error, 0.00138 → 0.00356 — a *partly* right rule, so it was not committed
+  (§5.8, §5.9, `tests/parity/fit/segtry.py`).
+
+**Start here, and mind the trap.** The `.seg` campaign begins with **no sharp grader**.
+`--ibs`'s `Pr_IBD2`/`MaxIBD2` used to be one and are now exact under every candidate, and
+the `.seg` exact-row count is pinned to 705 ± 1 by the 823 IBD2-free rows that dominate it.
+Building a grader is the first job, not an optimisation: `16-segment-extension.md` §10.1
+specifies one — a canvas of **opposite homozygotes** (the mask `.seg` actually splits on),
+one marker spacing per word, with `IBD2Seg` read back through the `--seglength` bisection of
+`14-…` §3.2 so an aggregate inverts to individual segment lengths.
 
 ### 5.1 The four small filesets do not grade the caller
 
@@ -441,23 +530,30 @@ a *W*-word all-HetHet block bounded by words in which every marker is an opposit
 usable segment*, running straight through the IBS0 words. So `Scan::ibd2_words` (`--ibs`) and
 `Scan::ibd2` (`.seg`) are separate functions over the same masks.
 
-The `--ibs` rules, each fixture-measured (`docs/research/15-ibs-ibd2-rules.md`): a word breaks
-a run **iff it carries ≥ 5 het-vs-hom mismatches** — opposite homozygotes and missing calls are
-irrelevant at any density; one dirty word is absorbed, two are not; a call is kept iff its
-measured words hold **≥ 95 HetHet markers**, waived when the run reaches the segment's last two
-words; and `Pr_IBD2`'s 10 Mb rule gates the **pair**, not the call, while `MaxIBD2` is never
-gated. This contradicts the `.seg` engine's "dirty iff IBS0 > 0 or IBS1 ≥ 5" word rule;
-whether `.seg` should adopt the IBS0-irrelevance finding is **open**, and §3 of that document
-is the evidence that the two currently differ.
+The `--ibs` rules, each fixture-measured (`docs/research/15-ibs-ibd2-rules.md` and
+`…/16-segment-extension.md`): a word breaks a run **iff it carries ≥ 5 het-vs-hom
+mismatches** — opposite homozygotes and missing calls are irrelevant at any density; one
+dirty word is absorbed, two are not; the run is then **confirmed in chunks of five
+mismatches**, each needing **≥ 95 HetHet over ≥ 3 words**, and the reported interval stops at
+the last confirmed chunk plus a one-mismatch overhang, the whole test being waived where the
+run reaches the segment's last two words; and `Pr_IBD2`'s 10 Mb rule gates the **pair**, not
+the call, while `MaxIBD2` is never gated. This contradicts the `.seg` engine's "dirty iff
+IBS0 > 0 or IBS1 ≥ 5" word rule; whether `.seg` should adopt the IBS0-irrelevance finding is
+**open**, and §3 of `15-…` is the evidence that the two currently differ.
 
-The residual is a sustained low-grade mismatch in one region: uniform 8-word blocks with *m*
-mismatches and *h* HetHet per word are reported only above a boundary that is **not linear and
-is order-dependent** (smallest reported *h* is 19 at *m*=1, 32 at *m*=2, 63 at *m*=3;
-`m=1,h=16` is refused while `m=2,h=32` — same ratio — is reported; eight clean words followed
-by eight at *m*=4 form one interval covering all sixteen, the reverse order reports only the
-clean eight). Every remaining `--ibs` error lives there. Per dataset: `bigish` 52 rows (mean
-0.0042, worst 0.0141), `monomorphic` 3, and `missing` / `multifam` / `nuclear` / `sexchr` 1
-each.
+**The `--ibs` residual is now zero**, on both IBD2 columns and every dataset. What used to
+sit here — a boundary that was "not linear and order-dependent" (smallest reported *h* 19 at
+*m*=1, 32 at *m*=2; `m=1,h=16` refused while `m=2,h=32` at the same ratio reported; eight
+clean words then eight at *m*=4 reported whole, the reverse order not) — was never an
+acceptance boundary at all. It was the chunk quantum seen edge-on: those are `5×19 = 95` and
+`3×32 = 96` against `5×16 = 80`, counted *within a chunk* from wherever that chunk starts,
+which is exactly why reversing the order changes the answer.
+
+Out of sample the chunk rule is not perfect and is not claimed to be: on 200 fresh random
+word canvases the reference agrees with it on **186 (93 %)**, the misses being sequences that
+alternate 20- and 64-mismatch words with near-empty ones. Nothing in the corpus resembles
+those, which is why the corpus is exact and this is not. `docs/research/16-segment-extension.md`
+§10.3 is the standing description of that residual.
 
 ### 5.9 What is unexplained about the IBD2 geometry, precisely
 
@@ -477,6 +573,15 @@ Recorded so the next person does not re-derive it (`docs/research/14-ibd2-geomet
 * Refinement is at a strict local optimum: sweeping `{last,first} × {−1,0,+1}` for all five
   marker-level rules, the committed choice is best or tied-best on every axis and the nearest
   alternatives cost 20–400 rows. The residual is *not* an off-by-one.
+* **The `--ibs` chunk scan does not carry over, and this is measured, not assumed**
+  (`docs/research/16-segment-extension.md` §9). The `.seg` IBD2 word predicate refuses a word
+  with *any* het-vs-hom mismatch where `--ibs` tolerates four, so the entire fixture family
+  that measured the chunk constants reports `IBD2Seg 0.0000` under `--ibdseg` and cannot
+  measure them at all. Porting the chunk geometry to `.seg` unchanged
+  (`tests/parity/fit/segtry.py`) moves exact rows 705 → **709** and the worst row 0.2109 →
+  **0.1490** but nearly triples mean `PropIBD` error, 0.00138 → **0.00356**. That is what a
+  *partly* right rule looks like, so it was **not committed**: `Scan::ibd2` still runs the
+  rule of `14-…`. A `.seg` campaign needs its own canvas and its own constants.
 
 ---
 
@@ -512,13 +617,51 @@ reference writes 19 and 34 lines. This is not a numeric gap: the reconstruction 
 reference applies here are unimplemented, so nothing is emitted. The other 12 `--build`
 datasets are byte-identical because they need none of those rules.
 
-Of the two files, `updateparents.txt` alone is structurally derivable — `RULE FS0` gives the
-two full-sib fathers synthetic parents numbered globally (KING1 → (1,2), KING2 → (3,4),
-KING3 → (5,6)) and everyone else keeps real parents. `kingbuild.log` is not: it needs
-`INFERENCE AV.FS` with a `Join3/Join2` statistic reproduced to three decimals (0.778, 0.801,
-0.779, 0.827, 0.803) and `INFERENCE HS.UN2`. That statistic is almost certainly
-segment-derived, so the case would still fail even if the rules were recovered. No partial
-implementation was attempted.
+Of the two files, `updateparents.txt` alone is structurally derivable — every clustered
+member on a tab-separated `FID IID FATHER MOTHER` row in `updateids.txt` order, keeping the
+`.fam`'s parents, except that each mutually-full-sib group declaring no parents takes the
+next synthetic pair (1,2), (3,4), (5,6) — **one pair per group regardless of its size**,
+verified on a three-father sibship. `kingbuild.log` additionally needs `INFERENCE AV.FS`
+with a `Join3/Join2` statistic printed to three decimals (`bigish`: 0.778, 0.801, 0.779,
+0.827, 0.803) and `INFERENCE HS.UN2`.
+
+**That statistic is no longer unknown, and it confirms the case is blocked on the segment
+caller.** Writing `IBD(x, y)` for the union of a pair's called IBD1 and IBD2 segments as a
+set of base pairs, for a triple `(R; N1, N2)`:
+
+```text
+Join2 = | IBD(R,N1) ∩ IBD(R,N2) |
+Join3 = | IBD(R,N1) ∩ IBD(R,N2) ∩ IBD(N1,N2) |
+```
+
+Where `R` is IBD to both sibs, a grandparent forces them to have inherited the same
+parental haplotype (ratio → 1); an avuncular does not (→ 2/3), which is exactly what the
+reference's two message variants discriminate. Scored against **all 53 `AV.FS` values the
+reference emitted over 19 filesets** — `bigish` plus 18 held-out pedigrees — the formula is
+one-sided high by a mean of **+0.0035** (range −0.0001 … +0.0118), the signature of the
+known IBD1 over-call. **Only 5 of the 53 round to the printed three decimals, and none of
+`bigish`'s five do.** So even a complete reconstruction implementation leaves all five log
+lines wrong: `apps/bigish__build` is blocked on §4.1 exactly as `apps/bigish__cluster` is,
+and it is **not** an independent 78th problem.
+
+Two further rules were measured the same way, and one is a sharp negative:
+
+* **The named sib pair belongs to the sibship, not to `R`** — every `AV.FS` line raised
+  against one sibship names the same pair whatever `R` is, and it is the sibship's first
+  two members in the order `RULE FS1` prints them. **What orders a sibship was not
+  identified**: it is data-dependent, not a fixed permutation (two-member sibships print
+  both `(C1 C2)` and `(C2 C1)`).
+* **The verdict is a cut on the ratio**, `uncle|aunt` below against
+  `grandfather|grandmother, HS, or nephew|niece` above, the words following `R`'s sex.
+  Bracketed to **(0.848, 0.901)** over the 53 values — which does not separate 0.85, 0.875
+  and 0.9.
+
+No partial implementation was attempted, deliberately: writing `updateparents.txt` alone
+cannot flip the case, the neighbouring `RULE PO.*` family and the phantom-materialisation
+path a non-sibship merge triggers are unrecovered, and the corpus exercises exactly one
+shape. The derivation lives in `crates/king-cli/src/analysis/build.rs`'s module doc;
+`docs/research/fixtures/avfs.py` regenerates the held-out pedigree shapes, though the
+segment-dumping scorer that produced the 53 values was **not** preserved.
 
 ---
 
@@ -560,4 +703,13 @@ not hiding anything: reference against its own captures is **480/480**.
 * `docs/VERIFIED_FORMULAS.md` — the estimators, with the experiment that fixed each.
 * `docs/research/` — the investigation log. `13-informativeness-gate.md` removed the 188
   spurious `.seg` rows; `14-ibd2-geometry.md` localises everything left to the IBD2 caller and
-  lists what no feature separates; `15-ibs-ibd2-rules.md` is §5.8.
+  lists what no feature separates; `15-ibs-ibd2-rules.md` and `16-segment-extension.md` are
+  §5.8 — the latter derives the chunk scan, records its 93 % out-of-sample accuracy (§10.3)
+  and, in §9, the measured negative that it does not port to `.seg`.
+* `docs/research/fixtures/` — the rigs. `fixlab.py` builds a fileset and drives the
+  reference (`$KING` repoints it at our build); `gate8.py` brackets the `--degree 1` clause;
+  `segfit.py` is the chunk-scan canvas; `avfs.py` regenerates the `--build` pedigree shapes
+  of §6.2. Their `work/` output is gitignored and disposable.
+* `tests/parity/fit/` — Python mirrors of the committed engine, kept honest by
+  `check_mirror.py`. `chunk.py` keeps the superseded `--ibs` rule alive beside the committed
+  one so the before/after scorecard reproduces; `segtry.py` is the `.seg` port trial of §5.9.

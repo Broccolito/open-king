@@ -44,8 +44,17 @@
 //! `bigish`'s `KING1` print small negatives rather than the between-family estimate.
 //!
 //! `IBD1Seg`, `IBD2Seg` and `PropIBD` come from the IBD-segment engine, which is not yet
-//! exact (`docs/PARITY.md` §11.1); everything else in the file is. That is the only thing
+//! exact (`docs/PARITY.md` §4.1); everything else in the file is. That is the only thing
 //! standing between `apps/bigish__cluster` and a pass.
+//!
+//! Re-measured column by column against the reference on `bigish`, the only fileset in
+//! the corpus whose families merge: of the 165 rows, **30 differ and every one of them
+//! differs only on `IBD1Seg` (29 rows), `IBD2Seg` (30) and `PropIBD` (29)**. The header,
+//! the row set, the row order and the identifier columns match exactly, and so do
+//! `Sex1`, `Sex2`, `N_SNP`, `HetHet`, `IBS0`, `HetConc`, `HomIBS0`, `Kinship` and
+//! `InfType` on all 165. There is no clustering rule left to find here and no
+//! non-segment residual to chase: this file becomes byte-identical the moment the
+//! segment caller does.
 
 use std::fmt::Write as _;
 use std::io::Write;

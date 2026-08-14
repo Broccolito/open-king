@@ -34,7 +34,57 @@
 //! that logs rules and inferences and writes all three files.
 //!
 //! **The reconstruction itself is unimplemented**; this module reproduces the
-//! no-reconstruction outcome and stops. See `docs/PARITY.md` §11.
+//! no-reconstruction outcome and stops. See `docs/PARITY.md` §6.2.
+//!
+//! # `INFERENCE AV.FS` and its `Join3/Join2` — measured, not implemented
+//!
+//! The one statistic the log needs was open when §6.2 was written. It is now identified,
+//! and it is **segment-derived**, which is why implementing the surrounding rules would
+//! still not make `apps/bigish__build` pass.
+//!
+//! For an ordered triple `(R; N1, N2)` write `IBD(x, y)` for the union of that pair's
+//! called IBD1 and IBD2 segments, as a set of base pairs on the usable-segment map. Then
+//!
+//! ```text
+//! Join2 = | IBD(R,N1) ∩ IBD(R,N2) |
+//! Join3 = | IBD(R,N1) ∩ IBD(R,N2) ∩ IBD(N1,N2) |
+//! ```
+//!
+//! and the log prints `Join3/Join2` at `%.3lf`. The genetics behind it: where `R` is IBD
+//! to both sibs, a *grandparent* forces the sibs to have inherited the same parental
+//! haplotype, so the ratio is 1; an *avuncular* does not, so it sits near 2/3.
+//!
+//! Scored against **53 `AV.FS` values the reference emitted over 19 filesets** — the
+//! corpus `bigish` plus eighteen purpose-built two- and three-family fixtures with
+//! sibships of 2…5 — the formula reproduces every one to a mean of **+0.0035**, range
+//! **−0.0001 … +0.0118**, one-sided high exactly like the IBD1 residual. Only 5 of the
+//! 53 round to the printed three decimals, and **none of `bigish`'s five do**.
+//!
+//! Two further rules, measured the same way:
+//!
+//! * **Which two sibs are named is a property of the sibship, not of `R`.** Every
+//!   `AV.FS` line raised against one sibship names the same pair whatever `R` is (three
+//!   distinct `R` in one fixture, two in another), and that pair is the sibship's first
+//!   two members in the order the `RULE FS1` line prints them — a fixture whose log
+//!   reads `joins in sibship (A_C2 A_C3 A_C1)` names `A_C2 and A_C3` in all three of its
+//!   `AV.FS` lines. What orders a sibship is *not* identified; it is data-dependent, not
+//!   a fixed permutation (two-member sibships in one fixture print both `(C1 C2)` and
+//!   `(C2 C1)`).
+//! * **The verdict is a cut on the ratio.** Below it the line reads `<R> is uncle|aunt of
+//!   N1 and N2`; above it, `<R> is grandfather|grandmother, HS, or nephew|niece of N1 and
+//!   N2`, the word pairs following `R`'s sex. Over the same 53 values the cut is bracketed
+//!   to **(0.848, 0.901)** — largest `uncle` 0.848, smallest ambiguous 0.901 — which does
+//!   not separate 0.85, 0.875 and 0.9.
+//!
+//! `<p>updateparents.txt` needs none of this: it is `RULE FS0`/`FS1` only — every
+//! clustered member on one tab-separated `FID IID FATHER MOTHER` row, in `updateids.txt`
+//! order, keeping its `.fam` parents, except that each mutually-full-sib group declaring no
+//! parents is given the next unused pair of synthetic parent ids (`1 2`, then `3 4`, …,
+//! counted across the whole run, one pair per group however many members it has —
+//! checked on a three-father sibship). It is left unwritten all the same: the only shape
+//! the corpus exercises is that one, the neighbouring `RULE PO.*` family and the phantom
+//! materialisation a non-sibship merge triggers are unrecovered, and a writer that
+//! handled only the `bigish` shape would be a rule fitted to a single file.
 
 use std::io::Write;
 use std::path::Path;
@@ -176,7 +226,7 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
 /// Across all thirteen corpus datasets the rule fires on exactly the one pair the
 /// reference warns about. It reaches the right answer only when the segment engine does:
 /// `multifam`'s `B_C2`/`B_C3` is 0.3583 for the reference and 0.3526 here, so this warning
-/// currently fires there too. That is `docs/PARITY.md` §11.1, not a second rule.
+/// currently fires there too. That is `docs/PARITY.md` §4.1, not a second rule.
 fn first_degree_warnings(opts: &Options, loaded: &Loaded) -> String {
     let Some(segments) = ibdseg::Segments::new(opts, loaded) else {
         return String::new();

@@ -124,7 +124,18 @@ A block of complete words holding exactly `k` HetHet markers, every other marker
   `w1` — is refused with 128 HetHet markers in it, while the same block one word earlier
   (three measured words) is reported.
 
-## 6. What is still open: sustained low-grade mismatch
+## 6. What was still open: sustained low-grade mismatch — **SOLVED, see `16-…`**
+
+> **Resolved by `docs/research/16-segment-extension.md`, which is the document to read
+> instead of this section.** The boundary tabulated below is not an acceptance boundary at
+> all: it is where the reported interval gets **cut**. The rule is a quantised confirmation
+> scan — a run is confirmed in chunks of five het-vs-hom mismatches, each needing ≥ 95
+> HetHet over ≥ 3 words — so `19`, `32` and `63` below are `5×19 = 95`, `3×32 = 96` and
+> `2×63 = 126`, counted *within a chunk*, from wherever that chunk starts. That is also why
+> the order matters. The rule is committed in `Scan::ibd2_words` and both `--ibs` IBD2
+> columns are now exact on the whole corpus; the last paragraph of this section (what the
+> residual costs) no longer describes the engine.
+
 
 The rules above are exact for words that are either clean or hard-dirty. They are **not**
 complete for words carrying one to four mismatches *and* few HetHet markers, which is what

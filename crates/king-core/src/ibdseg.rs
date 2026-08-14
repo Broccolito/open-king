@@ -38,12 +38,20 @@
 //!   is exact, then validated on data that had no part in choosing it: the corpus
 //!   separates on it with no overlap at all, and a 512-invocation word-grid sweep agrees
 //!   511 times. It is what [`MIN_RUN1`] used to stand in for.
-//! * [`Scan::ibd2`] and [`IBD2_HET_DIRTY`] — **measured against `--ibs`'s `MaxIBD2`**,
-//!   which grades one exact segment length per pair rather than an aggregate. The rule
-//!   reproduces **145 of the 158** corpus values, where the previous rule reached 95 and
-//!   the best rule the earlier recon found reached 51.
+//! * [`Scan::ibd2`] and [`IBD2_HET_DIRTY`] — **not verified, and the grader it was fitted
+//!   against has since been retired.** The rule was measured against `--ibs`'s `MaxIBD2`,
+//!   which then graded one exact segment length per pair; it reproduced **145 of the 158**
+//!   corpus values, where the rule before it reached 95 and the best rule the earlier recon
+//!   found reached 51. `MaxIBD2` is now produced by [`Scan::ibd2_words`] and says nothing
+//!   about this function — see the two sections below.
 //! * [`reported_at_degree`] — **measured**, over 38 298 differential cases plus a
 //!   constructed fixture for the clause the corpus cannot reach.
+//! * [`Scan::ibd2_words`] — **solved for the corpus.** The `--ibs` IBD2 caller is a
+//!   quantised confirmation scan (`docs/research/16-segment-extension.md`), and both of
+//!   `--ibs`'s IBD2 columns — `MaxIBD2` and `Pr_IBD2` — are exact on **all 21 560**
+//!   `.ibs`/`.ibs0` corpus rows and on all **158** pairs the reference grades. Out of
+//!   sample on constructed random word canvases it is right about 93 % of the time, which
+//!   is stated at [`Scan::ibd2_words`] rather than rounded up to "done".
 //!
 //! # What is still not right — and it is all [`Scan::ibd2`]
 //!
@@ -64,19 +72,35 @@
 //! The four exceptions in the first line are all `monomorphic`, the one fileset whose own
 //! `--kinship` contradicts its own `.seg` (`docs/PARITY.md` §5.1). So [`Scan::ibd1`] and
 //! its refinement are **finished**, and every failing `--ibdseg` parity case is failing
-//! because of [`Scan::ibd2`]. Two consequences for anyone continuing this:
+//! because of [`Scan::ibd2`]. Three consequences for anyone continuing this:
 //!
 //! * **`.seg` exact-row count is a useless gradient for IBD2 work** — it is dominated by
-//!   the 823 rows IBD2 cannot touch, and every rule variant tried scores 705 ± 1. Grade
-//!   IBD2 with `--ibs`'s `Pr_IBD2` (the word-aligned total: **7 of 158**, biased
-//!   **+0.0342** of the genome) and with `MaxIBD2` (the longest single segment: 145 of
-//!   158), not with this file's headline number.
-//! * **The `.seg` and `--ibs` errors have opposite signs**, which no width parameter can
-//!   fix: `IBD2Seg` is too low on 121 of 159 rows while `Pr_IBD2` is too high on 150 of
-//!   158. On `nuclear` `N_C1`/`N_C2` the reference's own `.seg` total exceeds its own
-//!   `Pr_IBD2` total by 22.64 Mb, and the largest gain "word-aligned plus usable-segment
-//!   fringe" can produce on that fileset is 13.58 Mb — so the geometry below is wrong in
-//!   kind, not by an offset (`…/14-ibd2-geometry.md` §5).
+//!   the 823 rows IBD2 cannot touch, and every rule variant tried scores 705 ± 1.
+//! * **...and `--ibs` is no longer a gradient either.** It used to be the sharp one: grade
+//!   with `Pr_IBD2` and `MaxIBD2`, not with the headline row count. [`Scan::ibd2_words`]
+//!   then made both exact, so every candidate `.seg` rule now scores an identical 158/158
+//!   on them. **The `.seg` campaign starts without a sharp grader and building one is the
+//!   first job** — `…/16-segment-extension.md` §10.1 says how: a canvas built out of
+//!   *opposite homozygotes* (the mask `.seg` actually splits on, where `--ibs` ignores
+//!   them entirely), one marker spacing per word, and `IBD2Seg` read back through the
+//!   `--seglength` bisection of `…/14-ibd2-geometry.md` §3.2 so that an aggregate inverts
+//!   to individual segment lengths.
+//! * **The `.seg` and `--ibs` errors had opposite signs**, which no width parameter could
+//!   have fixed: `IBD2Seg` is too low on 121 of 159 rows, where `Pr_IBD2` used to be too
+//!   high on 150 of 158. On `nuclear` `N_C1`/`N_C2` the reference's own `.seg` total
+//!   exceeds its own `Pr_IBD2` total by 22.64 Mb, and the largest gain "word-aligned plus
+//!   usable-segment fringe" can produce on that fileset is 13.58 Mb — so the geometry
+//!   below is wrong in kind, not by an offset (`…/14-ibd2-geometry.md` §5).
+//!
+//! **What is *not* the answer, measured** (`…/16-segment-extension.md` §9): porting
+//! [`Scan::ibd2_words`]'s chunk geometry to this pass unchanged. The two callers do not
+//! even see the same words — `.seg` refuses a word with *any* het-vs-hom mismatch where
+//! `--ibs` tolerates four — so every fixture that measured the chunk constants reports
+//! `IBD2Seg 0.0000` here and cannot measure them through this pass at all. The port scores
+//! 709 exact rows against 705 and a worst row of 0.149 against 0.211, but nearly triples
+//! mean `PropIBD` error (0.00138 → 0.00356). Deliberately **not committed**: a partly
+//! right rule that trades the mean for the tail is not progress, and `tests/parity/fit/
+//! segtry.py` keeps the measurement reproducible so nobody re-runs the experiment blind.
 //!
 //! Two constructed fixtures bound the answer and are not yet satisfied by anything
 //! (`docs/research/fixtures/ibd2end.py`, `ibd2gap.py`): a `W`-word IBD2 run bounded by
@@ -608,25 +632,40 @@ impl Scan {
     /// makes a parent–offspring pair print `IBD2Seg 0.0000`: PO genotypes disagree far too
     /// often in every word for any of them to qualify.
     ///
-    /// # The two length measures
+    /// # The two length measures — and, separately, the two callers
     ///
-    /// `--ibs` reports these same segments **word-aligned**, from `64u` to `64e+63`, while
-    /// `.seg` measures them to the usable segment's own ends. That is not a contradiction
-    /// and it is not two callers: a duplicate pair in `dups` prints `IBD2Seg 1.0000` and
-    /// `Pr_IBD2 0.8984`, and 0.8984 is, to the last digit, the word-aligned total over
-    /// that fileset's usable segments divided by the same `D` (357 701 908 / 398 163 465).
-    /// This function returns the `.seg` measure.
+    /// `--ibs` measures a call **word-aligned**, from `64u` to `64e+63`, while `.seg`
+    /// measures it to the usable segment's own ends. That much is only a ruler, and the
+    /// ruler is verified: a duplicate pair in `dups` prints `IBD2Seg 1.0000` and
+    /// `Pr_IBD2 0.8984`, and 0.8984 is, to the last digit, the word-aligned total over that
+    /// fileset's usable segments divided by the same `D` (357 701 908 / 398 163 465). This
+    /// function returns the `.seg` measure.
+    ///
+    /// The rulers were once thought to be the *whole* difference. They are not, and a
+    /// fixture says so outright (`docs/research/15-ibs-ibd2-rules.md` §3): the two passes
+    /// disagree about which words are even eligible, this one refusing any word carrying an
+    /// opposite homozygote where [`Scan::ibd2_words`] ignores them at any density. They are
+    /// two callers over one set of masks, and only the other one is solved.
     ///
     /// # Known wrong, with the measurement that says so
     ///
-    /// The right-hand geometry below fits `MaxIBD2` — the length of one segment per pair,
-    /// 145 of 158 exact — and fails two constructed fixtures and the `Pr_IBD2` total.
+    /// The right-hand geometry below was fitted to `MaxIBD2` — the length of one segment
+    /// per pair, 145 of 158 exact at the time — and fails two constructed fixtures and the
+    /// `Pr_IBD2` total. **That grader is gone**: `MaxIBD2` is `--ibs`'s column, and since
+    /// [`Scan::ibd2_words`] became exact it reports nothing about this function at all.
+    /// Nothing here changed; what changed is that its score can no longer be read off the
+    /// corpus, which is why the module header now asks for a purpose-built `.seg` canvas
+    /// before the next rule is proposed.
+    ///
     /// `docs/research/14-ibd2-geometry.md` is the write-up; in one line: a `W`-word IBD2
     /// run bounded by all-IBS0 words must report `64W - 1` marker intervals and this
     /// reports `64(W + 1) - 1`, while a lone IBS0 in an interior word must cost two whole
     /// words of coverage and this costs one word plus part of another. Every alternative
-    /// in `tests/parity/fit/sweep2.py` scores the same or worse on the corpus, so the rule
-    /// stands until something reproduces all four graders rather than three.
+    /// in `tests/parity/fit/sweep2.py` scores the same or worse on the corpus, and so does
+    /// the chunk geometry of [`Scan::ibd2_words`] ported over wholesale
+    /// (`tests/parity/fit/segtry.py`: 709 exact rows against 705, mean error 0.00356
+    /// against 0.00138). The rule stands until something beats it on the mean as well as
+    /// the tail.
     pub fn ibd2(&self, pos: &[i64], min_bp: i64) -> Vec<Called> {
         let n = self.nwords();
         let (w0, w1) = (self.seg.first_word(), self.seg.last_word());
@@ -708,17 +747,52 @@ impl Scan {
 /// (`docs/research/15-ibs-ibd2-rules.md` §2).
 const IBS_IBD2_DIRTY: u32 = 5;
 
-/// HetHet markers a call needs before the `--ibs` pass will report it.
+/// HetHet markers one confirmation chunk needs before the `--ibs` pass will keep it.
 ///
-/// **Measured, not inverted.** A block of complete words in which exactly `k` markers are
-/// heterozygous in both samples and the rest are homozygous-reference in everybody is
-/// reported iff `k >= 95`, and the boundary does not move with the block's width (2, 3,
-/// 4 and 5 words), its position, the marker spacing, the sample count or the carrier
-/// chromosome's length — eight independent bisections all land on 95. Markers where both
-/// samples are homozygous for A1 do not count at all: the same fixture with 200 of them
-/// and no HetHet reports nothing, which is what separates this from
+/// **Measured, not inverted, and bisected four separate ways.** The first measurement was
+/// a block of complete words in which exactly `k` markers are heterozygous in both samples
+/// and the rest are homozygous-reference in everybody: reported iff `k >= 95`, invariant to
+/// the block's width (2, 3, 4 and 5 words), its position, the marker spacing, the sample
+/// count and the carrier chromosome's length — eight independent bisections all landing on
+/// 95 (`docs/research/15-ibs-ibd2-rules.md` §5). `docs/research/16-segment-extension.md` §5
+/// then found the same integer from the other side, against an already-established run: a
+/// trailing tail of words at `(mismatches, HetHet) = (m, h)` per word is absorbed at
+/// `(1, 19)`, `(2, 24)`, `(3, 32)` and `(4, 48)` and refused at `(1, 18)`, `(2, 23)`,
+/// `(3, 31)` and `(4, 47)` — that is `5×19 = 95`, `4×24 = 96`, `3×32 = 96`, `2×48 = 96`
+/// against `90, 92, 93, 94`, whose intersection is the single integer `(94, 95]`.
+///
+/// Markers where both samples are homozygous for A1 do not count at all: the same fixture
+/// with 200 of them and no HetHet reports nothing, which is what separates this from
 /// [`MIN_INFORMATIVE`]'s `inf2`.
 const IBS_IBD2_HETHET: u32 = 95;
+
+/// Het-vs-hom mismatches that close one confirmation chunk.
+///
+/// The quantum the whole scan is built out of. Measured off the staircase of
+/// `docs/research/16-segment-extension.md` §4: sweeping the width `W` of a uniform block of
+/// words at `(m, h)` per word, the reported end lands on `min(W - 1, 5⌊W/5⌋)` at `m = 1`,
+/// and the staircase's period is `⌈5/m⌉` words for every `m` in `1..=5` — five mismatches,
+/// however they are spread. §5 sees the same quantum directly: a 20-word all-HetHet prefix
+/// buys a trailing tail *exactly five* mismatches and never ten, so the counters are reset
+/// at each chunk rather than carried.
+const IBS_IBD2_CHUNK_MIS: u32 = 5;
+
+/// Complete words one confirmation chunk must span before it can be confirmed.
+///
+/// A HetHet count alone does not decide a chunk: 2-word chunks are refused at 122 HetHet
+/// while 3-word chunks are confirmed at 96 (`…/16-segment-extension.md` §5, the `m = 3` and
+/// `m = 4` rows, refused at *every* `h`). A grid search over `{1, 2, 3, 4, 5}` scores
+/// 614/658 constructed filesets at 3 against 599 at 1–2 and 516 at 4.
+const IBS_IBD2_CHUNK_WORDS: usize = 3;
+
+/// Mismatches the measured interval may pick up past the last confirmed chunk.
+///
+/// The reported interval does not stop dead on the confirmed word: it reaches on through
+/// the run while it picks up at most this many further mismatches. Visible as the `+1`
+/// in §5's covered-word figure, which steps `…, 5, 6, then 10, 11, then 15, 16, …` — every
+/// fifth mismatch (the chunk) plus one. A grid search over `{0, 1, 2}` scores 614/658 at 1
+/// against 577 at 0 and 563 at 2.
+const IBS_IBD2_EXT_MIS: u32 = 1;
 
 /// Complete words the reported interval must span.
 ///
@@ -753,6 +827,31 @@ impl Scan {
     /// (`docs/research/15-ibs-ibd2-rules.md` §3). Whatever the `.seg` pass does with an
     /// opposite homozygote, this pass does not stop at one.
     ///
+    /// # The shape of the rule: a quantised confirmation scan
+    ///
+    /// A run is *not* accepted or refused whole, and it is not extended word by word
+    /// either. It is confirmed in **chunks of [`IBS_IBD2_CHUNK_MIS`] het-vs-hom
+    /// mismatches**, each of which must independently carry [`IBS_IBD2_HETHET`] HetHet
+    /// markers over at least [`IBS_IBD2_CHUNK_WORDS`] words, and the reported interval
+    /// stops at the last chunk that was confirmed. `docs/research/16-segment-extension.md`
+    /// derives this and rules out the three shapes that were guessed before it:
+    ///
+    /// * **Not a running score / X-drop.** Credit does not accumulate. A 20-word
+    ///   all-HetHet prefix — 1 280 HetHet markers — buys the tail *exactly five* trailing
+    ///   mismatches and never ten, at every prefix length. The counters reset at each
+    ///   chunk boundary (§5).
+    /// * **Not an HMM or a Viterbi path.** Both are aggregate-optimal over the words they
+    ///   see, so a uniform block bounded by walls admits no interior optimum; the
+    ///   reference reports **partial** intervals of uniform blocks, and where it cuts them
+    ///   depends on the block's width (§3, §4).
+    /// * **Not greedy word-at-a-time seed extension.** The scan *is* one forward pass, but
+    ///   the unit of extension is the chunk, accepted or refused whole.
+    ///
+    /// The two facts that made the residual look non-causal both fall out of the quantum:
+    /// the staircase `e = min(W - 1, 5⌊W/5⌋)` is the chunk period, and the
+    /// order-dependence (`8 clean + 8 dirty-ish` reported whole, the reverse not) is that
+    /// HetHet is counted *within* a chunk, from wherever that chunk happens to start.
+    ///
     /// # The rules, each with the fixture that fixes it
     ///
     /// * **A word breaks the run iff it carries [`IBS_IBD2_DIRTY`] het-vs-hom
@@ -760,33 +859,50 @@ impl Scan {
     ///   markers and nothing else is scanned straight through, and so is one of 64 missing
     ///   calls, while five het-vs-hom mismatches split the run.
     /// * **One dirty word between two clean ones is absorbed**, two in a row are not.
-    /// * **The call reaches one word past the run** (`hi = v + 1`), and all the way to the
-    ///   usable segment's last complete word when the run ends within two words of it.
-    ///   Sliding a three-word block along a ten-word segment and reading the reported
-    ///   length gives spans of 3, 4, 5, 4, 4, … as the trailing dirty words go 0, 1, 2,
-    ///   3, 4 — the only shape that fits is `hi = min(v + 2, w1)` when `w1 - v <= 2` and
-    ///   `v + 1` otherwise.
-    /// * **The call is kept iff its words hold [`IBS_IBD2_HETHET`] HetHet markers**, over
-    ///   `lo ..= hi` — the *measured* interval, not the run: loading the terminating word
-    ///   with 59 HetHet markers drops the block's own requirement from 95 to 36, while
-    ///   loading the word *before* the run leaves it at 95.
-    /// * **...unless the run reaches the segment's last two words**, where the count is
-    ///   not applied at all: a block of 384 markers with no HetHet at all is reported when
-    ///   it ends on `w1` or `w1 - 1` and refused one word earlier. The exemption follows
-    ///   the usable segment, not the genotype array — it is the same whether the segment
-    ///   is the first chromosome or the last.
+    /// * **The scan runs one word past the run's last clean word** — that word is what
+    ///   makes the mismatch counter fire, and its HetHet counts towards the chunk it
+    ///   closes — but never past the usable segment's own last word.
+    /// * **A refused chunk ends the segment at the last confirmation and starts a new
+    ///   one.** Where exactly it restarts is the least-supported clause here: see
+    ///   `restart` below.
+    /// * **The interval reaches past the last confirmed chunk while picking up at most
+    ///   [`IBS_IBD2_EXT_MIS`] further mismatch**, and snaps to the segment's last word
+    ///   when the run ends within two words of it.
+    /// * **...and the whole HetHet test is waived where the run reaches the segment's last
+    ///   two words**: a block of 384 markers with no HetHet at all is reported when it
+    ///   ends on `w1` or `w1 - 1` and refused one word earlier. The exemption follows the
+    ///   usable segment, not the genotype array — it is the same whether the segment is
+    ///   the first chromosome or the last.
     /// * **The interval must span [`IBS_IBD2_MIN_WORDS`] words.**
     ///
     /// Consecutive calls are clipped so they cannot share a word, earlier one wins.
+    ///
+    /// # Accuracy, and the one clause that is fitted rather than measured
+    ///
+    /// Out of sample this reproduces **`MaxIBD2` 158/158 and `Pr_IBD2` 158/158** — both
+    /// `--ibs` IBD2 columns exactly, on every corpus pair the reference grades, over ten
+    /// datasets none of which chose a constant. The rule it replaced scored 148 and 100.
+    /// On 658 constructed filesets, 200 of them *random* word sequences the fit never saw,
+    /// it reproduces the reference's exact interval 614 times (93.3 %); the residual is
+    /// concentrated on sequences that alternate 20- and 64-mismatch words with near-empty
+    /// ones, which nothing in the corpus resembles.
+    ///
+    /// The **restart** clause is the exception and is flagged in place below: the corpus
+    /// cannot see it (restarting after the refusing word scores identically on all 316
+    /// corpus targets), and it is fitted from fourteen irregular constructed patterns.
     pub fn ibd2_words(&self) -> Vec<WordCall> {
         let n = self.nwords();
         if n == 0 {
             return Vec::new();
         }
-        let (w0, w1) = (self.seg.first_word(), self.seg.last_word());
-        let clean: Vec<bool> = (0..n)
-            .map(|k| self.ibs1[k].count_ones() < IBS_IBD2_DIRTY)
-            .collect();
+        let w0 = self.seg.first_word();
+        // Everything below is in *local* word indices, `0 ..= last`; `last` is the usable
+        // segment's own final complete word, which several rules key off.
+        let last = n - 1;
+        let mis: Vec<u32> = self.ibs1.iter().map(|m| m.count_ones()).collect();
+        let hh: Vec<u32> = self.hethet.iter().map(|m| m.count_ones()).collect();
+
+        let clean: Vec<bool> = mis.iter().map(|&m| m < IBS_IBD2_DIRTY).collect();
         // A lone dirty word between two clean ones is absorbed. Read from `clean`, never
         // from the running copy, so two dirty words in a row cannot chain their way in.
         let mut ok = clean.clone();
@@ -796,37 +912,127 @@ impl Scan {
             }
         }
 
-        let mut out: Vec<WordCall> = Vec::new();
+        /// How far past the last confirmed word `conf` the measured interval reaches:
+        /// on through the run's words until the mismatches picked up would exceed
+        /// [`IBS_IBD2_EXT_MIS`]. `b` is the run's own last clean word, never crossed.
+        fn extend(mis: &[u32], conf: usize, b: usize) -> usize {
+            let mut cum = 0u32;
+            let mut e = conf;
+            for (k, &m) in mis.iter().enumerate().take(b + 1).skip(conf + 1) {
+                cum += m;
+                if cum > IBS_IBD2_EXT_MIS {
+                    break;
+                }
+                e = k;
+            }
+            e
+        }
+
+        let mut raw: Vec<(usize, usize)> = Vec::new();
         let mut k = 0usize;
         while k < n {
             if !ok[k] {
                 k += 1;
                 continue;
             }
-            let k0 = k;
+            let a = k;
             while k < n && ok[k] {
                 k += 1;
             }
-            let (u, v) = (w0 + k0, w0 + k - 1);
-            let hi = if v + 2 >= w1 { w1 } else { v + 1 };
-            let mut lo = u;
-            if let Some(prev) = out.last() {
-                lo = lo.max(prev.hi + 1);
+            let b = k - 1;
+            // One word past the run's last clean word, clamped to the segment.
+            let scan_last = (b + 1).min(last);
+            // The run reaches the usable segment's own last two words.
+            let exempt = b + 1 >= last;
+
+            let mut u = a; // where the segment currently being built started
+            let mut acc_mis = 0u32; // mismatches in the open chunk
+            let mut acc_het = 0u32; // HetHet in the open chunk
+            let mut cstart = a; // first word of the open chunk
+            let mut conf: Option<usize> = None; // last confirmed word
+            let mut last_mis: Option<usize> = None; // last word holding a mismatch
+            let mut s = a;
+            while s <= scan_last {
+                let (m, h) = (mis[s], hh[s]);
+                let before = acc_mis;
+                acc_mis += m;
+                acc_het += h;
+                if acc_mis >= IBS_IBD2_CHUNK_MIS {
+                    // The chunk closes on this word. A chunk closed by the usable
+                    // segment's own last word is exempt from the HetHet test, the same
+                    // tail exemption that waives it for a run reaching `last`.
+                    let confirmed = (acc_het >= IBS_IBD2_HETHET
+                        && s + 1 - cstart >= IBS_IBD2_CHUNK_WORDS)
+                        || (exempt && s >= scan_last);
+                    if confirmed {
+                        conf = Some(s);
+                        acc_mis = 0;
+                        acc_het = 0;
+                        last_mis = None;
+                        cstart = s + 1;
+                    } else {
+                        if let Some(c) = conf {
+                            raw.push((u, extend(&mis, c, b)));
+                        }
+                        // **The least-supported clause in this function.** Where the word
+                        // that closed the chunk holds only the chunk's fifth mismatch, the
+                        // next segment opens after the *fourth* mismatch's word instead of
+                        // after the refusing word. Fourteen irregular constructed patterns
+                        // separate the two (`[2,2,1] -> 2` against `[2,2,2] -> 3`,
+                        // `[4,1] -> 1` against `[4,4] -> 2`); the corpus cannot, and scores
+                        // identically either way. Treat it as fitted, not measured.
+                        u = match last_mis {
+                            Some(lm) if before + 1 == IBS_IBD2_CHUNK_MIS && m == 1 => lm + 1,
+                            _ => s + 1,
+                        };
+                        acc_mis = 0;
+                        acc_het = 0;
+                        conf = None;
+                        last_mis = None;
+                        cstart = u;
+                        s = u;
+                        continue;
+                    }
+                }
+                if m > 0 {
+                    last_mis = Some(s);
+                }
+                s += 1;
+            }
+            if exempt {
+                raw.push((u, last));
+            } else if let Some(c) = conf {
+                // A run ending exactly two words short of the segment's last word still
+                // takes it; otherwise the interval stops at the confirmed end plus its
+                // one-mismatch overhang.
+                raw.push((
+                    u,
+                    if b + 2 >= last {
+                        last
+                    } else {
+                        extend(&mis, c, b)
+                    },
+                ));
+            }
+        }
+
+        let mut out: Vec<WordCall> = Vec::new();
+        let mut prev_hi: Option<usize> = None;
+        for (mut lo, hi) in raw {
+            if lo > hi {
+                continue;
+            }
+            if let Some(p) = prev_hi {
+                lo = lo.max(p + 1);
             }
             if lo > hi || hi + 1 - lo < IBS_IBD2_MIN_WORDS {
                 continue;
             }
-            // The segment's own tail is exempt from the HetHet count.
-            if v + 1 < w1 {
-                let mut het = 0u32;
-                for &m in &self.hethet[lo - w0..=hi - w0] {
-                    het += m.count_ones();
-                }
-                if het < IBS_IBD2_HETHET {
-                    continue;
-                }
-            }
-            out.push(WordCall { lo, hi });
+            prev_hi = Some(hi);
+            out.push(WordCall {
+                lo: w0 + lo,
+                hi: w0 + hi,
+            });
         }
         out
     }
@@ -1466,5 +1672,121 @@ mod tests {
         e.extend(mismatches(7, 5));
         // Words 8..9 are clean and reach `w1`, so the interval is [8, 9] — two words.
         assert_eq!(word_calls(&e), vec![WordCall { lo: 0, hi: 6 }]);
+    }
+
+    // -----------------------------------------------------------------------
+    // The chunk scan (`docs/research/16-segment-extension.md`)
+    //
+    // A second canvas, painted one *whole word* at a time from an explicit composition,
+    // because everything the chunk rule does is a function of the per-word pair
+    // (mismatches, HetHet) and nothing else. This is the rig `segfit.py` drives against
+    // the reference binary, reproduced in-process.
+    // -----------------------------------------------------------------------
+
+    /// Word calls for a canvas in which word `w` carries `comp[w].0` het-vs-hom mismatches
+    /// and `comp[w].1` HetHet markers and is homozygous-concordant everywhere else.
+    fn composed(comp: &[(usize, usize)]) -> Vec<WordCall> {
+        let n = comp.len() * WORD;
+        let (mut a, mut b) = (vec![0u8; n], vec![0u8; n]);
+        for (w, &(m, h)) in comp.iter().enumerate() {
+            assert!(m + h <= WORD, "a word holds 64 markers");
+            for i in 0..m {
+                a[WORD * w + i] = 1; // het against hom A1: one het-vs-hom mismatch
+            }
+            for i in m..m + h {
+                a[WORD * w + i] = 1;
+                b[WORD * w + i] = 1; // both heterozygous: one HetHet
+            }
+        }
+        let gt = genotypes(&a, &b);
+        let seg = Usable {
+            chr: 1,
+            lo: 0,
+            hi: n - 1,
+        };
+        Scan::new(&gt, 0, 1, seg).ibd2_words()
+    }
+
+    /// `body` walled off at both ends by two words of 64 mismatches each — two, so the
+    /// bridging rule cannot absorb them — with three clean words after it so that `body`
+    /// is never inside the usable segment's own exempt tail. `body` starts at word 2, and
+    /// the trailing clean run is always reported as the segment's last three words.
+    fn walled(body: &[(usize, usize)]) -> Vec<WordCall> {
+        const WALL: (usize, usize) = (WORD, 0);
+        let mut comp = vec![WALL, WALL];
+        comp.extend_from_slice(body);
+        comp.extend([WALL, WALL, (0, WORD), (0, WORD), (0, WORD)]);
+        composed(&comp)
+    }
+
+    /// The reported interval stops at the last **confirmed chunk**, not at the run's end —
+    /// and where that is depends on words the interval does not reach, which is what no
+    /// word-local rule can produce (`…/16-segment-extension.md` §3, §4).
+    #[test]
+    fn the_ibs_ibd2_interval_is_cut_at_the_last_confirmed_chunk() {
+        // Nine words at one mismatch and 19 HetHet each. Words 2..6 accumulate five
+        // mismatches carrying 5 x 19 = 95 HetHet, which confirms them; words 7..10 only
+        // reach four, and the wall that finally closes their chunk brings no HetHet at
+        // all, so that chunk is refused and the interval stops at the confirmation plus
+        // its one-mismatch overhang.
+        let tail = WordCall { lo: 13, hi: 15 };
+        assert_eq!(walled(&[(1, 19); 9]), vec![WordCall { lo: 2, hi: 7 }, tail]);
+        // One further identical word, and the same nine words are no longer cut: the
+        // tenth mismatch now closes a second chunk inside the block, and 5 x 19 confirms
+        // it. The staircase of §4 in two lines.
+        assert_eq!(
+            walled(&[(1, 19); 10]),
+            vec![WordCall { lo: 2, hi: 11 }, WordCall { lo: 14, hi: 16 }]
+        );
+    }
+
+    /// [`IBS_IBD2_HETHET`] bisected against an established run: 5 x 19 confirms, 5 x 18
+    /// does not, and an unconfirmed block is not shortened but dropped entirely.
+    #[test]
+    fn a_chunk_of_five_mismatches_needs_ninetyfive_hethet() {
+        let tail = WordCall { lo: 13, hi: 15 };
+        assert_eq!(
+            walled(&[(1, 18); 9]),
+            vec![tail],
+            "5 x 18 = 90 confirms nothing"
+        );
+        assert_eq!(
+            walled(&[(1, 19); 9]),
+            vec![WordCall { lo: 2, hi: 7 }, tail],
+            "5 x 19 = 95 confirms the first chunk"
+        );
+    }
+
+    /// A chunk must also span [`IBS_IBD2_CHUNK_WORDS`] words: HetHet alone does not buy
+    /// one. Two words carrying 122 HetHet between them are refused where three carrying
+    /// 144 are confirmed, so the floor is on words and not on the count.
+    #[test]
+    fn a_chunk_must_span_three_words_however_much_hethet_it_carries() {
+        let tail = WordCall { lo: 13, hi: 15 };
+        // (3, 61): five mismatches accumulate in two words, at 122 HetHet — refused.
+        assert_eq!(walled(&[(3, 61); 9]), vec![tail]);
+        // (2, 48): five accumulate in three words, at 144 HetHet — confirmed, three times
+        // over, and the whole block is reported.
+        assert_eq!(
+            walled(&[(2, 48); 9]),
+            vec![WordCall { lo: 2, hi: 10 }, tail]
+        );
+    }
+
+    /// The counters are **reset** at each chunk, not carried: a 20-word all-HetHet prefix
+    /// buys the trailing words exactly five mismatches and never ten, at any tail length.
+    /// This is the measurement that rules out a running score or an X-drop
+    /// (`…/16-segment-extension.md` §5).
+    #[test]
+    fn a_hethet_prefix_buys_one_chunk_of_five_mismatches_and_no_more() {
+        let cut = |j: usize| {
+            let mut body = vec![(0usize, WORD); 20];
+            body.extend(vec![(1usize, 0usize); j]);
+            walled(&body)[0]
+        };
+        // 1 280 HetHet markers in front of the tail. Ten trailing mismatches or twenty,
+        // the interval covers the same six trailing words (22..=27).
+        assert_eq!(cut(10), WordCall { lo: 2, hi: 27 });
+        assert_eq!(cut(20), WordCall { lo: 2, hi: 27 });
     }
 }

@@ -308,24 +308,54 @@ def _overlap(c, others, pos):
     return tot
 
 
-IBS_IBD2_DIRTY = 5      # het-vs-hom mismatches that make a word break an --ibs run
-IBS_IBD2_HETHET = 95    # HetHet markers a call's measured words must hold
-IBS_IBD2_MIN_WORDS = 3  # words a call's measured interval must span
+IBS_IBD2_DIRTY = 5       # het-vs-hom mismatches that make a word break an --ibs run
+IBS_IBD2_HETHET = 95     # HetHet markers one confirmation chunk must carry
+IBS_IBD2_CHUNK_MIS = 5   # mismatches that close a chunk
+IBS_IBD2_CHUNK_WORDS = 3  # words a chunk must span to be confirmable
+IBS_IBD2_EXT_MIS = 1     # mismatches the measured interval may reach past the confirmation
+IBS_IBD2_MIN_WORDS = 3   # words a call's measured interval must span
 
 
-def ibd2_words(sc):
+def _chunk_extend(n1, conf, b, ext_mis=IBS_IBD2_EXT_MIS):
+    """How far past the confirmed end `conf` the measured interval reaches: on through
+    the run's words until the mismatches picked up would exceed `ext_mis`."""
+    cum, e = 0, conf
+    for k in range(conf + 1, b + 1):
+        cum += int(n1[k])
+        if cum > ext_mis:
+            break
+        e = k
+    return e
+
+
+def ibd2_words(sc, restart="fit"):
     """`--ibs`'s own IBD2 caller — the mirror of `Scan::ibd2_words`.
 
     NOT the `.seg` caller: opposite homozygotes and missing calls are irrelevant here at
     any density, only het-vs-hom mismatches break a run, and the call runs straight
     through IBS0 words that `Scan::ibd2` would split on.  Returns word intervals
     `(lo, hi)` inclusive, in global word indices.
+
+    The shape is the **quantised confirmation scan** of
+    `docs/research/16-segment-extension.md`: a run is confirmed in chunks of five
+    het-vs-hom mismatches, each needing 95 HetHet over at least three words, and the
+    reported interval stops at the last confirmed chunk plus a one-mismatch overhang.
+    Reproduces `MaxIBD2` 158/158 and `Pr_IBD2` 158/158 on the corpus.
+
+    `restart` picks the rule for where a new segment begins after a chunk is refused:
+    "fit"   — after the 4th mismatch's word when the refusing word holds only the 5th,
+              else after the refusing word (what the constructed fixtures measure, and
+              what the Rust engine does);
+    "after" — always after the refusing word;
+    "at"    — always the refusing word.
+    The corpus cannot separate "fit" from "after"; see §7 of the write-up.
     """
     n = sc.n
     if n == 0:
         return []
     w0, w1 = sc.w0, sc.w1
-    clean = [int(sc.n1[w0 + k]) < IBS_IBD2_DIRTY for k in range(n)]
+    n1, nhh = sc.n1, sc.nhh
+    clean = [int(n1[w0 + k]) < IBS_IBD2_DIRTY for k in range(n)]
     # A lone dirty word between two clean ones is absorbed; two in a row are not. Read
     # from `clean`, never from the running copy, so dirty words cannot chain in.
     ok = list(clean)
@@ -333,27 +363,65 @@ def ibd2_words(sc):
         if not clean[k] and clean[k - 1] and clean[k + 1]:
             ok[k] = True
 
+    raw = []
+    for a, b in _runs(ok):
+        lo_w, hi_w = w0 + a, w0 + b
+        # The scan runs one word past the run's last clean word: that word is what makes
+        # the mismatch counter fire, and its HetHet counts towards the chunk it closes.
+        scan_last = min(hi_w + 1, w1)
+        exempt = hi_w + 1 >= w1        # the run reaches the segment's own last two words
+        u = lo_w
+        mis = het = 0
+        cstart = lo_w
+        conf = None
+        last_mis = None                # last word holding a mismatch, this chunk
+        k = u
+        while k <= scan_last:
+            m, h = int(n1[k]), int(nhh[k])
+            before = mis
+            mis += m
+            het += h
+            if mis >= IBS_IBD2_CHUNK_MIS:
+                good = (het >= IBS_IBD2_HETHET
+                        and k - cstart + 1 >= IBS_IBD2_CHUNK_WORDS)
+                # A chunk closed by the usable segment's own last word is exempt.
+                if good or (exempt and k >= scan_last):
+                    conf, mis, het, last_mis, cstart = k, 0, 0, None, k + 1
+                else:
+                    if conf is not None:
+                        raw.append((u, _chunk_extend(n1, conf, hi_w)))
+                    if restart == "at":
+                        u = max(k, u + 1)
+                    elif restart == "after":
+                        u = k + 1
+                    elif (before == IBS_IBD2_CHUNK_MIS - 1 and m == 1
+                          and last_mis is not None):
+                        u = last_mis + 1
+                    else:
+                        u = k + 1
+                    mis = het = 0
+                    conf = None
+                    last_mis = None
+                    cstart = u
+                    k = u
+                    continue
+            if m:
+                last_mis = k
+            k += 1
+        if exempt:                     # the HetHet test is waived at the segment's end
+            raw.append((u, w1))
+        elif conf is not None:
+            raw.append((u, w1 if hi_w + 2 >= w1 else _chunk_extend(n1, conf, hi_w)))
+
     out = []
-    k = 0
-    while k < n:
-        if not ok[k]:
-            k += 1
+    for u, e in raw:
+        if u > e:
             continue
-        k0 = k
-        while k < n and ok[k]:
-            k += 1
-        u, v = w0 + k0, w0 + k - 1
-        hi = w1 if v + 2 >= w1 else v + 1
-        lo = u
         if out:
-            lo = max(lo, out[-1][1] + 1)
-        if lo > hi or hi + 1 - lo < IBS_IBD2_MIN_WORDS:
+            u = max(u, out[-1][1] + 1)
+        if u > e or e + 1 - u < IBS_IBD2_MIN_WORDS:
             continue
-        # The segment's own tail is exempt from the HetHet count.
-        if v + 1 < w1:
-            if int(sc.nhh[lo:hi + 1].sum()) < IBS_IBD2_HETHET:
-                continue
-        out.append((lo, hi))
+        out.append((u, e))
     return out
 
 
