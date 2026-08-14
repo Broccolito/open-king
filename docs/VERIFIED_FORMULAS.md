@@ -207,6 +207,34 @@ Reproducing this exactly is required for parity: a single-family dataset is a co
 real-world input, and emitting a populated `.kin` there would be a diff against the
 reference on the very first case a user tries.
 
+## Output files are not unconditional
+
+Two effects mean an implementation can compute every number correctly and still fail the
+diff. Both are tracked in `docs/BEHAVIOR.md`.
+
+**File existence varies with the input.** Running `--ibs`:
+
+| Dataset | Families | Samples | `king.ibs` | `king.ibs0` |
+| --- | --- | --- | --- | --- |
+| `trio` | 1 | 3 | not created | not created |
+| `nuclear` | 1 | 6 | not created | not created |
+| `threegen` | 1 | 14 | created | not created |
+| `dups` | 8 | 10 | created | created |
+
+Note `threegen` is also a single family yet does get a `.ibs`, so family count alone does
+not explain it. **Absent**, **zero-byte**, and **header-only** are three distinct
+outcomes and must each be reproduced as-is.
+
+**The `.ibs0` column set varies with the marker map.** Full-genome `dups` emits two extra
+trailing columns, `MaxIBD2` and `Pr_IBD2`; the *same* 8-family fileset subset to
+chromosomes 1–2 emits the short header ending at `Kinship`. The trigger is therefore the
+map, not the samples — presumably whether an IBD2 segment analysis is attempted.
+
+```
+short: ... HetConc Het2|1 Het1|2 HomConc Kinship
+long:  ... HetConc Het2|1 Het1|2 HomConc Kinship MaxIBD2 Pr_IBD2
+```
+
 ## Open questions
 
 These are unresolved and each is paired with the experiment that settles it.
