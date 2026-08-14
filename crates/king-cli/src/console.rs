@@ -288,25 +288,27 @@ pub const MINCONC_OUT_OF_RANGE: &str = "minConc value is out of range and not sp
 ///
 /// The reference reports the tail that failed — `p/2` for the lower one, `1 - p/2` for
 /// the upper — formatted with C's `%g`.
+/// The reference reports the tail with C's `%.2g`, pinned by a value sweep:
+/// `-0.25` stays `-0.25`, `-10.5` prints as `-10` and `-499` as `-5e+02`.
 pub fn p_value_out_of_range(tail: f64) -> String {
-    format!("p-value [{}] outside range in ninv()", format_g(tail))
+    format!("p-value [{}] outside range in ninv()", format_g(tail, 2))
 }
 
-/// C's `%g` with the default precision of 6: `%f` or `%e` depending on the exponent,
-/// with trailing zeros and a bare decimal point removed.
-fn format_g(v: f64) -> String {
-    const PRECISION: i32 = 6;
+/// C's `%.Ng`: `%f` or `%e` depending on the exponent, with trailing zeros and a bare
+/// decimal point removed.
+fn format_g(v: f64, precision: i32) -> String {
+    let precision = precision.max(1);
     if v.is_nan() {
         return "nan".to_string();
     }
     if v.is_infinite() {
         return if v > 0.0 { "inf" } else { "-inf" }.to_string();
     }
-    let sci = format!("{v:.*e}", (PRECISION - 1) as usize);
+    let sci = format!("{v:.*e}", (precision - 1) as usize);
     let (mantissa, exponent) = sci.split_once('e').expect("Rust always writes an exponent");
     let x: i32 = exponent.parse().expect("exponent is an integer");
-    if (-4..PRECISION).contains(&x) {
-        let decimals = (PRECISION - 1 - x).max(0) as usize;
+    if (-4..precision).contains(&x) {
+        let decimals = (precision - 1 - x).max(0) as usize;
         strip_trailing_zeros(&format!("{v:.decimals$}"))
     } else {
         let m = strip_trailing_zeros(mantissa);

@@ -157,6 +157,9 @@ mod tests {
         n_ibs2: u32,
     }
 
+    // `Dist` for the first pair happens to be 0.3010, which clippy mistakes for log10(2).
+    // These are captured reference digits, not mathematical constants.
+    #[allow(clippy::approx_constant)]
     const REFERENCE_PAIRS: [RefPair; 4] = [
         RefPair {
             name: "f1dad/f1kid1",

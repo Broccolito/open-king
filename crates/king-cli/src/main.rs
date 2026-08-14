@@ -1,17 +1,22 @@
 //! `king` — drop-in CLI matching KING 2.3.2's command line and console output.
 //!
-//! The startup sequence below is the order the reference binary uses, verified against
-//! captured runs:
+//! The startup sequence below is the reference binary's own order, established by
+//! probing it; each step names the observation that fixes its position.
 //!
-//! 1. banner and the "parameters in effect" block;
-//! 2. the WARNING block, if the command line had problems (parsing never aborts);
-//! 3. FATAL ERROR if no `-b` fileset was named — nothing else is printed;
-//! 4. the "please specify an analysis" notice, if a fileset was named but no analysis;
-//! 5. `KING starts at <time>`;
-//! 6. FATAL ERROR if the `.bed` cannot be opened;
-//! 7. the analyses themselves.
+//!  1. banner and the "parameters in effect" block;
+//!  2. the WARNING block, if the command line had problems — parsing never aborts;
+//!  3. FATAL ERROR if no `-b` fileset was named, and nothing else is printed;
+//!  4. either the "please specify an analysis" notice (no analysis requested) or the
+//!     "will run separately" line (more than one);
+//!  5. `KING starts at <time>`;
+//!  6. the analysis-parameter checks, in this order: `--maxP`, `--sexchr`,
+//!     `--seglength`, `--minConc`, `--risk`/`--model`;
+//!  7. FATAL ERROR if the `.bed` cannot be opened;
+//!  8. the analyses themselves.
 //!
 //! Everything goes to stdout; the reference writes nothing to stderr, and neither do we.
+//! Every exit here is status 1, which is what the reference returns for all four
+//! captured command lines.
 
 #![forbid(unsafe_code)]
 
@@ -80,10 +85,6 @@ fn main() {
         fatal(console::RISK_MODEL_REQUIRED);
     }
 
-    if std::fs::File::open(&opts.bed).is_err() {
-        fatal(&console::genotype_file_unopenable(&opts.bed));
-    }
-
     // ------------------------------------------------------------------
     // SEAM: the analysis engines plug in here.
     //
@@ -93,7 +94,17 @@ fn main() {
     // `console::autosome_words`), then dispatch the analyses named by
     // `opts.analyses_in_effect()` into `king_core`, printing
     // `console::options_in_effect` first and `console::king_ends_at` last.
+    //
+    // The `.bed` probe below belongs to that loader and only stands in for it: it is
+    // what makes `king -b nonexistent.bed --related` match the reference. Note that the
+    // reference does *not* probe the `.bed` on the `--risk` path — with a model file it
+    // goes straight to the `.fam` and fails with "Pedigree file <x>.fam cannot be
+    // opened" — so move this check inside the loader rather than keeping it here.
     // ------------------------------------------------------------------
+
+    if std::fs::File::open(&opts.bed).is_err() {
+        fatal(&console::genotype_file_unopenable(&opts.bed));
+    }
 
     std::process::exit(0);
 }

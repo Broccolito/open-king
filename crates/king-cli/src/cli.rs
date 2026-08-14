@@ -170,7 +170,10 @@ pub static GROUPS: &[(&str, &[Opt])] = &[
     ("Structure Parameter", &[Opt::Projection, Opt::Pcs]),
     ("Quantitative Trait GWAS", &[Opt::Lmm]),
     ("Binary Trait GWAS", &[Opt::Tdt, Opt::Gdt]),
-    ("Association Model", &[Opt::Trait, Opt::Covariate, Opt::MaxP]),
+    (
+        "Association Model",
+        &[Opt::Trait, Opt::Covariate, Opt::MaxP],
+    ),
     ("Association Method Parameter", &[Opt::Invnorm]),
     (
         "Genetic Risk Score",
@@ -527,7 +530,11 @@ fn c_atoi(s: &str) -> i32 {
             Some(v) => v,
             None => {
                 // strtol clamps, then the narrowing cast truncates.
-                return if neg { i64::MIN as i32 } else { i64::MAX as i32 };
+                return if neg {
+                    i64::MIN as i32
+                } else {
+                    i64::MAX as i32
+                };
             }
         };
     }
@@ -616,7 +623,9 @@ fn c_atof_hex(s: &str) -> Option<f64> {
         let start = j;
         let mut exp: i32 = 0;
         while j < b.len() && b[j].is_ascii_digit() {
-            exp = exp.saturating_mul(10).saturating_add(i32::from(b[j] - b'0'));
+            exp = exp
+                .saturating_mul(10)
+                .saturating_add(i32::from(b[j] - b'0'));
             j += 1;
         }
         if j > start {
@@ -704,14 +713,17 @@ pub fn parse(args: &[String]) -> Parsed {
         // A lone `--` borrows the next token as its name — `king -- related` turns
         // --related on — but only when that token is not itself dash-led, and the
         // resulting option never takes a value: `king -- degree 3` leaves the 3 behind.
-        let merged = tok == "--"
-            && args
-                .get(i + 1)
-                .is_some_and(|next| !next.starts_with('-'));
+        let merged = tok == "--" && args.get(i + 1).is_some_and(|next| !next.starts_with('-'));
 
         if merged {
             let name = args[i + 1].as_str();
-            apply_long(&mut options, &mut warnings, &format!("--{name}"), name, None);
+            apply_long(
+                &mut options,
+                &mut warnings,
+                &format!("--{name}"),
+                name,
+                None,
+            );
             i += 2;
             continue;
         }
@@ -980,6 +992,114 @@ mod tests {
     }
 
     #[test]
+    fn flags_toggle() {
+        // Found by differential fuzzing: a repeated flag is not idempotent.
+        assert!(parse_str(&["--related"]).options.flag(Opt::Related));
+        assert!(!parse_str(&["--related", "--related"])
+            .options
+            .flag(Opt::Related));
+        assert!(parse_str(&["--rel", "--RELATED", "--related"])
+            .options
+            .flag(Opt::Related));
+    }
+
+    #[test]
+    fn lone_dash_dash_borrows_the_next_token_as_a_name() {
+        assert!(parse_str(&["--", "related"]).options.flag(Opt::Related));
+        assert!(parse_str(&["--", "rel"]).options.flag(Opt::Related));
+        // The borrowed option never takes a value of its own.
+        let p = parse_str(&["--", "degree", "3"]);
+        assert_eq!(p.options.int(Opt::Degree), 1);
+        assert_eq!(p.warnings, vec!["Command line parameter 3 (#3) ignored"]);
+        // A dash-led follower is not borrowed.
+        let p = parse_str(&["--", "--", "related"]);
+        assert!(p.options.flag(Opt::Related));
+        assert_eq!(p.warnings, vec!["Command line parameter -- is ambiguous"]);
+    }
+
+    #[test]
+    fn value_predicates_ignore_option_lookalikes_by_spelling_only() {
+        // `--sexchr` has an `e` followed by junk so it is not a number; `--minConc`
+        // has no `e` at all, so the reference eats it as a value of 0.0.
+        let p = parse_str(&["--seglength", "--sexchr"]);
+        assert!(!p.options.was_given(Opt::Seglength));
+        assert_eq!(p.options.int(Opt::Sexchr), 0, "--sexchr still got its turn");
+        let p = parse_str(&["--seglength", "--minConc"]);
+        assert!(p.options.was_given(Opt::Seglength));
+        assert_eq!(p.options.double(Opt::Seglength), 0.0);
+    }
+
+    #[test]
+    fn hex_values() {
+        assert_eq!(
+            parse_str(&["--callrateN", "0x10"])
+                .options
+                .double(Opt::CallrateN),
+            16.0
+        );
+        assert_eq!(
+            parse_str(&["--callrateN", "0X1A"])
+                .options
+                .double(Opt::CallrateN),
+            26.0
+        );
+        assert_eq!(
+            parse_str(&["--callrateN", "0x1p4"])
+                .options
+                .double(Opt::CallrateN),
+            16.0
+        );
+        assert_eq!(
+            parse_str(&["--callrateN", "0x.8p1"])
+                .options
+                .double(Opt::CallrateN),
+            1.0
+        );
+        // `0x` alone falls back to the plain decimal 0.
+        assert_eq!(
+            parse_str(&["--callrateN", "0x"])
+                .options
+                .double(Opt::CallrateN),
+            0.0
+        );
+        // Integers do not take hex at all.
+        let p = parse_str(&["--degree", "0x10"]);
+        assert_eq!(p.options.int(Opt::Degree), 1);
+    }
+
+    #[test]
+    fn separate_analyses_use_the_reference_names_and_order() {
+        assert_eq!(
+            parse_str(&["--duplicate", "--related"])
+                .options
+                .separate_analyses(),
+            vec!["--related", "--duplicate"]
+        );
+        assert_eq!(
+            parse_str(&["--tdt", "--build", "--autoQC"])
+                .options
+                .separate_analyses(),
+            vec!["--autoQC", "--build", "--tdt"]
+        );
+        assert_eq!(
+            parse_str(&["--makeGRM", "--pca", "--lmm", "--bySNP"])
+                .options
+                .separate_analyses(),
+            vec!["--mtscore", "--pca", "--bysnp", "--grm"]
+        );
+        // --cluster silences the line entirely.
+        assert!(parse_str(&["--unrelated", "--cluster", "--build"])
+            .options
+            .separate_analyses()
+            .is_empty());
+        // ...and these three never appear in it, though they do count as analyses.
+        assert!(parse_str(&["--rplot", "--pngplot"])
+            .options
+            .separate_analyses()
+            .is_empty());
+    }
+
+    #[test]
     fn analyses_in_effect() {
         assert!(!Options::new().any_analysis());
         assert!(parse_str(&["--kinship"]).options.any_analysis());
@@ -988,7 +1108,9 @@ mod tests {
         assert!(!parse_str(&["--plink"]).options.any_analysis());
         assert!(!parse_str(&["--pcs", "2"]).options.any_analysis());
         assert_eq!(
-            parse_str(&["--ibs", "--related"]).options.analyses_in_effect(),
+            parse_str(&["--ibs", "--related"])
+                .options
+                .analyses_in_effect(),
             vec!["--related", "--ibs"]
         );
     }
