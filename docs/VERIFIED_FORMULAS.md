@@ -1,0 +1,200 @@
+# Verified formulas
+
+Every formula on this page was **checked numerically against output produced by the
+reference KING 2.3.2 binary**, not merely read out of the paper. Each one reproduces the
+reference's printed value to the full 4 decimal places it prints, on both within-family
+and between-family pairs, including a pair with genotyping error and a pair with
+substantial missingness.
+
+Reproduce the check with `tests/parity/verify_formulas.py`.
+
+Anything **not** on this page is unverified and must be treated as a hypothesis until a
+parity case confirms it. Unverified items are listed in [Open questions](#open-questions).
+
+## Per-pair counts
+
+All counts are over the set of SNPs where **both** members of the pair are non-missing.
+Call that set size `M_ij` — this is the `N_SNP` column. Missing data is handled
+**pairwise**: `N_SNP` differs from pair to pair.
+
+| Symbol | Meaning |
+| --- | --- |
+| `M_ij` | SNPs non-missing in both `i` and `j` (printed as `N_SNP`) |
+| `Het_i` | SNPs where `i` is heterozygous, counted over `M_ij` (printed as `N_Het1`) |
+| `Het_j` | SNPs where `j` is heterozygous, counted over `M_ij` (printed as `N_Het2`) |
+| `HetHet` | SNPs where **both** are heterozygous (printed as `NHetHet`) |
+| `IBS0` | SNPs where the two are **opposite homozygotes** (printed as `N_IBS0`) |
+| `HomHom` | SNPs where **both** are homozygous (printed as `NHomHom`) |
+
+> **Critical parity detail.** `Het_i` and `Het_j` are counted over the *pairwise*
+> non-missing set `M_ij`, **not** over each sample's own non-missing set. Using a
+> per-sample heterozygote count computed once and reused across pairs gives subtly wrong
+> kinship whenever missingness differs between samples. This was confirmed by the
+> `missing` parity dataset.
+
+Derived identities (exact, verified):
+
+```
+N_IBS1 = Het_i + Het_j - 2*HetHet
+N_IBS2 = M_ij - IBS0 - N_IBS1
+```
+
+## Kinship
+
+### Within-family (`.kin`, the `Kinship` column)
+
+```
+                HetHet - 2*IBS0
+    phi_ij  =  -----------------
+                  Het_i + Het_j
+```
+
+Sanity: for an MZ pair, `HetHet = Het_i = Het_j = H` and `IBS0 = 0`, giving `H/2H = 0.5`. ✓
+
+### Between-family (`.kin0`, the `Kinship` column)
+
+```
+                     2*HetHet - 4*IBS0 - Het_i - Het_j
+    phi_ij  =  0.5 + ---------------------------------
+                          4 * min(Het_i, Het_j)
+```
+
+Sanity: for unrelated samples from one population, `Het_i = Het_j = H` and
+`E[2*HetHet] = H`, giving `0.5 + (H - 2H)/(4H)`... which tends to 0. ✓
+
+The two forms **coincide exactly when `Het_i == Het_j`**; they differ otherwise. The
+`min()` denominator is what makes the between-family estimator robust to population
+structure — it is the whole point of "KING-robust".
+
+**Do not** use the within-family form for cross-family pairs or vice versa. Which form
+applies is decided purely by whether the two samples share an `FID`.
+
+### Verified against the reference
+
+| Pair | Kind | Computed | Reference |
+| --- | --- | --- | --- |
+| `f1dad`/`f1kid1` | within | 0.252297 | `0.2523` |
+| `f1dad`/`f1kid2` | within | 0.237633 | `0.2376` |
+| `f1dad`/`f2dad` | between | 0.235215 | `0.2352` |
+| `f1dad`/`f2mom` | between | −0.006831 | `-0.0068` |
+
+## The `.ibs` / `.ibs0` derived columns
+
+All verified to 4 decimals:
+
+```
+IBS      = (N_IBS1 + 2*N_IBS2) / M_ij          mean IBS allele sharing
+Dist     = (N_IBS1 + 4*IBS0)   / M_ij          mean squared genotype distance
+HetConc  = HetHet / (Het_i + Het_j - HetHet)   heterozygote Jaccard concordance
+Het2|1   = HetHet / Het_i
+Het1|2   = HetHet / Het_j
+HomConc  = (HomHom - IBS0) / HomHom
+```
+
+Note `Dist` is **not** `2 - IBS`; that identity only holds when `IBS0 = 0`.
+
+## The `.kin` / `.kin0` proportion columns
+
+In `.kin` and `.kin0`, `HetHet` and `IBS0` are printed as **proportions of `N_SNP`**,
+not as raw counts (the raw counts appear in `.ibs`):
+
+```
+HetHet_column = HetHet / M_ij
+IBS0_column   = IBS0   / M_ij
+```
+
+Verified: `HetHet = 302`, `N_SNP = 1970` → `0.1533`; `IBS0 = 28`, `N_SNP = 1960` → `0.0143`.
+
+## Pedigree-expected columns (`.kin` only)
+
+`Z0` and `Phi` are **expected values derived from the declared pedigree**, not estimates:
+`Phi` is the pedigree kinship coefficient and `Z0` the pedigree Pr[IBD = 0]. Observed:
+
+| Pedigree relationship | `Z0` | `Phi` |
+| --- | --- | --- |
+| Parent–offspring | `0.000` | `0.2500` |
+| Full siblings | `0.250` | `0.2500` |
+| Unrelated within family | `1.000` | `0.0000` |
+
+Formats: `Z0` is `%.3f`, `Phi` is `%.4f`.
+
+### The `Error` column
+
+`Error` is `1` when the **inferred** relationship class disagrees with the
+**pedigree-declared** class, else `0`. Verified on the captured `tiny` dataset: the
+pairs flagged `1` were `f2dad`/`f2dup` (pedigree unrelated, inferred 2nd degree,
+`Kinship = 0.1161`) and `f2dup`/`f2kid1` (pedigree unrelated, inferred 3rd degree,
+`Kinship = 0.0741`), while `f2dad`/`f2mom` (`-0.0308`) and `f2dup`/`f2mom` (`0.0090`)
+both infer unrelated and are flagged `0`.
+
+## Relationship inference cutoffs
+
+Kinship thresholds, from the paper and the KING manual:
+
+| Class | Kinship range |
+| --- | --- |
+| Duplicate / MZ twin | `> 0.354` |
+| 1st degree | `0.177 – 0.354` |
+| 2nd degree | `0.0884 – 0.177` |
+| 3rd degree | `0.0442 – 0.0884` |
+| 4th degree | `0.0221 – 0.0442` |
+| Unrelated | `< 0.0221` |
+
+The boundaries are `2^(-3/2)`, `2^(-5/2)`, `2^(-7/2)`, … i.e. successive halvings of the
+kinship coefficient on a `2^(-k/2)` grid.
+
+Parent–offspring is separated from full siblings **by IBS0, not by kinship** — both have
+`phi = 0.25`. A true PO pair has `IBS0 ≈ 0` (no opposite-homozygote sites are possible
+without genotyping error); a FS pair has `Pr[IBD=0] = 0.25` and hence a clearly non-zero
+IBS0 rate. The reference binary uses a **data-derived threshold** on the IBS0 proportion
+rather than a hard-coded constant — see [Open questions](#open-questions).
+
+## Output-file field formats
+
+| Column | Format |
+| --- | --- |
+| `N_SNP`, all `N_*` counts | `%d` |
+| `Z0` | `%.3f` |
+| `Phi`, `HetHet`, `IBS0`, `Kinship` | `%.4f` |
+| `IBS`, `Dist`, `HetConc`, `Het2\|1`, `Het1\|2`, `HomConc` | `%.4f` |
+| `Concord`, `HomConc`, `HetConc` in `.con` | `%.5f` |
+| `Error` | `%d` |
+
+Separators: `.kin`, `.kin0`, `.con`, `.ibs`, `.ibs0`, `unrelated.txt` are **tab**
+separated. `bySample.txt` and `bySNP.txt` are **space** separated. This asymmetry is
+real and verified.
+
+## Row ordering
+
+* `.kin0` — outer loop over samples in **`.fam` file order**, inner loop over
+  later-ordered samples in a different family, also in `.fam` order. Verified on the
+  `tiny` capture.
+* `.kin` — grouped by `FID` in first-appearance order; **within** a family the observed
+  order was ID-alphabetical, which on the `tiny` fixture is *not* the `.fam` order.
+  See [Open questions](#open-questions) — this needs an explicit discriminating test.
+
+## Open questions
+
+These are unresolved and each is paired with the experiment that settles it.
+
+1. **`.kin` within-family row order.** On `tiny` the order was alphabetical by ID, but
+   `.fam` order and alphabetical order were confounded for family 2.
+   *Experiment:* build a family whose `.fam` order is deliberately reverse-alphabetical
+   (e.g. IDs `zeta`, `mid`, `alpha` in that `.fam` order) and see which order `.kin` uses.
+2. **PO vs FS IBS0 threshold.** The binary's string table contains
+   `1st-degree relatives are treated as parent-offspring if IBS0 < %.4lf`, implying the
+   cutoff is computed from the data, not fixed.
+   *Experiment:* run `--related` on datasets with differing overall IBS0 rates and read
+   the printed threshold back off stdout; fit the rule.
+3. **SNP inclusion rules.** Whether monomorphic SNPs, SNPs with an allele coded `0`, or
+   SNPs above a missingness threshold are dropped before counting, and whether only
+   autosomes are used by default. The console prints
+   `Genotype data consist of N autosome SNPs`, which suggests non-autosomes are excluded
+   from the default relatedness path.
+   *Experiment:* the `monomorphic` and `sexchr` parity datasets; compare `N_SNP` against
+   the count we predict under each candidate rule.
+4. **`--cpus` determinism.** Whether thread count changes any printed digit (it should
+   not, since the kernel sums integers, but must be confirmed).
+   *Experiment:* diff `--cpus 1` against `--cpus 8` output on `bigish`.
+5. **`--degree` filtering semantics.** Whether `--degree n` filters `.kin0` rows only, or
+   also changes `.kin`, and whether the cutoff is applied to kinship or to inferred class.
