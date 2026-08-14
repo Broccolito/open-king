@@ -237,6 +237,58 @@ pub fn genotype_file_unopenable(path: &str) -> String {
     format!("Genotype file {path} cannot be opened")
 }
 
+/// `Pedigree file <name> cannot be opened`.
+pub fn pedigree_file_unopenable(path: &str) -> String {
+    format!("Pedigree file {path} cannot be opened")
+}
+
+/// `Map file <name> cannot be opened`.
+pub fn map_file_unopenable(path: &str) -> String {
+    format!("Map file {path} cannot be opened")
+}
+
+/// Body of the FATAL ERROR raised when `-b` names a file that exists but is not `.bed`.
+///
+/// The suffix test is on the literal argument and is case sensitive: a readable
+/// `t.BED` fails here rather than loading.
+pub const PLINK_BINARY_REQUIRED: &str = "Please use PLINK binary format as input.";
+
+/// Body of the FATAL ERROR raised when the `.bed` does not begin with the PLINK magic.
+///
+/// A zero-length `.bed` lands here too.
+pub const PLINK_OR_KING_BINARY_REQUIRED: &str =
+    "Please use either PLINK or KING binary format as input.";
+
+/// Body of the FATAL ERROR raised by an individual-major (mode `0x00`) `.bed`.
+///
+/// Unlike the magic check this one fires *after* `Read in PLINK bed file …` has printed.
+pub const SNP_MAJOR_ONLY: &str = "Currently only SNP-major mode can be analyzed.";
+
+/// Body of the FATAL ERROR raised when the map has no autosomal variants.
+///
+/// Printed after the map-composition line and `PLINK maps loaded`, not instead of them.
+pub const NO_AUTOSOME_SNPS: &str = "No autosome SNPs are available. Please check your map file.";
+
+/// `Not enough genotypes at the <k>th marker` for a truncated `.bed`.
+///
+/// `k` is the **0-based** index of the first marker whose row is not fully present, and
+/// the suffix is a literal `th` at every value. The reference's own string ends in a
+/// newline, so this fatal block closes with three newlines rather than the usual two —
+/// verified with `od`.
+pub fn not_enough_genotypes(marker: usize) -> String {
+    format!("Not enough genotypes at the {marker}th marker\n")
+}
+
+/// `Family <fid>: Person <iid> is duplicated`, printed before the fatal that follows it.
+pub fn person_duplicated(fid: &str, iid: &str) -> String {
+    format!("Family {fid}: Person {iid} is duplicated\n")
+}
+
+/// Body of the FATAL ERROR that follows [`person_duplicated`].
+///
+/// Ends in a newline in the reference's own string, like [`not_enough_genotypes`].
+pub const PEDIGREE_STRUCTURE_PROBLEMS: &str = "Please correct problems with pedigree structure\n";
+
 /// The lowest `--sexchr` the reference accepts; 1 and below are fatal.
 pub const MIN_SEX_CHROMOSOME: i32 = 2;
 
@@ -369,6 +421,45 @@ pub fn read_bim(path: &str) -> String {
 /// `  Genotype data consist of <n> autosome SNPs`
 pub fn autosome_snps(snps: usize) -> String {
     format!("  Genotype data consist of {snps} autosome SNPs\n")
+}
+
+/// The full map-composition line, generalising [`autosome_snps`] to a map that also
+/// carries sex chromosomes.
+///
+/// ```text
+///   Genotype data consist of 4150 autosome SNPs (including 150 XY SNPs), 1500 X-chromosome SNPs, 300 Y-chromosome SNPs, 50 mitochondrial SNPs
+/// ```
+///
+/// `autosome` is the printed autosome total and **already includes** `xy`; the XY count is
+/// then repeated in its own parenthetical. Every clause but the autosome one is dropped
+/// when its count is zero — including the parenthetical — while `0 autosome SNPs` still
+/// prints, because the reference emits that line before deciding there is nothing to
+/// analyse. All five behaviours were read off the reference on a fileset carrying every
+/// chromosome class at a distinct count.
+pub fn genotype_data_counts(autosome: usize, xy: usize, x: usize, y: usize, mt: usize) -> String {
+    let mut s = format!("  Genotype data consist of {autosome} autosome SNPs");
+    if xy > 0 {
+        let _ = write!(s, " (including {xy} XY SNPs)");
+    }
+    if x > 0 {
+        let _ = write!(s, ", {x} X-chromosome SNPs");
+    }
+    if y > 0 {
+        let _ = write!(s, ", {y} Y-chromosome SNPs");
+    }
+    if mt > 0 {
+        let _ = write!(s, ", {mt} mitochondrial SNPs");
+    }
+    s.push('\n');
+    s
+}
+
+/// `  <n> other SNPs are removed.` — the variants that fell outside every class.
+///
+/// The reference omits the line entirely when nothing was removed, which is the caller's
+/// job to check.
+pub fn other_snps_removed(n: usize) -> String {
+    format!("  {n} other SNPs are removed.\n")
 }
 
 /// `  PLINK maps loaded: <n> SNPs`

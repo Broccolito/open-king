@@ -6,8 +6,13 @@
 //! CHR  ID  CM  BP  A1  A2
 //! ```
 //!
+//! Fewer than six fields is an error; extra trailing fields are ignored, matching the
+//! reference (see [`parse_bim`]'s tests).
+//!
 //! * `CHR` is kept verbatim (`1`, `chr1`, `X`, `MT`, or a contig name we do not
-//!   recognise); [`crate::chrom_code`] maps it to PLINK's numeric code when asked.
+//!   recognise); [`crate::chrom_code`] maps it to PLINK's numeric code when asked, and
+//!   [`crate::bed::king_chrom_code`] — the stricter mapping the reference itself uses —
+//!   decides what the analysis filter keeps.
 //! * `CM` is a genetic position in centimorgans. It is usually the literal `0`, and is
 //!   frequently written as an integer, so it is parsed as a float either way.
 //! * `BP` is signed: PLINK itself emits negative base-pair positions to mark variants it
@@ -43,7 +48,9 @@ pub fn parse_bim(text: &str, path: &Path) -> Result<Vec<Variant>> {
             continue;
         }
         let f: Vec<&str> = line.split_ascii_whitespace().collect();
-        if f.len() != N_FIELDS {
+        // Too few fields is fatal (the reference reports `0 autosome SNPs` then a FATAL
+        // ERROR); extra trailing fields are ignored, as the reference ignores them.
+        if f.len() < N_FIELDS {
             return Err(IoError::Fields {
                 path: path.to_path_buf(),
                 line: lineno,
@@ -155,7 +162,7 @@ mod tests {
     }
 
     #[test]
-    fn wrong_field_count_is_rejected() {
+    fn too_few_fields_is_rejected() {
         match parse_bim("1 rs1 0 1000 A\n", &p()) {
             Err(IoError::Fields {
                 line,
@@ -167,6 +174,22 @@ mod tests {
             }
             other => panic!("expected Fields error, got {other:?}"),
         }
+    }
+
+    /// The reference accepts extra trailing columns and ignores them.
+    ///
+    /// Probed directly: `king -b t.bed --bim seven.bim --ibs`, with a seventh field
+    /// appended to every `.bim` line, printed the same `70 autosome SNPs` and wrote a
+    /// `king.ibs` byte-identical to the six-column run. (A *five*-column `.bim` gives
+    /// `0 autosome SNPs` and a FATAL ERROR there, which is why too-few stays an error
+    /// here.)
+    #[test]
+    fn extra_trailing_columns_are_ignored_as_the_reference_ignores_them() {
+        let six = parse_bim("1\trs1\t0\t1000\tA\tG\n2\trs2\t1.5\t20\tC\tT\n", &p()).unwrap();
+        let seven =
+            parse_bim("1\trs1\t0\t1000\tA\tG\tX\n2\trs2\t1.5\t20\tC\tT\tY\n", &p()).unwrap();
+        assert_eq!(seven, six);
+        assert_eq!(seven[1].a2, "T", "A2 must still come from column 6");
     }
 
     #[test]

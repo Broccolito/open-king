@@ -22,7 +22,7 @@
 
 use std::io::Write;
 
-use king_cli::{cli, console};
+use king_cli::{cli, console, load};
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -85,26 +85,27 @@ fn main() {
         fatal(console::RISK_MODEL_REQUIRED);
     }
 
+    // The fileset load owns its own console sequence and its own `.bed` probe — including
+    // the reference's quirk of skipping that probe on the `--risk --model` path.
+    let loaded = match load::load(opts, &mut std::io::stdout()) {
+        Ok(loaded) => loaded,
+        Err(message) => fatal(&message),
+    };
+
     // ------------------------------------------------------------------
     // SEAM: the analysis engines plug in here.
     //
-    // TODO(engine): load the fileset with `king_io` (emitting
-    // `console::loading_plink_binary`, `console::read_fam`, `console::read_bim`,
-    // `console::read_bed`, the `console::progress` ticks and
-    // `console::autosome_words`), then dispatch the analyses named by
-    // `opts.analyses_in_effect()` into `king_core`, printing
-    // `console::options_in_effect` first and `console::king_ends_at` last.
+    // TODO(engine): dispatch the analyses named by `opts.analyses_in_effect()` into
+    // `king_core`. The reference reprints `loaded.preamble()` — the
+    // "Autosome genotypes stored in …" line and the blank line under it — ahead of
+    // *each* pass, then that pass's `console::options_in_effect`, then its body; a
+    // `--kinship --ibs` run shows the pair twice. `console::king_ends_at` closes the run.
     //
-    // The `.bed` probe below belongs to that loader and only stands in for it: it is
-    // what makes `king -b nonexistent.bed --related` match the reference. Note that the
-    // reference does *not* probe the `.bed` on the `--risk` path — with a model file it
-    // goes straight to the `.fam` and fails with "Pedigree file <x>.fam cannot be
-    // opened" — so move this check inside the loader rather than keeping it here.
+    // The single-analysis preamble below is what the loader is obliged to print and no
+    // more; the per-analysis loop replaces it.
     // ------------------------------------------------------------------
 
-    if std::fs::File::open(&opts.bed).is_err() {
-        fatal(&console::genotype_file_unopenable(&opts.bed));
-    }
+    emit(&loaded.preamble());
 
     std::process::exit(0);
 }

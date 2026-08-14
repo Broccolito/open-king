@@ -5,6 +5,8 @@
 //! * [`cli`] — the argument parser and the option table.
 //! * [`console`] — every line the program prints, from the banner to the run-time
 //!   progress ticks the analysis engines emit.
+//! * [`load`] — the fileset loader: the chromosome partition, the order of the file
+//!   checks, and the progress ticks that interleave with them.
 //!
 //! The binary in `main.rs` is a thin wiring layer over these.
 
@@ -12,3 +14,4 @@
 
 pub mod cli;
 pub mod console;
+pub mod load;

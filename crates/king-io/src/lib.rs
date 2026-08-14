@@ -138,8 +138,14 @@ pub enum VariantFilter {
 /// console messages where those are known.
 #[derive(Debug)]
 pub enum IoError {
-    Open { path: PathBuf, source: std::io::Error },
-    Read { path: PathBuf, source: std::io::Error },
+    Open {
+        path: PathBuf,
+        source: std::io::Error,
+    },
+    Read {
+        path: PathBuf,
+        source: std::io::Error,
+    },
     /// `.bed` did not start with the 0x6c 0x1b magic.
     BadMagic { path: PathBuf },
     /// `.bed` mode byte was neither 0x00 nor 0x01.
@@ -147,11 +153,25 @@ pub enum IoError {
     /// Individual-major `.bed` (mode 0x00), which KING does not accept.
     IndividualMajor { path: PathBuf },
     /// `.bed` length disagreed with `n_samples` x `n_variants`.
-    SizeMismatch { path: PathBuf, expected: u64, found: u64 },
+    SizeMismatch {
+        path: PathBuf,
+        expected: u64,
+        found: u64,
+    },
     /// A line had the wrong number of fields.
-    Fields { path: PathBuf, line: usize, expected: usize, found: usize },
+    Fields {
+        path: PathBuf,
+        line: usize,
+        expected: usize,
+        found: usize,
+    },
     /// A numeric field failed to parse.
-    Parse { path: PathBuf, line: usize, field: &'static str, value: String },
+    Parse {
+        path: PathBuf,
+        line: usize,
+        field: &'static str,
+        value: String,
+    },
     /// Two samples shared an (FID, IID) key.
     DuplicateSample { fid: String, iid: String },
 }
@@ -169,24 +189,42 @@ impl fmt::Display for IoError {
                 write!(f, "{} is not a PLINK binary genotype file", path.display())
             }
             IoError::BadMode { path, mode } => {
-                write!(f, "{} has unrecognized mode byte {mode:#04x}", path.display())
+                write!(
+                    f,
+                    "{} has unrecognized mode byte {mode:#04x}",
+                    path.display()
+                )
             }
             IoError::IndividualMajor { path } => write!(
                 f,
                 "{} is in individual-major order, which is not supported",
                 path.display()
             ),
-            IoError::SizeMismatch { path, expected, found } => write!(
+            IoError::SizeMismatch {
+                path,
+                expected,
+                found,
+            } => write!(
                 f,
                 "{} is {found} bytes but {expected} were expected",
                 path.display()
             ),
-            IoError::Fields { path, line, expected, found } => write!(
+            IoError::Fields {
+                path,
+                line,
+                expected,
+                found,
+            } => write!(
                 f,
                 "{}: line {line} has {found} fields, expected {expected}",
                 path.display()
             ),
-            IoError::Parse { path, line, field, value } => write!(
+            IoError::Parse {
+                path,
+                line,
+                field,
+                value,
+            } => write!(
                 f,
                 "{}: line {line}: cannot parse {field} from {value:?}",
                 path.display()

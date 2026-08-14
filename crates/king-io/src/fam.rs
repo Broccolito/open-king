@@ -8,9 +8,11 @@
 //!
 //! Every field except `SEX` is kept verbatim as text so that a fileset can be written
 //! back out unchanged; `SEX` is normalised to `1`/`2`/`0` because the relatedness code
-//! needs to compare it. Blank lines are ignored; a line with any other field count is an
-//! error, because a `.fam` that is not six columns wide is almost always a `.ped` or a
-//! `.tfam` that has been pointed at by mistake.
+//! needs to compare it. Blank lines are ignored; a line with **fewer** than six fields is
+//! an error. Extra trailing fields are read past and dropped rather than rejected: the
+//! reference binary does the same, and a `.fam` given a seventh column analysed
+//! byte-identically to the same file without it, so refusing it here would turn a file the
+//! reference accepts into a FATAL ERROR.
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -55,7 +57,10 @@ pub fn parse_fam(text: &str, path: &Path) -> Result<Vec<Sample>> {
             continue;
         }
         let f: Vec<&str> = line.split_ascii_whitespace().collect();
-        if f.len() != N_FIELDS {
+        // Too few fields is fatal; extra trailing fields are ignored, because that is
+        // what the reference does — a `.fam` with a seventh column analysed byte-identically
+        // to the same file without it. See the tests for the probe.
+        if f.len() < N_FIELDS {
             return Err(IoError::Fields {
                 path: path.to_path_buf(),
                 line: lineno,
@@ -202,7 +207,7 @@ fam2\ts3\t0\t0\t0\t2
     }
 
     #[test]
-    fn wrong_field_count_is_rejected_with_the_offending_line() {
+    fn too_few_fields_is_rejected_with_the_offending_line() {
         let short = "fam1 s1 0 0 1\n";
         match parse_fam(short, &p()) {
             Err(IoError::Fields {
@@ -215,11 +220,35 @@ fam2\ts3\t0\t0\t0\t2
             }
             other => panic!("expected Fields error, got {other:?}"),
         }
-        let long = "fam1 s1 0 0 1 -9 extra\n";
-        match parse_fam(long, &p()) {
-            Err(IoError::Fields { found, .. }) => assert_eq!(found, 7),
+        // ... and it is the *first* bad line that is named
+        match parse_fam("f a 0 0 1 -9\nf b 0 0\n", &p()) {
+            Err(IoError::Fields { line, found, .. }) => assert_eq!((line, found), (2, 4)),
             other => panic!("expected Fields error, got {other:?}"),
         }
+    }
+
+    /// The reference accepts extra trailing columns and ignores them.
+    ///
+    /// Probed directly: `king -b t.bed --fam seven.fam --ibs`, where `seven.fam` is the
+    /// six-column `.fam` with a seventh field appended to every line, produced a
+    /// `king.ibs` **byte-identical** to the six-column run — no warning, no error. Failing
+    /// the load here would turn a file the reference analyses into a FATAL ERROR.
+    #[test]
+    fn extra_trailing_columns_are_ignored_as_the_reference_ignores_them() {
+        let six = parse_fam(SIX, &p()).unwrap();
+        let seven: String = SIX
+            .lines()
+            .map(|l| format!("{l} EXTRA\n"))
+            .collect::<String>();
+        let extra = parse_fam(&seven, &p()).unwrap();
+        assert_eq!(extra, six, "the seventh column must not change anything");
+
+        // a `.ped`-shaped line is read as its first six fields, exactly as the reference
+        // reads it
+        let ped = parse_fam("fam1 s1 0 0 1 -9 A A C T G G\n", &p()).unwrap();
+        assert_eq!(ped.len(), 1);
+        assert_eq!(ped[0].pheno, "-9");
+        assert_eq!(ped[0].sex, 1);
     }
 
     #[test]

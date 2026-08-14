@@ -81,15 +81,23 @@ fn ibs1(counts: &PairCounts) -> f64 {
     c(counts.het_i) + c(counts.het_j) - 2.0 * c(counts.het_het)
 }
 
-/// `N_IBS2 = N_SNP - IBS0 - N_IBS1`, as `f64`.
-#[inline]
-fn ibs2(counts: &PairCounts) -> f64 {
-    c(counts.n_snp) - c(counts.ibs0) - ibs1(counts)
-}
-
-/// Mean IBS allele sharing: `(N_IBS1 + 2*N_IBS2) / N_SNP`. Ranges 0..=2.
+/// Mean IBS allele sharing. Ranges 0..=2.
+///
+/// Written as `2 - (N_IBS1 + 2*IBS0) / N_SNP`, **not** as the algebraically identical
+/// `(N_IBS1 + 2*N_IBS2) / N_SNP` that `docs/VERIFIED_FORMULAS.md` states. The two differ
+/// in their last printed digit: with `N_SNP` a power-of-ten-friendly count such as 20000,
+/// the quotient is an exact multiple of `0.00005`, i.e. a `%.4f` tie, and which way the
+/// tie falls depends on which side of the decimal the `f64` lands — which in turn depends
+/// on the expression. Over the 21 561 `.ibs`/`.ibs0` rows in `tests/parity/golden/core`,
+/// the `2 - ...` form reproduces the reference's printed `IBS` on every row while the
+/// `N_IBS2` form misprints 168 of them (81 a digit low, 87 a digit high), e.g. the
+/// `threegen` pair `TG_C1`/`TG_GM2` where the exact value is 1.43965 and the reference
+/// prints `1.4396`.
+///
+/// The identity is `2 - (N_IBS1 + 2*IBS0)/N_SNP = (N_IBS1 + 2*N_IBS2)/N_SNP` because
+/// `N_SNP = IBS0 + N_IBS1 + N_IBS2`; only the floating-point path differs.
 pub fn ibs_mean(counts: &PairCounts) -> f64 {
-    (ibs1(counts) + 2.0 * ibs2(counts)) / c(counts.n_snp)
+    2.0 - (ibs1(counts) + 2.0 * c(counts.ibs0)) / c(counts.n_snp)
 }
 
 /// Mean squared genotype distance: `(N_IBS1 + 4*IBS0) / N_SNP`.
@@ -261,6 +269,112 @@ mod tests {
             assert_eq!(r4(hom_concordance(k)), p.hom_conc, "{}: HomConc", p.name);
             assert_eq!(r4(kinship(k, p.scope)), p.kinship, "{}: Kinship", p.name);
         }
+    }
+
+    /// `%.4f` ties in the `IBS` column.
+    ///
+    /// Every row below is a verbatim `.ibs` row from `tests/parity/golden/core`. Each has
+    /// `N_SNP = 20000`, so `(N_IBS1 + 2*N_IBS2)/N_SNP` is an exact multiple of `0.00005`
+    /// and lands precisely on a `%.4f` rounding tie; the two algebraically identical
+    /// expressions then disagree in the fourth decimal, in *both* directions. The
+    /// reference's value is reproduced only by `2 - (N_IBS1 + 2*IBS0)/N_SNP`.
+    ///
+    /// `(dataset pair, counts, printed IBS, what the N_IBS2 form would print)`
+    #[test]
+    fn ibs_mean_reproduces_the_reference_on_rounding_ties() {
+        let rows: [(&str, PairCounts, &str, &str); 4] = [
+            (
+                "threegen TG_C1/TG_GM2",
+                PairCounts {
+                    n_snp: 20000,
+                    het_i: 7057,
+                    het_j: 7036,
+                    het_het: 2756,
+                    ibs0: 1313,
+                    hom_hom: 8663,
+                },
+                "1.4396",
+                "1.4397",
+            ),
+            (
+                "threegen TG_C1/TG_S2",
+                PairCounts {
+                    n_snp: 20000,
+                    het_i: 7057,
+                    het_j: 7032,
+                    het_het: 2788,
+                    ibs0: 1350,
+                    hom_hom: 8699,
+                },
+                "1.4394",
+                "1.4393",
+            ),
+            (
+                "unrelated P02/P07",
+                PairCounts {
+                    n_snp: 20000,
+                    het_i: 6951,
+                    het_j: 6978,
+                    het_het: 2676,
+                    ibs0: 1376,
+                    hom_hom: 8747,
+                },
+                "1.4335",
+                "1.4336",
+            ),
+            (
+                "unrelated P03/P04",
+                PairCounts {
+                    n_snp: 20000,
+                    het_i: 6971,
+                    het_j: 6968,
+                    het_het: 2734,
+                    ibs0: 1326,
+                    hom_hom: 8795,
+                },
+                "1.4438",
+                "1.4439",
+            ),
+        ];
+        for (name, k, printed, naive_form) in rows {
+            // the counts are the reference's own, so the identities must hold exactly
+            assert_eq!(k.n_snp, k.ibs0 + k.ibs1() + k.ibs2(), "{name}: partition");
+            assert_ne!(
+                printed, naive_form,
+                "{name}: the case must be discriminating"
+            );
+            let naive = (f64::from(k.ibs1()) + 2.0 * f64::from(k.ibs2())) / f64::from(k.n_snp);
+            assert_eq!(format!("{naive:.4}"), naive_form, "{name}: tie direction");
+            assert_eq!(format!("{:.4}", ibs_mean(&k)), printed, "{name}: IBS");
+        }
+    }
+
+    /// The two forms agree on everything that is not a tie, so the fix cannot have moved
+    /// any ordinary value.
+    #[test]
+    fn ibs_mean_still_equals_the_algebraic_definition_away_from_ties() {
+        for p in &REFERENCE_PAIRS {
+            let k = &p.counts;
+            let naive = (f64::from(k.ibs1()) + 2.0 * f64::from(k.ibs2())) / f64::from(k.n_snp);
+            assert!(
+                (ibs_mean(k) - naive).abs() < 1e-12,
+                "{}: {} vs {naive}",
+                p.name,
+                ibs_mean(k)
+            );
+        }
+        // and an all-IBS2 pair is still exactly 2, an all-IBS0 pair exactly 0
+        let same = PairCounts {
+            n_snp: 100,
+            het_i: 0,
+            het_j: 0,
+            het_het: 0,
+            ibs0: 0,
+            hom_hom: 100,
+        };
+        assert_eq!(ibs_mean(&same), 2.0);
+        let opposite = PairCounts { ibs0: 100, ..same };
+        assert_eq!(ibs_mean(&opposite), 0.0);
     }
 
     #[test]

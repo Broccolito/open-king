@@ -72,12 +72,50 @@ pub const fn planes_for_code(code: u8) -> (u64, u64) {
     }
 }
 
+/// The chromosome code the **reference binary** assigns to a `.bim` chromosome field, or
+/// `None` if it does not recognise the field at all and drops the variant.
+///
+/// This is deliberately *not* [`crate::chrom_code`]. That contract function also accepts a
+/// `chr` prefix, `PAR` and a bare `M`; the reference accepts none of them, and a variant it
+/// does not recognise is excluded from every analysis. Filtering through the more
+/// permissive mapping would analyse rows the reference silently drops.
+///
+/// Established by handing the reference a fixed `.bed` with `--bim` overrides that relabel
+/// the chromosome column, and reading its per-chromosome tallies back off the console —
+/// see the test module for the exact runs.
+pub fn king_chrom_code(chrom: &str) -> Option<u8> {
+    if let Ok(n) = chrom.parse::<u8>() {
+        return if (1..=26).contains(&n) { Some(n) } else { None };
+    }
+    match chrom {
+        "X" | "x" => Some(23),
+        "Y" | "y" => Some(24),
+        "XY" | "xy" => Some(25),
+        "MT" | "mt" => Some(26),
+        _ => None,
+    }
+}
+
+/// Whether the reference counts this chromosome code among its "autosome SNPs".
+///
+/// Codes 1..=22 **plus 25 (XY, the pseudo-autosomal region)**: with 4000 autosomal and 150
+/// XY variants the reference reports `4150 autosome SNPs (including 150 XY SNPs)` and
+/// stores them in `ceil(4150/64) = 65` words, and its `king.ibs` rows for that fileset
+/// carry `N_SNP = 4150`. Note this differs from [`Variant::is_autosome`], which is the
+/// strict biological sense (1..=22) that the contract in `lib.rs` defines.
+fn is_king_autosome(code: u8) -> bool {
+    matches!(code, 1..=22 | 25)
+}
+
 /// Whether a variant survives `filter`.
+///
+/// Chromosome recognition goes through [`king_chrom_code`], not [`Variant::chrom_code`],
+/// so that the set of analysed rows is exactly the reference's.
 pub fn is_kept(variant: &Variant, filter: VariantFilter) -> bool {
     match filter {
         VariantFilter::All => true,
-        VariantFilter::Autosomes => variant.is_autosome(),
-        VariantFilter::Chromosome(c) => variant.chrom_code() == Some(c),
+        VariantFilter::Autosomes => king_chrom_code(&variant.chrom).is_some_and(is_king_autosome),
+        VariantFilter::Chromosome(c) => king_chrom_code(&variant.chrom) == Some(c),
     }
 }
 
@@ -535,6 +573,122 @@ fam3 s6 0 0 2 -9
         }
         // and a missing call is distinguishable from every real genotype
         assert_ne!(call_at(&g, 3, 1), Call::Missing);
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Which chromosomes the reference actually analyses.
+    //
+    // Probed by handing the reference binary a fixed `.bed` together with `--bim`
+    // overrides that relabel its chromosome column, and reading the console back. With a
+    // map of 2000+2000+1500+300+150+50 rows relabelled `1 / 0 / 23 / GL000226 / XY / 26`
+    // it printed
+    //
+    //   Genotype data consist of 2150 autosome SNPs (including 150 XY SNPs),
+    //   1500 X-chromosome SNPs, 50 mitochondrial SNPs
+    //   Autosome genotypes stored in 34 words for each of 10 individuals.
+    //
+    // 2150 = 2000 + 150, and ceil(2150/64) = 34: **XY (code 25) is part of the autosome
+    // set the relatedness path uses**, while `0` and an unplaced contig are dropped
+    // outright. The `sexchr` corpus fileset says the same thing without any relabelling
+    // (4000 autosomal + 150 XY -> "4150 autosome SNPs", 65 words), and its captured
+    // `king.ibs` rows carry `N_SNP = 4150`, so the XY rows reach the counting kernel and
+    // are not merely tallied.
+    //
+    // Further relabelling runs pinned the accepted spellings: `x`/`X` -> 23, `y`/`Y` ->
+    // 24, `xy`/`XY` -> 25, `mt`/`MT` -> 26, and everything else — including `chr1`,
+    // `chrX`, `PAR`, `M`, `MITO`, `0` and `27` — dropped.
+    // ---------------------------------------------------------------------------------
+
+    #[test]
+    fn the_autosome_set_includes_xy_as_the_reference_defines_it() {
+        let variants = vec![
+            variant("1", "a", 1, "A", "G"),
+            variant("22", "b", 1, "A", "G"),
+            variant("25", "xy", 1, "A", "G"),
+            variant("XY", "xy2", 1, "A", "G"),
+            variant("xy", "xy3", 1, "A", "G"),
+            variant("23", "x", 1, "A", "G"),
+            variant("24", "y", 1, "A", "G"),
+            variant("26", "mt", 1, "A", "G"),
+            variant("0", "unplaced", 1, "A", "G"),
+            variant("GL000226", "contig", 1, "A", "G"),
+        ];
+        let kept: Vec<&str> = variants
+            .iter()
+            .filter(|v| is_kept(v, VariantFilter::Autosomes))
+            .map(|v| v.id.as_str())
+            .collect();
+        assert_eq!(kept, vec!["a", "b", "xy", "xy2", "xy3"]);
+
+        // ... and the XY rows really do land in the planes, densely renumbered alongside
+        // the autosomal ones rather than being tallied and dropped.
+        let n_samples = 4;
+        let mut bytes = vec![0x6c, 0x1b, 0x01];
+        // one byte per row: sample 0 hom A1 (00), 1 het (10), 2 hom A2 (11), 3 missing (01)
+        bytes.extend(std::iter::repeat(0b01_11_10_00).take(variants.len()));
+        let (g, kept) = read_bed_bytes(
+            &bytes,
+            Path::new("xy.bed"),
+            n_samples,
+            &variants,
+            VariantFilter::Autosomes,
+        )
+        .unwrap();
+        assert_eq!(kept, vec![0, 1, 2, 3, 4]);
+        assert_eq!(g.n_variants, 5);
+        for m in 0..5 {
+            assert_eq!(
+                call_at(&g, 0, m),
+                Call::HomA1,
+                "sample 0 at kept variant {m}"
+            );
+            assert_eq!(call_at(&g, 1, m), Call::Het);
+            assert_eq!(call_at(&g, 2, m), Call::HomA2);
+            assert_eq!(call_at(&g, 3, m), Call::Missing);
+        }
+    }
+
+    #[test]
+    fn only_the_reference_s_own_chromosome_spellings_are_recognised() {
+        // Accepted by the reference, and by us.
+        for (text, code) in [
+            ("1", 1u8),
+            ("22", 22),
+            ("23", 23),
+            ("X", 23),
+            ("x", 23),
+            ("24", 24),
+            ("Y", 24),
+            ("y", 24),
+            ("25", 25),
+            ("XY", 25),
+            ("xy", 25),
+            ("26", 26),
+            ("MT", 26),
+            ("mt", 26),
+        ] {
+            assert_eq!(king_chrom_code(text), Some(code), "chromosome {text:?}");
+        }
+        // Rejected by the reference: it dropped every one of these from all four of its
+        // per-chromosome tallies.
+        for text in [
+            "0", "27", "255", "chr1", "chrX", "PAR", "M", "MITO", "GL000226", "", "-1",
+        ] {
+            assert_eq!(king_chrom_code(text), None, "chromosome {text:?}");
+        }
+        // The frozen `Variant::chrom_code` contract is deliberately more permissive; the
+        // analysis filter must not inherit that, or a `chr1`-style `.bim` would be
+        // analysed here and ignored by the reference.
+        assert_eq!(crate::chrom_code("chr1"), Some(1));
+        assert_eq!(king_chrom_code("chr1"), None);
+        assert!(!is_kept(
+            &variant("chr1", "v", 1, "A", "G"),
+            VariantFilter::Autosomes
+        ));
+        assert!(!is_kept(
+            &variant("PAR", "v", 1, "A", "G"),
+            VariantFilter::Autosomes
+        ));
     }
 
     #[test]
