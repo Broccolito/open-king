@@ -1,0 +1,25 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/king-io",
+    "crates/king-core",
+    "crates/king-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"
+repository = "https://github.com/Broccolito/open-king"
+authors = ["Wanjun Gu"]
+
+[workspace.dependencies]
+king-io = { path = "crates/king-io" }
+king-core = { path = "crates/king-core" }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"

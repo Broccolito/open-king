@@ -1,0 +1,19 @@
+[package]
+name = "king-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Drop-in CLI for open-king, a clean-room reimplementation of KING"
+
+[[bin]]
+name = "king"
+path = "src/main.rs"
+
+[dependencies]
+king-io.workspace = true
+king-core.workspace = true
+flate2 = "1"
+rayon = "1"

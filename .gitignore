@@ -1,0 +1,17 @@
+/target
+**/*.rs.bk
+*.pdb
+
+# Parity-test scratch: generated filesets and captured reference output.
+/tests/parity/work/
+/tests/parity/golden/**/*.bed
+/tests/parity/golden/**/*.bim
+/tests/parity/golden/**/*.fam
+
+# Never commit genomic data.
+*.vcf
+*.vcf.gz
+*.bcf
+*.ped
+
+.DS_Store
