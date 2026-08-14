@@ -29,18 +29,32 @@ The one-paragraph version: the relatedness estimators, the QC reports, duplicate
 detection, auto-QC, unrelated-set selection, `--ibs` and the whole command-line surface are
 byte-identical everywhere. What is left is the `.seg` IBD-segment **caller**, which finds
 exactly the right set of segments — **0 spurious and 0 missing rows on every output file in
-the corpus** — but places their endpoints within about one 64-marker scan word of the
-reference. So the segment columns are close without being equal: **69.5 %** of `.seg` rows
-and **93.1 %** of `--related`'s `.kin` rows are exact, and the residual is concentrated
-entirely in the IBD2 half of the caller.
+the corpus** — but places a called IBD2 segment's endpoints a few markers from the reference.
+So the segment columns are close without being equal: on the primary `--ibdseg` capture
+**825 of 982** rows carry both estimates exactly, `IBD2Seg` alone is right on **896**, every
+one of the 982 `InfType` labels is right, and the mean absolute `PropIBD` error is
+**0.00036** with a worst row of **0.0089**. Whether a pair has any IBD2 at all is now
+decided correctly on all 982 rows; the residual is purely the *length* of the 159 rows that
+do carry some.
 
 Of the 77 cases that are not byte-identical, 76 are that one cause; the remaining one is
 `--build`'s pedigree reconstruction, which is unimplemented.
 
 `--ibs` left that list when its IBD2 caller was solved outright: both of its IBD2 columns,
 `MaxIBD2` and `Pr_IBD2`, are exact on every row of every dataset. It is a *different* caller
-from `.seg`'s, which is why solving it moved six cases and not sixty
-(`docs/research/16-segment-extension.md`, `docs/PARITY.md` §5.8).
+from `.seg`'s (`docs/research/16-segment-extension.md`, `docs/PARITY.md` §5.8), so the `.seg`
+caller needed its own campaign and its own instrument — a canvas that inverts a printed
+`IBD2Seg` back to the number of calls and the number of words
+(`docs/research/17-seg-caller.md`). That work cut the mean error by a factor of 3.7 and the
+worst row by a factor of 24, and **moved the headline count by nothing at all**: the residual
+is spread too thin for any whole file to become byte-identical. 403/480 is the same number
+the previous caller scored. `docs/PARITY.md` §4.4 is where that work is graded, and §5.0 says
+what is left, in what shape, and which experiment to run next.
+
+Two known differences sit outside the 480 captures entirely, so they cost no case but a user
+could still hit them: `--ibdseg` does not apply the reference's 100 Mb usable-total floor,
+and `splitped.txt` is written unconditionally. Both are measured, localised and written up in
+`docs/PARITY.md` §5.10.
 
 ## Scope (v1)
 
@@ -58,9 +72,9 @@ cases, not files.
 | `--cluster` | `allsegs.txt`, `updateids.txt`, `cluster.kin` | 12/13 — `cluster.kin`'s three segment columns differ on 30 of 165 rows on `bigish` |
 | `--build` | `updateids.txt`, `updateparents.txt`, `build.log`, `allsegs.txt` | 12/13 — on `bigish` the pedigree-reconstruction rules are unimplemented, so both files come out empty |
 | `--unrelated` | `unrelated.txt`, `unrelated_toberemoved.txt`, `allsegs.txt` | **byte-identical** (26/26) |
-| `--related` | `.kin` (16 col), `.kin0` (14 col), `X.kin`, `allsegs.txt` | 35/65 — four of the six extra columns come from the segment engine; `IBD1Seg` differs on 828 of 3 978 `.kin` rows, mean absolute error 0.0196. `HetConc`, `HomIBS0` and the ten `--kinship` columns are exact on every row, and no row's `PropIBD`, `InfType` or `Error` differs unless its segment estimates already do |
+| `--related` | `.kin` (16 col), `.kin0` (14 col), `X.kin`, `allsegs.txt` | 35/65 — four of the six extra columns come from the segment engine; `IBD1Seg` differs on 810 of 3 978 `.kin` rows, mean absolute error 0.0040. `HetConc`, `HomIBS0` and the ten `--kinship` columns are exact on every row, and `InfType` and `Error` now differ on no row anywhere |
 | `--ibs` | `.ibs`, `.ibs0`, `allsegs.txt` | **13/13** — every column byte-identical, `MaxIBD2` and `Pr_IBD2` included, on all 21 561 rows |
-| `--ibdseg` | `.seg`, `allsegs.txt`, `splitped.txt`, `X.seg` | 20/65 (16/52 alone, 4/13 with `--related`) — `allsegs.txt` and `splitped.txt` byte-identical everywhere; `.seg` has the right rows (0 extra, 0 missing) with 1 271 of 4 172 differing numerically; `X.seg` is not written |
+| `--ibdseg` | `.seg`, `allsegs.txt`, `splitped.txt`, `X.seg` | 20/65 (16/52 alone, 4/13 with `--related`) — `allsegs.txt` byte-identical everywhere; `.seg` has the right rows (0 extra, 0 missing) with 1 252 of 4 169 differing numerically; `X.seg` is not written; `splitped.txt` is byte-identical in all 50 corpus cases but is written unconditionally, which the reference does not always do (`docs/PARITY.md` §5.10) |
 
 `--related` is **not** a synonym for `--kinship`: it emits six extra columns
 (`HetConc`, `HomIBS0`, `IBD1Seg`, `IBD2Seg`, `PropIBD`, `InfType`), four of which come from
@@ -99,15 +113,15 @@ All three are measured, and they are why a handful of captures cannot be graded 
   `bigish`'s 50 000. On `monomorphic` the
   reference reports two full siblings as `IBD1Seg 0.9800 / IBD2Seg 0.0000`, labels them
   `PO`, and its own `--kinship` puts the same pair at 0.3384 where those segment numbers
-  imply 0.2450. open-king is no closer to the truth there. That row is the 0.2109
-  worst-case error quoted above.
+  imply 0.2450. open-king reproduces that row exactly, which says nothing about either
+  implementation recovering the underlying IBD.
 * **The reference disagrees with itself about `PropIBD`.** In a single
-  `--related --ibdseg` run, 175 pairs appear in both `king.kin` and `king.seg` with
-  identical `IBD1Seg` and `IBD2Seg` — and 50 of them carry a different `PropIBD` in the
-  two files (e.g. 0.5532 against 0.5533). open-king computes it once, from the unrounded
-  estimates, which matches `.kin` on every row and costs 115 `.seg` rows a ±1 in the
-  fourth decimal. Fifteen arithmetic reformulations all score identically, so this is not
-  a formula that can be fixed.
+  `--related --degree 2 --ibdseg` run on `bigish`, 147 pairs appear in both `king.kin` and
+  `king.seg` with identical `IBD1Seg` and `IBD2Seg` — and 43 of them carry a different
+  `PropIBD` in the two files (e.g. 0.5048 against 0.5049). open-king computes it once, from
+  the unrounded estimates, which matches `.kin` on every row and costs 116 `.seg` rows a ±1
+  in the fourth decimal. Fifteen arithmetic reformulations all score identically, so this is
+  not a formula that can be fixed.
 
 ## Building
 

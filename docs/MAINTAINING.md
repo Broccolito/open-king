@@ -76,9 +76,14 @@ docs/
   SPEC.md                the reference's observable behaviour, flag by flag
   BEHAVIOR.md            raw sweeps behind the rules
   VERIFIED_FORMULAS.md   the estimators and the experiment that fixed each
-  research/              the investigation log, numbered in the order it happened
+  research/              the investigation log, numbered in the order it happened;
+                         17-seg-caller.md is the newest and covers the .seg caller
   research/fixtures/     the fixture rigs: filesets whose answer is forced by
-                         construction, used to pin constants the corpus cannot see
+                         construction, used to pin constants the corpus cannot see.
+                         fixlab.py builds a fileset and drives the reference;
+                         gate8.py brackets the --degree 1 IBD2 clause;
+                         segcanvas.py is the .seg canvas (+ its measured cache);
+                         avfs.py / avfs_score.py are the --build AV.FS rig
 
 tests/parity/
   generate_corpus.py     builds the 13 input datasets from a fixed seed
@@ -101,7 +106,23 @@ rebuild-and-replay. It is a *mirror, not a second source of truth*: `fit/check_m
 asserts that with default `Params` it reproduces the built binary's own `.seg` columns and
 `MaxIBD2` on every corpus row. **If you change a rule in `ibdseg.rs`, either update
 `engine.py` to match or expect `check_mirror.py` to fail** — and when the two disagree,
-the Rust is right and the mirror has the bug.
+the Rust is right and the mirror has the bug. `fit/seg17.py` is the scorecard built on it:
+`python3 seg17.py` prints the committed `.seg` caller and the retired geometry side by side
+over all 982 primary rows, and `R17(...)` exposes every knob for a candidate.
+
+**One committed file is a measurement cache, and a non-reference binary will silently
+corrupt it.** `docs/research/fixtures/segcanvas_measured.json` holds 872 answers *measured
+from the reference*, so `segcanvas.py` re-runs in seconds without it. `segcanvas.py` writes
+whatever it measures back into that file, and it takes the binary from `$KING`. **To grade
+our own build with it, copy the whole `fixtures/` directory somewhere else and run there**
+— never in the tree. `git diff --stat docs/research/fixtures/` before committing; that file
+should only ever change when the reference was the thing being run.
+
+A second hazard in that rig, worth knowing before you trust a single probe: the reference
+has a **major-allele QC check seeded from the clock**, which aborts a run with
+`FATAL ERROR - Too many first alleles as the major allele` at random on small constructed
+filesets. `segcanvas.py` retries up to 24 times with a sleep between attempts for exactly
+this reason. A one-shot probe of a fixture is not evidence — run it a dozen times and count.
 
 Three rules of thumb the tree already follows:
 
@@ -149,11 +170,21 @@ about missing inputs; only the 480/480 self-check needs the reference binary.
 ### Before tagging a release
 
 ```bash
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
 cargo clean && cargo build --release --offline   # must work from a clean checkout, offline
 python3 tests/parity/run_parity.py --impl target/release/king     # record the exact count
 python3 tests/parity/run_parity.py --impl "<reference>"           # must be 480/480
+python3 tests/parity/measure_gaps.py --impl target/release/king -q # the numbers PARITY.md §4 quotes
+cd tests/parity/fit && python3 check_mirror.py                     # must print MIRROR OK
 git ls-files | grep -E '\.(bed|bim|fam|vcf|bcf)$'                 # must print nothing
+git diff --stat docs/research/fixtures/                            # the cache must be untouched
 ```
+
+The last release measured **403 PASS / 77 FAIL / 480**, self-check **480/480**, and a clean
+offline build in 8.1 s. Do not publish a count you have not just re-run: the parity number
+is the project's entire claim, and it is cheap to check (the suite takes under two seconds).
 
 The last one is not decoration. `.gitignore` excludes `/docs/research/fixtures/work/` and
 `/tests/parity/work/`, but **`.gitignore` does not untrack files already committed** — a

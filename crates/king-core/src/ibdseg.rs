@@ -38,12 +38,13 @@
 //!   is exact, then validated on data that had no part in choosing it: the corpus
 //!   separates on it with no overlap at all, and a 512-invocation word-grid sweep agrees
 //!   511 times. It is what [`MIN_RUN1`] used to stand in for.
-//! * [`Scan::ibd2`] and [`IBD2_HET_DIRTY`] — **not verified, and the grader it was fitted
-//!   against has since been retired.** The rule was measured against `--ibs`'s `MaxIBD2`,
-//!   which then graded one exact segment length per pair; it reproduced **145 of the 158**
-//!   corpus values, where the rule before it reached 95 and the best rule the earlier recon
-//!   found reached 51. `MaxIBD2` is now produced by [`Scan::ibd2_words`] and says nothing
-//!   about this function — see the two sections below.
+//! * [`Scan::ibd2`], [`IBD2_HET_DIRTY`] and [`IBD2_REACH`] — **measured on a `.seg`-native
+//!   canvas** (`docs/research/17-seg-caller.md`), which is the instrument the rest of this
+//!   header used to ask for: every constant below is a bisection read off the reference
+//!   through a marker ruler that recovers the number of calls and the number of words
+//!   exactly, not an inversion of some other pass's column. One clause — the bridging
+//!   condition — is fitted rather than bisected and is flagged in place. See the section
+//!   below for what is left.
 //! * [`reported_at_degree`] — **measured**, over 38 298 differential cases plus a
 //!   constructed fixture for the clause the corpus cannot reach.
 //! * [`Scan::ibd2_words`] — **solved for the corpus.** The `--ibs` IBD2 caller is a
@@ -56,67 +57,59 @@
 //! # What is still not right — and it is all [`Scan::ibd2`]
 //!
 //! Against the captured reference `.seg` files at the default 3 Mb floor the caller
-//! reproduces **705 of 982 rows** with all four printed columns identical, **981 of 982**
-//! `InfType` labels, and a mean absolute `PropIBD` error of **0.00137** (worst 0.2109).
+//! reproduces **709 of 982 rows** with all four printed columns identical, **all 982**
+//! `InfType` labels, and a mean absolute `PropIBD` error of **0.00037** (worst 0.0089).
 //! The set of pairs reported is exactly right — 0 extra, 0 missing, on all ten datasets —
 //! so what is left is the *length* of calls that are already found.
 //!
 //! Split those rows by whether the reference reports any IBD2 at all and the residual
-//! stops looking like a general boundary problem (`docs/research/14-ibd2-geometry.md` §2):
+//! localises completely (`docs/research/14-ibd2-geometry.md` §2 drew this table for the
+//! rule before this one; the second column is what moved):
 //!
 //! | reference row | rows | both estimate columns exact |
 //! | --- | ---: | ---: |
-//! | `IBD2Seg == 0.0000` | 823 | **819** |
-//! | `IBD2Seg > 0` | 159 | **1** |
+//! | `IBD2Seg == 0.0000` | 823 | **823** (was 819) |
+//! | `IBD2Seg > 0` | 159 | **2** (was 1) |
 //!
-//! The four exceptions in the first line are all `monomorphic`, the one fileset whose own
-//! `--kinship` contradicts its own `.seg` (`docs/PARITY.md` §5.1). So [`Scan::ibd1`] and
-//! its refinement are **finished**, and every failing `--ibdseg` parity case is failing
-//! because of [`Scan::ibd2`]. Three consequences for anyone continuing this:
+//! The first line is now clean: the four exceptions were all `monomorphic`, where the
+//! reference prints `IBD2Seg 0.0000` and the retired rule invented 0.42, 0.27, 0.03 and
+//! 0.08 of the genome out of words carrying two to four mismatches. So [`Scan::ibd1`] and
+//! its refinement are **finished**, the "is there any IBD2 here at all" question is
+//! finished, and every failing `--ibdseg` parity case is failing on the *length* of the
+//! 159 rows that do carry IBD2. Three notes for anyone continuing this:
 //!
-//! * **`.seg` exact-row count is a useless gradient for IBD2 work** — it is dominated by
-//!   the 823 rows IBD2 cannot touch, and every rule variant tried scores 705 ± 1.
-//! * **...and `--ibs` is no longer a gradient either.** It used to be the sharp one: grade
-//!   with `Pr_IBD2` and `MaxIBD2`, not with the headline row count. [`Scan::ibd2_words`]
-//!   then made both exact, so every candidate `.seg` rule now scores an identical 158/158
-//!   on them. **The `.seg` campaign starts without a sharp grader and building one is the
-//!   first job** — `…/16-segment-extension.md` §10.1 says how: a canvas built out of
-//!   *opposite homozygotes* (the mask `.seg` actually splits on, where `--ibs` ignores
-//!   them entirely), one marker spacing per word, and `IBD2Seg` read back through the
-//!   `--seglength` bisection of `…/14-ibd2-geometry.md` §3.2 so that an aggregate inverts
-//!   to individual segment lengths.
-//! * **The `.seg` and `--ibs` errors had opposite signs**, which no width parameter could
-//!   have fixed: `IBD2Seg` is too low on 121 of 159 rows, where `Pr_IBD2` used to be too
-//!   high on 150 of 158. On `nuclear` `N_C1`/`N_C2` the reference's own `.seg` total
-//!   exceeds its own `Pr_IBD2` total by 22.64 Mb, and the largest gain "word-aligned plus
-//!   usable-segment fringe" can produce on that fileset is 13.58 Mb — so the geometry
-//!   below is wrong in kind, not by an offset (`…/14-ibd2-geometry.md` §5).
+//! * **`.seg` exact-row count is a poor gradient for IBD2 work** — it is dominated by the
+//!   823 rows IBD2 barely touches, which is why a rule that cuts mean error by a factor of
+//!   3.7 and the worst row by a factor of 24 moves it only from 705 to 709. Grade with the
+//!   `IBD2Seg` column (822 → 896) and the mean, as `tests/parity/fit/seg17.py` does.
+//! * **`--ibs` is not a gradient either.** It used to be the sharp one, but
+//!   [`Scan::ibd2_words`] made both its IBD2 columns exact, so every candidate `.seg` rule
+//!   now scores an identical 158/158 on them. The grader that works is the `.seg`-native
+//!   canvas of `docs/research/17-seg-caller.md` §1 — `docs/research/fixtures/segcanvas.py`,
+//!   with 872 reference answers cached, so it re-runs in seconds without the binary.
+//! * **What is left is one clause.** All 11 misses of the exhaustive length-≤4 battery and
+//!   the whole 8 % random-canvas residual are the bridging condition of [`Scan::ibd2`],
+//!   whose lookahead is guessed: it stops at the next unusable word, and the canvas `Cyzy`
+//!   says it should not (`…/17-seg-caller.md` §11.1, §11.2). Two further open items are
+//!   recorded there: a two-marker left-end effect on runs that open on a mismatch word, and
+//!   the **100 Mb usable-total floor** (§2) — the reference refuses a fileset whose usable
+//!   total is under 100 000 000 bp, bisected to the base pair, and this crate does not
+//!   model it. No corpus dataset is anywhere near it.
 //!
-//! **What is *not* the answer, measured** (`…/16-segment-extension.md` §9): porting
-//! [`Scan::ibd2_words`]'s chunk geometry to this pass unchanged. The two callers do not
-//! even see the same words — `.seg` refuses a word with *any* het-vs-hom mismatch where
-//! `--ibs` tolerates four — so every fixture that measured the chunk constants reports
-//! `IBD2Seg 0.0000` here and cannot measure them through this pass at all. The port scores
-//! 709 exact rows against 705 and a worst row of 0.149 against 0.211, but nearly triples
-//! mean `PropIBD` error (0.00138 → 0.00356). Deliberately **not committed**: a partly
-//! right rule that trades the mean for the tail is not progress, and `tests/parity/fit/
-//! segtry.py` keeps the measurement reproducible so nobody re-runs the experiment blind.
-//!
-//! Two constructed fixtures bound the answer and are not yet satisfied by anything
-//! (`docs/research/fixtures/ibd2end.py`, `ibd2gap.py`): a `W`-word IBD2 run bounded by
-//! all-IBS0 words reports exactly `64W - 1` marker intervals where [`Scan::ibd2`] reports
-//! `64(W + 1) - 1`, and a single IBS0 forced into one word of an otherwise fully-IBD2
-//! chromosome costs exactly two words and one marker of IBD2 coverage when that word is
-//! interior and exactly one word when it is the usable segment's first or last —
-//! independently of where in the word the IBS0 sits, which rules out marker-level
-//! refinement at an interior IBD2 boundary altogether.
+//! **What is *not* the answer, measured** (`…/16-segment-extension.md` §9,
+//! `…/17-seg-caller.md` §8): porting [`Scan::ibd2_words`]'s chunk geometry to this pass.
+//! `.seg` is **not a quantised confirmation scan** — no chunk quantum, no confirmation
+//! count, HetHet and A1A1/A1A1 interchangeable where `--ibs` ignores the latter, and
+//! nothing ever cut. The port scored 709 exact rows against 705 but nearly tripled mean
+//! `PropIBD` error (0.00138 → 0.00356); `tests/parity/fit/segtry.py` keeps that measurement
+//! reproducible so nobody re-runs the experiment blind.
 //!
 //! Read the per-dataset split with the caveat that four of the ten filesets report only
 //! the 14 within-family pairs of one six-person nuclear family, over 5 000 to 10 000
 //! markers — and in `monomorphic`'s case half of those markers are monomorphic or
 //! ultra-rare. The reference's own numbers there are nowhere near the pedigree truth, so
 //! they grade nothing. `bigish` 557/763, `multifam` 73/104, `threegen` 28/39, `admixed`
-//! 12/16, `dups` 2/3, `unrelated` 1/1; `nuclear` 8/14, `missing` 8/14, `monomorphic`
+//! 12/16, `monomorphic` 12/14, `dups` 2/3, `unrelated` 1/1; `nuclear` 8/14, `missing`
 //! 8/14, `sexchr` 8/14. `docs/PARITY.md` §5 carries the evidence.
 
 use king_io::Genotypes;
@@ -164,16 +157,30 @@ const MIN_RUN2: usize = 1;
 /// agrees with the reference 511 times with no false accepts.
 const MIN_INFORMATIVE: u32 = 10;
 
-/// Het-vs-hom disagreements that make a word too dirty to sit inside an IBD2 run.
+/// Het-vs-hom disagreements that make a word too dirty to sit inside a `.seg` IBD2 run.
 ///
-/// **Measured against `--ibs`'s `MaxIBD2`**, which prints the length in base pairs of one
-/// single IBD2 segment for 158 corpus pairs and so grades a candidate rule pass/fail per
-/// segment instead of through an aggregate. Inverting those 158 numbers locates 154 of
-/// them to exactly one word interval; over the 92 whose start is interior to a usable
-/// segment, the first word of the segment has an IBS1 count of **at most 4** in 92 cases
-/// out of 92, and the word before it has **at least 5** in 92 out of 92. The threshold is
-/// not a fit, it is a gap in the data with nothing in it.
-const IBD2_HET_DIRTY: u32 = 5;
+/// **Two: one mismatch leaves a word usable, two do not.** Measured directly on the
+/// `.seg`-native canvas of `docs/research/17-seg-caller.md` §3 — a block of eight
+/// pure-HetHet words with `j` consecutive words replaced by one carrying `m` mismatches,
+/// read back through a marker ruler that recovers the number of words *and* the number of
+/// calls. `m = 1` never splits the block at any `j`; `m = 2` always does. The corpus agrees
+/// and its gradient is sharp: `IBD2Seg` is exact on 896 of 982 rows at 2, against
+/// 867 / 868 / 837 at 1 / 3 / 5.
+///
+/// The **5** this used to be was inverted out of `--ibs`'s `MaxIBD2`, which is a different
+/// caller's column (`docs/research/15-ibs-ibd2-rules.md` §3) — see [`IBS_IBD2_DIRTY`],
+/// which is that caller's threshold and is still 5.
+const IBD2_HET_DIRTY: u32 = 2;
+
+/// Markers a `.seg` IBD2 call reaches past the nearest het-vs-hom mismatch bounding it.
+///
+/// The endpoints are **not** word-aligned. Swept over all 64 bit positions of the flanking
+/// word (`docs/research/17-seg-caller.md` §5): the extension is `127 − lastbit` to the left
+/// and `64 + firstbit` to the right, which is the same statement twice — the call runs 63
+/// markers past the nearest mismatch on that side. Bit 31 gives exactly +96, so 62 (→95)
+/// and 64 (→97) are both excluded. Corpus: `IBD2Seg` exact on 896 rows at 63, against
+/// 824 / 825 / 830 / 826 at 0 / 32 / 62 / 64.
+const IBD2_REACH: usize = 63;
 
 /// Whether scan word `k` is too dirty to sit inside an IBD2 run.
 ///
@@ -605,30 +612,56 @@ impl Scan {
     }
 
     /// IBD2 segments: stretches of words that are not [`ibd2_dirty`], with their own
-    /// geometry — **not** [`Scan::ibd1`]'s.
+    /// geometry — **not** [`Scan::ibd1`]'s and **not** [`Scan::ibd2_words`]'s.
     ///
-    /// Everything here is measured against `--ibs`'s `MaxIBD2` column, which gives one
-    /// exact segment length per pair for 158 corpus pairs; the fitted rule reproduces
-    /// **145** of them, where the previous rule reproduced 51. Three things separate an
-    /// IBD2 run from an IBD1 one:
+    /// Every constant below is a reading off the `.seg`-native canvas of
+    /// `docs/research/17-seg-caller.md`: chromosome 1 carries one IBD1 segment so the pair
+    /// earns a `.seg` row at all, chromosome 2 is painted one complete word at a time from
+    /// an explicit composition and walled with all-IBS0 words, and its uniform spacing is
+    /// chosen so that one ulp of the printed `IBD2Seg` is a fifth of a marker gap. The
+    /// printed column then reads back **the number of marker intervals called** — and,
+    /// because a word-aligned call over `n` words measures `64n − 1`, a total `M` over `w`
+    /// words from `c` calls is `64w − c`, so `c = (−M) mod 64` recovers the number of calls
+    /// and the number of words exactly. That is what makes the rules below bisections
+    /// rather than fits.
     ///
-    /// * **A lone dirty word does not break a run.** Two consecutive ones always do. Over
-    ///   the 154 located segments, 103 contain a dirty word in their interior and only
-    ///   three contain two in a row, and a constructed fixture makes the same point
-    ///   without statistics: an interior word in which *all 64* markers are het-vs-hom
-    ///   mismatches leaves the call untouched
-    ///   (`docs/research/10-segment-rule-fixtures.md` §3). A word carrying an opposite
-    ///   homozygote is never bridged.
-    /// * **The run reaches one word past its last clean word, and not one marker past its
-    ///   first.** Of the 92 located segments whose end is interior to a usable segment, 88
-    ///   end on a word the rule calls dirty; every one of the 92 has a dirty word
-    ///   immediately after it. The start is the opposite: all 92 begin on a clean word.
-    /// * **The last word boundary of a usable segment never breaks a run.** Where the two
-    ///   dirty words that would end a run are the segment's own last two, the call runs to
-    ///   the segment's end instead — `nuclear`'s `N_C1`/`N_C4`, `multifam`'s 17/19 and
-    ///   `bigish`'s 157/158 are all exactly this, and no other rule reaches them.
+    /// # The rule
     ///
-    /// Requiring a whole *word* to be clean rather than only cutting at boundaries is what
+    /// * **A word is usable iff it carries no opposite homozygote and at most
+    ///   [`IBD2_HET_DIRTY`] − 1 het-vs-hom mismatches.** One IBS0 anywhere in a word
+    ///   disqualifies it at any HetHet density; missing calls, A2A2/A2A2 and A1A1/A1A1
+    ///   markers are all irrelevant, and a het-vs-A1A1 mismatch counts exactly like a
+    ///   het-vs-A2A2 one (§3).
+    /// * **A lone unusable word carrying no IBS0 is absorbed** — but conditionally, which
+    ///   is the part `docs/research/10-segment-rule-fixtures.md` §3 could not see: the word
+    ///   after it must carry *no* mismatch at all, and the usable words from there on must
+    ///   carry [`MIN_INFORMATIVE`] `inf2` between them. `CyC` is one call over three words
+    ///   where `Cyz` is one over two and `CyzC` is one over four (§3, §7).
+    /// * **The gate is [`MIN_INFORMATIVE`] markers of `inf2`, counted from the run's first
+    ///   *mismatch-free* word** through the words the right end reaches into. Where the
+    ///   count starts is not a detail: `zx` and `xz` are the same two words with the same
+    ///   total and only `zx` is called (§4). A run with no mismatch-free word at all is
+    ///   refused outright, which is why a uniform block at one mismatch per word reports
+    ///   nothing however wide it is.
+    /// * **The endpoints are marker-level, not word-aligned**: a call reaches
+    ///   [`IBD2_REACH`] markers past the nearest het-vs-hom mismatch in the word that
+    ///   bounds it — right past the *first*, left before the *last*. An opposite
+    ///   homozygote blocks that reach **whole-word**: a flanking word carrying one stops
+    ///   the call on the run's own boundary whatever bit it sits at, and one in the second
+    ///   word out caps the reach at that word's boundary (§5). This asymmetry —
+    ///   marker-level for mismatches, word-level for IBS0 — is what made
+    ///   `docs/research/14-ibd2-geometry.md` §6.2's "two words and one marker" look
+    ///   unexplainable.
+    /// * **Every call after the first in a usable segment starts one word late**, counted
+    ///   from its gate-start word. It is the *emitted* call that pushes, not the break: a
+    ///   run refused by the gate pushes nothing, and the push survives its cause being
+    ///   dropped by `--seglength`, so the clip is applied before the length filter (§6).
+    /// * **A call touching the usable segment's own first or last complete word runs on to
+    ///   the segment's first or last marker.** The canvas cannot see this (its chromosome 2
+    ///   is word-aligned); the corpus can — it is worth 37 exact `IBD2Seg` values, and it is
+    ///   why `dups`' duplicate pair reads `IBD2Seg 1.0000` and not the word-aligned 0.8984.
+    ///
+    /// Requiring a whole *word* to be usable rather than only cutting at boundaries is what
     /// makes a parent–offspring pair print `IBD2Seg 0.0000`: PO genotypes disagree far too
     /// often in every word for any of them to qualify.
     ///
@@ -641,90 +674,142 @@ impl Scan {
     /// fileset's usable segments divided by the same `D` (357 701 908 / 398 163 465). This
     /// function returns the `.seg` measure.
     ///
-    /// The rulers were once thought to be the *whole* difference. They are not, and a
-    /// fixture says so outright (`docs/research/15-ibs-ibd2-rules.md` §3): the two passes
-    /// disagree about which words are even eligible, this one refusing any word carrying an
-    /// opposite homozygote where [`Scan::ibd2_words`] ignores them at any density. They are
-    /// two callers over one set of masks, and only the other one is solved.
+    /// The rulers were once thought to be the *whole* difference. They are not, and
+    /// `docs/research/17-seg-caller.md` §8 states the negative in full: **`.seg` is not a
+    /// quantised confirmation scan.** There is no chunk quantum (sweeping a uniform block's
+    /// width gives exactly `64W − 1` at every `W`, with no staircase at any composition), no
+    /// confirmation count (a uniform block at one mismatch per word is refused at every
+    /// width, yet *one* clean word in front of it buys an unbounded tail), HetHet and
+    /// A1A1/A1A1 are interchangeable here where [`Scan::ibd2_words`] ignores the latter
+    /// entirely, and nothing is ever cut — a run is called whole or refused. Porting the
+    /// chunk geometry over wholesale (`tests/parity/fit/segtry.py`) was tried and rejected:
+    /// 709 exact rows against 705 but mean `PropIBD` error 0.00356 against 0.00138. It was
+    /// not mis-tuned, it was the wrong kind of rule.
     ///
-    /// # Known wrong, with the measurement that says so
+    /// # Accuracy, and the one clause that is fitted rather than bisected
     ///
-    /// The right-hand geometry below was fitted to `MaxIBD2` — the length of one segment
-    /// per pair, 145 of 158 exact at the time — and fails two constructed fixtures and the
-    /// `Pr_IBD2` total. **That grader is gone**: `MaxIBD2` is `--ibs`'s column, and since
-    /// [`Scan::ibd2_words`] became exact it reports nothing about this function at all.
-    /// Nothing here changed; what changed is that its score can no longer be read off the
-    /// corpus, which is why the module header now asks for a purpose-built `.seg` canvas
-    /// before the next rule is proposed.
+    /// Out of sample on the captured corpus — nothing in it chose a constant — this scores
+    /// **709 of 982 exact rows** against the previous rule's 705, `IBD2Seg` exact on
+    /// **896 rows against 822**, mean `PropIBD` error **0.00037 against 0.00138**, worst row
+    /// **0.0089 against 0.2109**, with the reported pair set still exactly right (0 extra,
+    /// 0 missing). On 160 random canvases from two seeds that had no part in the fit it
+    /// reproduces the reference **147 times (92 %)**, where the geometry it replaces
+    /// reproduces 18 %; on the exhaustive battery of every word sequence of length ≤ 4 over
+    /// `{clean, quiet, 1-mismatch, 2-mismatch}` it scores **329 of 340** against 4.
     ///
-    /// `docs/research/14-ibd2-geometry.md` is the write-up; in one line: a `W`-word IBD2
-    /// run bounded by all-IBS0 words must report `64W - 1` marker intervals and this
-    /// reports `64(W + 1) - 1`, while a lone IBS0 in an interior word must cost two whole
-    /// words of coverage and this costs one word plus part of another. Every alternative
-    /// in `tests/parity/fit/sweep2.py` scores the same or worse on the corpus, and so does
-    /// the chunk geometry of [`Scan::ibd2_words`] ported over wholesale
-    /// (`tests/parity/fit/segtry.py`: 709 exact rows against 705, mean error 0.00356
-    /// against 0.00138). The rule stands until something beats it on the mean as well as
-    /// the tail.
+    /// The **bridging condition** is the exception and is flagged in place below: its
+    /// lookahead is guessed rather than bisected, it accounts for all 11 exhaustive misses
+    /// and the whole 8 % random residual, and on the corpus it buys `IBD2Seg` 896 against
+    /// 874 while costing a little mean (0.00037 against 0.00033) and tail (0.0089 against
+    /// 0.0071) — the signature of a clause that is *nearly* right
+    /// (`docs/research/17-seg-caller.md` §11.1). Treat it as fitted, not measured.
     pub fn ibd2(&self, pos: &[i64], min_bp: i64) -> Vec<Called> {
         let n = self.nwords();
         let (w0, w1) = (self.seg.first_word(), self.seg.last_word());
         if n == 0 {
             return Vec::new();
         }
-        let clean: Vec<bool> = (0..n).map(|k| !ibd2_dirty(self, k)).collect();
-        // A single dirty word with a clean word on either side is absorbed; an opposite
-        // homozygote is never absorbed. Read from `clean`, never from the running copy,
-        // so two dirty words in a row can not chain their way in.
-        let mut ok = clean.clone();
+        let mis: Vec<u32> = self.ibs1.iter().map(|m| m.count_ones()).collect();
+        let inf2: Vec<u32> = self.inf2.iter().map(|m| m.count_ones()).collect();
+        let usable: Vec<bool> = (0..n).map(|k| !ibd2_dirty(self, k)).collect();
+
+        // **The one fitted clause.** A lone unusable word carrying no opposite homozygote
+        // is absorbed only when the run picks up cleanly on the other side: the next word
+        // must carry no mismatch at all, and the usable words from there on must carry the
+        // gate's worth of `inf2` between them. Read from `usable`, never from the running
+        // copy, so two unusable words in a row cannot chain their way in.
+        let mut ok = usable.clone();
         for k in 1..n.saturating_sub(1) {
-            if !clean[k] && clean[k - 1] && clean[k + 1] && self.ibs0_at(k) == 0 {
+            if usable[k] || self.ibs0_at(k) != 0 || !usable[k - 1] || !usable[k + 1] {
+                continue;
+            }
+            if mis[k + 1] != 0 {
+                continue;
+            }
+            let mut acc = 0u32;
+            let mut t = k + 1;
+            while t < n && usable[t] && acc < MIN_INFORMATIVE {
+                acc += inf2[t];
+                t += 1;
+            }
+            if acc >= MIN_INFORMATIVE {
                 ok[k] = true;
             }
         }
 
         let mut out: Vec<Called> = Vec::new();
+        // Calls that cleared the gate in *this* usable segment, whether or not they
+        // survived `--seglength`. The push counts these, not the breaks between runs.
+        let mut emitted = 0usize;
         let mut k = 0usize;
         while k < n {
             if !ok[k] {
                 k += 1;
                 continue;
             }
-            let k0 = k;
+            let a = k;
             while k < n && ok[k] {
                 k += 1;
             }
-            let k1 = k - 1;
-            if k1 + 1 - k0 < MIN_RUN2 {
+            let b = k - 1;
+            if b + 1 - a < MIN_RUN2 {
                 continue;
             }
-            if !Scan::informative(&self.inf2, k0, k1) {
-                continue;
-            }
-            let (u, v) = (w0 + k0, w0 + k1);
-            // One word past the run — except that the segment's own last boundary is
-            // never a break, so a run stopping two words short of `w1` still takes `w1`.
-            let e = if v + 2 >= w1 { w1 } else { v + 1 };
-            // The start is the run's own first marker — an IBD2 call never reaches back
-            // into the word that opened it, where an IBD1 call does. All 92 located
-            // segments whose start is interior to a usable segment begin exactly on
-            // `64u`, and refining the start by the flanking word's last IBS0 the way
-            // [`Scan::left_end`] does moves no row of the 982-row corpus either way.
-            let mut lo = if u == w0 { self.seg.lo } else { WORD * u };
-            // The end does reach into the word that ended the run, and stops on that
-            // word's last IBS0 if it has one — the same asymmetry [`Scan::right_end`]
-            // applies to IBD1. Worth two IBD2 columns on the corpus; `MaxIBD2` cannot see
-            // it, since every located segment's flanking words happen to be IBS0-free.
-            let hi = if e == w1 {
-                self.seg.hi
-            } else {
-                match self.ibs0_at(e - w0) {
-                    0 => WORD * e + WORD - 1,
-                    m => self.marker(e - w0, 63 - m.leading_zeros()),
+            let (u, v) = (w0 + a, w0 + b);
+
+            // Left: `IBD2_REACH` markers before the *last* mismatch of the word that
+            // opened the run — but only if that word is inside the segment and carries no
+            // opposite homozygote, and only as far as the next word out, which blocks the
+            // reach whole-word when it is outside the segment or carries an IBS0.
+            let mut left = WORD * u;
+            if a > 0 && self.ibs0_at(a - 1) == 0 && self.ibs1[a - 1] != 0 {
+                let last = self.marker(a - 1, 63 - self.ibs1[a - 1].leading_zeros());
+                left = last.saturating_sub(IBD2_REACH);
+                if a < 2 || self.ibs0_at(a - 2) != 0 {
+                    left = left.max(WORD * (u - 1));
                 }
+            }
+            // Right: the mirror image, past the *first* mismatch of the word that ended it.
+            let mut right = WORD * v + WORD - 1;
+            if b + 1 < n && self.ibs0_at(b + 1) == 0 && self.ibs1[b + 1] != 0 {
+                let first = self.marker(b + 1, self.ibs1[b + 1].trailing_zeros());
+                right = first + IBD2_REACH;
+                if b + 2 >= n || self.ibs0_at(b + 2) != 0 {
+                    right = right.min(WORD * (v + 2) - 1);
+                }
+            }
+
+            // The gate, from the run's first mismatch-free word through the words the
+            // right end reaches into. A run without one is refused outright.
+            let Some(gs) = (a..=b).find(|&t| mis[t] == 0) else {
+                continue;
             };
+            let ge = if right > WORD * v + WORD - 1 {
+                (n - 1).min(right / WORD - w0)
+            } else {
+                b
+            };
+            if inf2[gs..=ge].iter().sum::<u32>() < MIN_INFORMATIVE {
+                continue;
+            }
+
+            if emitted > 0 {
+                left = left.max(WORD * (w0 + gs + 1));
+            }
+            emitted += 1;
+            // The segment's own fringes: a call touching `w0`/`w1` runs to the segment's
+            // own first/last marker, which the word grid does not cover.
+            if u == w0 {
+                left = left.min(self.seg.lo);
+            }
+            if v == w1 {
+                right = right.max(self.seg.hi);
+            }
+            let mut lo = left.max(self.seg.lo);
+            let hi = right.min(self.seg.hi);
+            // Consecutive calls may touch, but not overlap.
             if let Some(prev) = out.last() {
-                lo = lo.max(prev.hi + 1);
+                lo = lo.max(prev.hi);
             }
             if lo <= hi && pos[hi] - pos[lo] >= min_bp {
                 out.push(Called { lo, hi });
@@ -1427,23 +1512,33 @@ mod tests {
         }
     }
 
+    /// The whole canvas as one usable segment, word-aligned at both ends.
+    fn whole() -> Usable {
+        Usable {
+            chr: 1,
+            lo: 0,
+            hi: WORDS * WORD - 1,
+        }
+    }
+
+    /// IBD2 calls over an all-hom-A1 canvas with `edits` — `(sample, marker, code)` —
+    /// measured over `seg`.
+    fn ibd2_calls_over(edits: &[(usize, usize, u8)], seg: Usable) -> Vec<Called> {
+        let n = WORDS * WORD;
+        let mut g = [vec![0u8; n], vec![0u8; n]];
+        for &(s, m, code) in edits {
+            g[s][m] = code;
+        }
+        let gt = genotypes(&g[0], &g[1]);
+        let pos: Vec<i64> = (0..n).map(|i| i as i64 * 1_000).collect();
+        Scan::new(&gt, 0, 1, seg).ibd2(&pos, 0)
+    }
+
     /// IBD2 calls for a pair that is identical everywhere except at `edits`, which set
     /// the second sample's genotype at a marker (1 = het, so an IBS1; 2 = hom A2, an IBS0).
     fn ibd2_calls(edits: &[(usize, u8)]) -> Vec<Called> {
-        let n = WORDS * WORD;
-        let a = vec![0u8; n];
-        let mut b = vec![0u8; n];
-        for &(m, g) in edits {
-            b[m] = g;
-        }
-        let g = genotypes(&a, &b);
-        let pos: Vec<i64> = (0..n).map(|i| i as i64 * 1_000).collect();
-        let seg = Usable {
-            chr: 1,
-            lo: 0,
-            hi: n - 1,
-        };
-        Scan::new(&g, 0, 1, seg).ibd2(&pos, 0)
+        let e: Vec<(usize, usize, u8)> = edits.iter().map(|&(m, g)| (1, m, g)).collect();
+        ibd2_calls_over(&e, whole())
     }
 
     /// `k` het-vs-hom disagreements inside word `w`.
@@ -1451,15 +1546,58 @@ mod tests {
         (0..k).map(|i| (WORD * w + i, 1u8)).collect()
     }
 
+    /// Het-vs-hom mismatches at *named bits* of word `w`, so the reach can be swept.
+    fn mismatch_bits(w: usize, bits: &[usize]) -> Vec<(usize, usize, u8)> {
+        bits.iter().map(|&b| (1, WORD * w + b, 1u8)).collect()
+    }
+
+    /// Every marker of word `w` an opposite homozygote — a wall no run crosses and no
+    /// reach passes.
+    fn ibs0_wall(w: usize) -> Vec<(usize, usize, u8)> {
+        (0..WORD).map(|i| (1, WORD * w + i, 2u8)).collect()
+    }
+
+    /// A `z` word (`docs/research/17-seg-caller.md` §4): both samples homozygous for A2,
+    /// so the word is usable and mismatch-free but carries no `inf2` at all.
+    fn quiet_word(w: usize) -> Vec<(usize, usize, u8)> {
+        (0..WORD)
+            .flat_map(|i| [(0, WORD * w + i, 2u8), (1, WORD * w + i, 2u8)])
+            .collect()
+    }
+
     #[test]
-    fn a_lone_dirty_word_does_not_break_an_ibd2_run() {
-        let calls = ibd2_calls(&het(4, 40));
+    fn a_lone_dirty_word_is_absorbed_when_the_run_picks_up_cleanly() {
+        // Word 4 is unusable and word 5 carries no mismatch at all, so the bridge holds
+        // whatever word 4 carries — 40 mismatches or all 64.
+        for k in [40, 64] {
+            assert_eq!(
+                ibd2_calls(&het(4, k)),
+                vec![Called {
+                    lo: 0,
+                    hi: WORDS * WORD - 1
+                }],
+                "{k} mismatches in a lone word"
+            );
+        }
+    }
+
+    /// The conditional half of the bridge (`…/17-seg-caller.md` §3, §7): word 5 now
+    /// carries a single mismatch, which leaves it *usable* but not mismatch-free, and the
+    /// lone unusable word 4 is no longer absorbed. `Cyz` against `Cyx` in the doc's
+    /// notation.
+    #[test]
+    fn a_lone_dirty_word_is_not_absorbed_when_the_next_word_carries_a_mismatch() {
+        let mut e = het(4, 40);
+        e.extend(het(5, 1));
         assert_eq!(
-            calls,
-            vec![Called {
-                lo: 0,
-                hi: WORDS * WORD - 1
-            }]
+            ibd2_calls(&e),
+            vec![
+                Called { lo: 0, hi: 319 },
+                Called {
+                    lo: WORD * 7,
+                    hi: WORDS * WORD - 1
+                },
+            ]
         );
     }
 
@@ -1467,14 +1605,73 @@ mod tests {
     fn two_consecutive_dirty_words_break_an_ibd2_run() {
         let mut e = het(4, 40);
         e.extend(het(5, 40));
-        // The first call reaches one word past its last clean word — into word 4, the
-        // word that ended it — and the second opens on the next clean word.
+        // The first call reaches 63 markers past word 4's *first* mismatch (marker 256),
+        // so it ends at 319 — deep inside the word that ended it, not on a word boundary.
+        // The second run opens on word 6 and is pushed one word: its gate-start word is 6,
+        // so it starts at 64 * 7 rather than the 296 the left reach alone would give.
         assert_eq!(
             ibd2_calls(&e),
             vec![
+                Called { lo: 0, hi: 319 },
+                Called {
+                    lo: WORD * 7,
+                    hi: WORDS * WORD - 1
+                },
+            ]
+        );
+    }
+
+    /// [`IBD2_HET_DIRTY`] bisected: one mismatch per word never splits a run, two always
+    /// do (`…/17-seg-caller.md` §3). This is the constant that used to be 5, inverted out
+    /// of a different caller's column.
+    #[test]
+    fn the_het_mismatch_threshold_is_two_per_word() {
+        let mut one = het(4, 1);
+        one.extend(het(5, 1));
+        assert_eq!(
+            ibd2_calls(&one).len(),
+            1,
+            "one mismatch leaves a word usable"
+        );
+        let mut two = het(4, 2);
+        two.extend(het(5, 2));
+        assert_eq!(ibd2_calls(&two).len(), 2, "two make it unusable");
+    }
+
+    /// A call reaches [`IBD2_REACH`] markers past the nearest het-vs-hom mismatch, so
+    /// moving that mismatch one bit moves the call's end one marker
+    /// (`…/17-seg-caller.md` §5). Words 4 and 5 are both unusable, so the run is [0, 3]
+    /// and its right end is `64 * 4 + firstbit + 63`.
+    #[test]
+    fn a_call_reaches_sixtythree_markers_past_the_bounding_mismatch() {
+        for (bits, want) in [
+            (vec![0, 1], 256 + IBD2_REACH),
+            (vec![30, 31], 256 + 30 + IBD2_REACH),
+            (vec![62, 63], 256 + 62 + IBD2_REACH),
+        ] {
+            let mut e = mismatch_bits(4, &bits);
+            e.extend(mismatch_bits(5, &bits));
+            assert_eq!(
+                ibd2_calls_over(&e, whole())[0],
+                Called { lo: 0, hi: want },
+                "mismatches at bits {bits:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_opposite_homozygote_is_never_bridged() {
+        // One IBS0 in word 4, with usable words either side. It is not absorbed, and it
+        // also blocks the reach **whole-word**: the first call stops on the run's own last
+        // marker (255) rather than reaching into word 4, whatever bit the IBS0 sits at.
+        // The second run opens on word 5 and is pushed one word, to 64 * 6.
+        let calls = ibd2_calls(&[(WORD * 4 + 10, 2)]);
+        assert_eq!(
+            calls,
+            vec![
                 Called {
                     lo: 0,
-                    hi: WORD * 5 - 1
+                    hi: WORD * 4 - 1
                 },
                 Called {
                     lo: WORD * 6,
@@ -1484,83 +1681,86 @@ mod tests {
         );
     }
 
+    /// The gate counts `inf2` from the run's first **mismatch-free** word, not from the
+    /// run's first word — which is what makes `zx` a call and `xz` not, at the same two
+    /// words, the same run and the same total (`…/17-seg-caller.md` §4).
     #[test]
-    fn the_het_mismatch_threshold_is_five_per_word() {
-        // Four disagreements leave both words clean, so the run is never broken...
-        let mut four = het(4, 4);
-        four.extend(het(5, 4));
-        assert_eq!(ibd2_calls(&four).len(), 1);
-        // ...and five break it, because two dirty words now sit side by side.
-        let mut five = het(4, 5);
-        five.extend(het(5, 5));
-        assert_eq!(ibd2_calls(&five).len(), 2);
+    fn the_gate_counts_from_the_runs_first_mismatch_free_word() {
+        let walls: Vec<(usize, usize, u8)> = [0usize, 1, 2, 5, 6, 7, 8, 9]
+            .iter()
+            .flat_map(|&w| ibs0_wall(w))
+            .collect();
+        let body = |e: Vec<(usize, usize, u8)>| {
+            let mut all = walls.clone();
+            all.extend(e);
+            ibd2_calls_over(&all, whole())
+        };
+        let called = vec![Called {
+            lo: WORD * 3,
+            hi: WORD * 5 - 1,
+        }];
+        // `zx`: the count opens on the quiet word and picks up the mismatch word's 64.
+        let mut zx = quiet_word(3);
+        zx.extend(mismatch_bits(4, &[0]));
+        assert_eq!(body(zx), called);
+        // `xz`: the same two words the other way round. The count opens on word 4, which
+        // carries nothing, and the run is refused.
+        let mut xz = mismatch_bits(3, &[0]);
+        xz.extend(quiet_word(4));
+        assert_eq!(body(xz), vec![]);
+        // ...and two quiet words are refused on their own, so it is the `x` that pays.
+        let mut zz = quiet_word(3);
+        zz.extend(quiet_word(4));
+        assert_eq!(body(zz), vec![]);
     }
 
+    /// A call touching the usable segment's own first or last complete word runs on to the
+    /// segment's first or last **marker** — the fringe the word grid does not cover, and
+    /// what makes `dups`' duplicate pair read `IBD2Seg 1.0000` rather than 0.8984.
     #[test]
-    fn an_opposite_homozygote_is_never_bridged() {
-        // One IBS0 in word 4, with clean words either side: an IBD1 run would bridge
-        // nothing here either, but the point is that the IBD2 pass must not absorb it.
-        let calls = ibd2_calls(&[(WORD * 4 + 10, 2)]);
-        assert_eq!(
-            calls,
-            vec![
-                // the run ends on that word's last (and only) IBS0, not at the word end
-                Called {
-                    lo: 0,
-                    hi: WORD * 4 + 10
-                },
-                Called {
-                    lo: WORD * 5,
-                    hi: WORDS * WORD - 1
-                },
-            ]
-        );
+    fn a_call_touching_the_segments_ends_takes_its_own_first_and_last_marker() {
+        let seg = Usable {
+            chr: 1,
+            lo: 5,
+            hi: 630,
+        };
+        assert_eq!(ibd2_calls_over(&[], seg), vec![Called { lo: 5, hi: 630 }]);
     }
 
+    /// **The tail snap is gone.** The rule this replaced took a run stopping within two
+    /// words of `w1` all the way to the segment's end; the `.seg`-native canvas says a run
+    /// ends where its reach ends and nowhere else (`…/17-seg-caller.md` §7, §8 — nothing is
+    /// ever extended or cut to a boundary).
     #[test]
-    fn a_usable_segments_last_word_boundary_never_breaks_a_run() {
-        // Words 8 and 9 are the segment's last two and both dirty. The boundary between
-        // them is never tested, so the call runs to the segment's end rather than
-        // stopping one word past word 7.
+    fn a_run_stopping_short_of_the_segments_last_word_does_not_snap_to_it() {
         let mut e = het(8, 40);
         e.extend(het(9, 40));
-        assert_eq!(
-            ibd2_calls(&e),
-            vec![Called {
-                lo: 0,
-                hi: WORDS * WORD - 1
-            }]
-        );
+        assert_eq!(ibd2_calls(&e), vec![Called { lo: 0, hi: 575 }]);
     }
 
+    /// Three one- and two-word runs, and the push in three places at once: without it the
+    /// second call would open at 104 (word 2's last mismatch, less the reach) and the third
+    /// at 360, where the reference opens them a whole word later — at `64 * 4` and `64 * 8`,
+    /// one past each run's gate-start word (`…/17-seg-caller.md` §6).
     #[test]
-    fn an_ibd2_run_of_one_word_is_a_segment() {
-        // Words 1..2 and 5..6 dirty leaves a single clean word at 3 and 4 — one run.
+    fn an_ibd2_run_of_one_word_is_a_segment_and_later_calls_start_one_word_late() {
         let mut e = het(1, 40);
         e.extend(het(2, 40));
         e.extend(het(5, 40));
         e.extend(het(6, 40));
-        let calls = ibd2_calls(&e);
         assert_eq!(
-            calls[0],
-            Called {
-                lo: 0,
-                hi: WORD * 2 - 1
-            }
-        );
-        assert_eq!(
-            calls[1],
-            Called {
-                lo: WORD * 3,
-                hi: WORD * 6 - 1
-            }
-        );
-        assert_eq!(
-            calls[2],
-            Called {
-                lo: WORD * 7,
-                hi: WORDS * WORD - 1
-            }
+            ibd2_calls(&e),
+            vec![
+                Called { lo: 0, hi: 127 },
+                Called {
+                    lo: WORD * 4,
+                    hi: 383
+                },
+                Called {
+                    lo: WORD * 8,
+                    hi: WORDS * WORD - 1
+                },
+            ]
         );
     }
 

@@ -12,6 +12,12 @@ corpus in a second.
 all 982 corpus rows and the Rust binary's `MaxIBD2` on all 158 non-zero rows. Any
 divergence there is a bug in this file, never a discovery.
 
+The `.seg` IBD2 caller is `SegScan.ibd2_17` — the rule of
+`docs/research/17-seg-caller.md`, committed to `Scan::ibd2`. The geometry it replaced is
+still reachable as `RETIRED` (`seg_rule="word"`), because the sweeps in `sweep2.py`,
+`segtry.py` and `rules*.py` were scored against it and their numbers are quoted in the
+research write-ups; passing `RETIRED` reproduces them.
+
 Two rulers are implemented over one caller, exactly as `analysis/segments.rs` describes:
 
 * `.seg` measures a call from its refined `lo` to its refined `hi`;
@@ -29,6 +35,10 @@ WORD = 64
 PC = np.bitwise_count
 
 SEGLEN = 3_000_000
+
+#: Markers a `.seg` IBD2 call reaches past the nearest bounding mismatch
+#: (`docs/research/17-seg-caller.md` §5) — `IBD2_REACH` in the Rust engine.
+REACH = 63
 LONG = 10_000_000
 
 
@@ -41,7 +51,11 @@ class Params:
     """
 
     # --- word predicates -------------------------------------------------
-    ibd2_dirty_ibs1: int = 5        # IBS1 count that makes a word too dirty for IBD2
+    seg_rule: str = "17"            # "17" = the committed `.seg` caller
+    #                                 (`docs/research/17-seg-caller.md`); "word" = the
+    #                                 retired word-aligned geometry, kept so the sweeps
+    #                                 scored against it still run — see `RETIRED`
+    ibd2_dirty_ibs1: int = 2        # IBS1 count that makes a word too dirty for IBD2
     bridge: bool = True             # a lone dirty word between clean ones is absorbed
     gate: int = 10                  # MIN_INFORMATIVE
     min_run1: int = 1
@@ -81,6 +95,11 @@ class Params:
 
 BASE = Params()
 
+#: The geometry `BASE` replaced: word-aligned ends, a five-mismatch word predicate and
+#: the two-word tail snap. Scores 705 exact `.seg` rows against 709, MAE 0.00138
+#: against 0.00037. Kept so the sweeps that were scored against it still reproduce.
+RETIRED = Params(seg_rule="word", ibd2_dirty_ibs1=5)
+
 
 # ---------------------------------------------------------------------------
 # per-pair word masks
@@ -109,7 +128,7 @@ def masks(ds, i, j):
         v = (ibs0, PC(ibs0).astype(np.int32), PC(ibs1).astype(np.int32),
              np.concatenate(([0], np.cumsum(PC(inf1).astype(np.int64)))),
              np.concatenate(([0], np.cumsum(PC(share).astype(np.int64)))),
-             PC(het_i & het_j).astype(np.int32))
+             PC(het_i & het_j).astype(np.int32), ibs1)
         _MASKS[key] = v
     return v
 
@@ -144,8 +163,9 @@ class SegScan:
         self.w0 = -(-lo // WORD)
         self.w1 = (hi + 1) // WORD - 1
         self.n = max(0, self.w1 - self.w0 + 1)
-        ibs0, n0, n1, k1, k2, nhh = masks(ds, i, j)
+        ibs0, n0, n1, k1, k2, nhh, ibs1 = masks(ds, i, j)
         self.ibs0 = ibs0
+        self.ibs1 = ibs1
         self.n0 = n0
         self.n1 = n1
         self.nhh = nhh
@@ -212,6 +232,83 @@ class SegScan:
 
     # --- IBD2 ----------------------------------------------------------
     def ibd2(self, pos, min_bp):
+        if self.p.seg_rule == "17":
+            return self.ibd2_17(pos, min_bp)
+        return self.ibd2_word(pos, min_bp)
+
+    def ibd2_17(self, pos, min_bp):
+        """The committed `.seg` IBD2 caller — the mirror of `Scan::ibd2`.
+
+        `docs/research/17-seg-caller.md` §7. A word is usable iff it carries no opposite
+        homozygote and at most one het-vs-hom mismatch; a lone unusable word is absorbed
+        only when the next word is mismatch-free and the usable words from there carry the
+        gate between them; the gate is counted from the run's first mismatch-free word;
+        the endpoints reach `REACH` markers past the nearest mismatch and are blocked
+        whole-word by an IBS0; every call after the first in a usable segment starts one
+        word past its gate-start word; and the segment's own fringes take a touching call
+        to its first or last marker.
+        """
+        p = self.p
+        n = self.n
+        if n == 0:
+            return []
+        w0, w1 = self.w0, self.w1
+        z = [int(self.n0[w0 + k]) != 0 for k in range(n)]
+        mis = [int(self.n1[w0 + k]) for k in range(n)]
+        usable = [(not z[k]) and mis[k] < p.ibd2_dirty_ibs1 for k in range(n)]
+        ok = list(usable)
+        for k in range(1, max(0, n - 1)):
+            if usable[k] or z[k] or not usable[k - 1] or not usable[k + 1]:
+                continue
+            if mis[k + 1] != 0:
+                continue
+            acc, t = 0, k + 1
+            while t < n and usable[t] and acc < p.gate:
+                acc += int(self.cum2[w0 + t + 1] - self.cum2[w0 + t])
+                t += 1
+            if acc >= p.gate:
+                ok[k] = True
+
+        out, emitted = [], 0
+        for a, b in _runs(ok):
+            if b - a + 1 < p.min_run2:
+                continue
+            u, v = w0 + a, w0 + b
+            left = WORD * u
+            if a > 0 and not z[a - 1] and int(self.ibs1[u - 1]):
+                last = WORD * (u - 1) + _last_bit(int(self.ibs1[u - 1]))
+                left = max(0, last - REACH)
+                if a < 2 or z[a - 2]:
+                    left = max(left, WORD * (u - 1))
+            right = WORD * v + WORD - 1
+            if b + 1 < n and not z[b + 1] and int(self.ibs1[v + 1]):
+                right = WORD * (v + 1) + _first_bit(int(self.ibs1[v + 1])) + REACH
+                if b + 2 >= n or z[b + 2]:
+                    right = min(right, WORD * (v + 2) - 1)
+            gs = next((t for t in range(a, b + 1) if mis[t] == 0), None)
+            if gs is None:
+                continue
+            ge = b
+            if right > WORD * v + WORD - 1:
+                ge = min(n - 1, right // WORD - w0)
+            if int(self.cum2[w0 + ge + 1] - self.cum2[w0 + gs]) < p.gate:
+                continue
+            if emitted:
+                left = max(left, WORD * (w0 + gs + 1))
+            emitted += 1
+            if u == w0:
+                left = min(left, self.lo)
+            if v == w1:
+                right = max(right, self.hi)
+            left, right = max(left, self.lo), min(right, self.hi)
+            if out:
+                left = max(left, out[-1][1])   # calls may touch, but not overlap
+            if left <= right and pos[right] - pos[left] >= min_bp:
+                out.append((left, right))
+        return out
+
+    def ibd2_word(self, pos, min_bp):
+        """The **retired** word-aligned geometry — reachable as `RETIRED`, not committed."""
         p = self.p
         if self.n == 0:
             return []

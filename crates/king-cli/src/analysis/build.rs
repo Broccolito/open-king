@@ -60,16 +60,56 @@
 //! **−0.0001 … +0.0118**, one-sided high exactly like the IBD1 residual. Only 5 of the
 //! 53 round to the printed three decimals, and **none of `bigish`'s five do**.
 //!
+//! ## Why the residual is the `.seg` caller and nothing else
+//!
+//! Re-measured with the rig now committed as `docs/research/fixtures/avfs_score.py`, which
+//! also prints the accounting below. `Join2` reads only the two `R`-to-nephew pairs;
+//! `Join3` additionally intersects the **sib** pair. Those two inputs sit on opposite
+//! sides of the one gap this project still has:
+//!
+//! * `R`-to-nephew is avuncular, so the reference reports `IBD2Seg 0.0000` for it — and
+//!   the reported union `IBD1Seg + IBD2Seg` is exact on **all 823** corpus rows whose
+//!   reference `IBD2Seg` is zero. Measured directly on every triple: `dU` for both
+//!   `R` pairs is `±0.0000` in all of them. The denominator is not the problem.
+//! * The sib pair's reference `IBD2Seg` is **not** zero, and there the union is exact on
+//!   only **3 of 159** corpus rows — always because ours is too *big*.
+//!
+//! An over-call `ΔS` in the sib set can raise `Join3` by at most `ΔS`, hence the ratio by
+//! at most `ΔS / Join2`. Over **39 triples** (the corpus five plus fixtures across eight
+//! two- and three-family shapes) every residual is positive and lands inside
+//! `[0, ΔS / Join2]` — **39 of 39**, with nothing left over for a second cause. So the
+//! formula above is not approximate: it is exact arithmetic on inputs one of which is
+//! wrong, and `apps/bigish__build` closes exactly when `docs/PARITY.md` §4.1 closes.
+//!
+//! Three variants were tried and are worse, so none of them is the missing correction:
+//! measuring the intersections in SNP counts rather than base pairs (identical to four
+//! decimals), word-aligning the intervals instead of using their refined endpoints
+//! (mean −0.025, the wrong way and five times as large), and re-calling all three sets at
+//! a different minimum segment length (0…10 Mb: no change below 5 Mb, worse at 10).
+//!
 //! Two further rules, measured the same way:
 //!
 //! * **Which two sibs are named is a property of the sibship, not of `R`.** Every
 //!   `AV.FS` line raised against one sibship names the same pair whatever `R` is (three
-//!   distinct `R` in one fixture, two in another), and that pair is the sibship's first
-//!   two members in the order the `RULE FS1` line prints them — a fixture whose log
-//!   reads `joins in sibship (A_C2 A_C3 A_C1)` names `A_C2 and A_C3` in all three of its
-//!   `AV.FS` lines. What orders a sibship is *not* identified; it is data-dependent, not
-//!   a fixed permutation (two-member sibships in one fixture print both `(C1 C2)` and
-//!   `(C2 C1)`).
+//!   distinct `R` in one fixture, two in another), and where the sibship is the
+//!   `RULE FS0`/`FS1` one it is that sibship's first two members in the order the rule
+//!   line prints them.
+//!
+//!   For a *declared* sibship — the children of one `.fam` couple, which is what `bigish`
+//!   names — the order is **not** the `.fam` order, and the earlier reading that it is
+//!   "data-dependent" is wrong. It survives complete genotype reseeding: the 4:4 shape
+//!   gives `(A_C3 A_C4)` and `(B_C1 B_C2)` on **all nine** seeds tried, and seven other
+//!   shapes agree across three seeds each, though every printed `Join3/Join2` differs.
+//!   It is also unchanged by each child's sex (five sex patterns, including all-male and
+//!   all-female) and by sliding the whole pedigree down the `.fam` behind 0…8 extra
+//!   singletons — so it is a *position* inside the sibship, not a sample index.
+//!   What it is **not** a function of: the sibship's size alone, nor any pairwise
+//!   statistic — over 19 measured triples the named pair's rank on `Join2`, `Join3`, the
+//!   ratio itself, the sibs' mutual `PropIBD` and `Kinship`, and `PropIBD` to `R` each
+//!   range from first to last. A four-child second family names positions `(1,2)`,
+//!   `(1,3)`, `(3,4)` or `(3,2)` according to how many children the *first* family has
+//!   and how many unrelated singletons pad the cohort — the one input that moves it
+//!   while genotypes do not. `avfs_score.py --pairs` re-measures the map.
 //! * **The verdict is a cut on the ratio.** Below it the line reads `<R> is uncle|aunt of
 //!   N1 and N2`; above it, `<R> is grandfather|grandmother, HS, or nephew|niece of N1 and
 //!   N2`, the word pairs following `R`'s sex. Over the same 53 values the cut is bracketed
@@ -84,7 +124,11 @@
 //! checked on a three-father sibship). It is left unwritten all the same: the only shape
 //! the corpus exercises is that one, the neighbouring `RULE PO.*` family and the phantom
 //! materialisation a non-sibship merge triggers are unrecovered, and a writer that
-//! handled only the `bigish` shape would be a rule fitted to a single file.
+//! handled only the `bigish` shape would be a rule fitted to a single file. Writing it
+//! would not move the case either: `<p>updateids.txt` is **already byte-identical** on
+//! `apps/bigish__build` — the family numbering, the `KING1/2/3` assignment and its row
+//! order are all correct — so the case's three remaining diffs are stdout, `build.log`
+//! and `updateparents.txt`, and the first two carry the five blocked numbers.
 
 use std::io::Write;
 use std::path::Path;
