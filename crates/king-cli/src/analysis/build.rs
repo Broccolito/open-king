@@ -83,11 +83,14 @@
 //! | `Duplicate <a> (of <b>) is removed.` | **rule** | an inferred `Dup/MZ` pair inside the cluster, *provided the cluster raises something else* |
 //! | `RULE FS0` | **rule** | a component of *inferred FS* ∪ *declares the same couple* that the inference **created** |
 //! | `RULE FS1` | **rule** | one more member joining a component that already contained a declared sibship, or one `FS0` just made |
-//! | `RULE FS2` | rule | two declared sibships in one component — never observed to fire |
+//! | `RULE FS2` | rule | two *declared* sibships in one component; needs a mis-declaring `.fam`, and does fire — see below |
 //! | `Reconstruct parent-offspring pair (X, Y)...` | **inference** | an inferred `PO` pair, but only inside a cluster whose inference block also speaks |
 //! | `<X>'s sibship is used to determine the parent/offspring`, `RULE PO.S`, `<n> is created as <Y>'s mother.` | inference | the `PO` pair above, when one member's sibship orients it |
-//! | `INFERENCE AV.FS` | inference | an `R` inferred 2nd-degree to **both** named members of a sibship |
-//! | `INFERENCE AV.HS`, `HS <a> unrelated to <b>`, `INFERENCE HS.UN2` | inference | a half-sib pair the avuncular pass turned up |
+//! | `INFERENCE AV.FS`, `uncle\|aunt` form | inference | an `R` inferred 2nd-degree to **both** named members of a sibship, with `Join3/Join2 < 0.85` |
+//! | `INFERENCE AV.FS`, `grandfather\|…, HS, or nephew\|…` form | inference | the same candidate with `Join3/Join2 > 0.90` |
+//! | *(no line at all)* | — | the same candidate with `0.85 <= Join3/Join2 <= 0.90` — the dead band, see below |
+//! | `HS <a> unrelated to <b>` | inference | a candidate HS pair (`PropIBD > 0.1875`), one line per declared parent the other member is unrelated to |
+//! | `INFERENCE HS.UN2` | inference | that pair, when both sides produced such a line |
 //!
 //! **`Reconstruct parent-offspring pair` is not a rule line**, which is the correction
 //! that matters most here. It looks like one — no `Family KING<k>` prefix, sitting above
@@ -126,161 +129,193 @@
 //! ## The blank lines, and why they are still not written
 //!
 //! Their count is a function of the inference half, so a binary that writes no inference
-//! cannot write them. Two rules fit the measurements, and the difference between them is
-//! worth recording because the one this doc used to carry is the weaker:
+//! cannot write them. Two rules were fitted to it — **block** (one blank before each
+//! sibship's block until the family prints its first inference) and **reject** (one blank
+//! opens the section, one more per candidate examined and turned down before the first
+//! line prints), 107 of 113 each. `reject` was the better of the two and is now refuted
+//! outright; the evidence is in its own section at the end of this doc.
 //!
-//! * **block** — one blank before each sibship's block until the family prints its first
-//!   inference; if it never prints one, every block still prints its blank;
-//! * **reject** — one blank opens the section, and one more for every candidate `R` that
-//!   is *examined and turned down* before the first line prints.
+//! # `INFERENCE AV.FS` and its `Join3/Join2` — solved
 //!
-//! `buildlog.py blanks` scores both over every cluster whose sibships are all pairs (so
-//! the named pair is forced and the candidate set is readable off `.kin0`): **107 of 113**
-//! each, on different failure sets, and the scorer has to guess the block order and the
-//! candidate order, neither of which is established. What separates them by hand is the
-//! two clusters `block` provably misses: `three_fs`, whose first sibship faces **two**
-//! candidate uncles and prints **three** blanks where `block` says two, and `ord3`, whose
-//! two sibships face **no** candidate at all and prints **one** where `block` says two.
-//! `reject` gets both, and reproduces 1, 1, 2 for `bigish`'s three clusters, 3, 2, 1 for
-//! `three_clusters`'s and 1, 2 for `mixed_po_fs`'s. It is the better rule; it is not a
-//! settled one.
-//!
-//! # `INFERENCE AV.FS` and its `Join3/Join2` — measured, not implemented
-//!
-//! The one statistic the log needs was open when §6.2 was written. It is now identified,
-//! and it is **segment-derived**, which is why implementing the surrounding rules would
-//! still not make `apps/bigish__build` pass.
-//!
-//! For an ordered triple `(R; N1, N2)` write `IBD(x, y)` for the union of that pair's
-//! called IBD1 and IBD2 segments, as a set of base pairs on the usable-segment map. Then
+//! The one statistic the log needs is **segment-derived**, and the set it is computed
+//! over is the one the pair **reports**, not the one the caller finds. For an ordered
+//! triple `(R; N1, N2)` write `S(x, y)` for the base pairs covered by that pair's
+//! *reported* segments — every IBD2 call, plus the IBD1 pieces left when the IBD2 calls
+//! are cut out at marker granularity, each piece having cleared `--seglength` on its own.
+//! That is exactly the interval set `<prefix>.seg` would list, and exactly what
+//! [`reported_intervals`] builds. Then
 //!
 //! ```text
-//! Join2 = | IBD(R,N1) ∩ IBD(R,N2) |
-//! Join3 = | IBD(R,N1) ∩ IBD(R,N2) ∩ IBD(N1,N2) |
+//! Join2 = | S(R,N1) INTERSECT S(R,N2) |
+//! Join3 = | S(R,N1) INTERSECT S(R,N2) INTERSECT S(N1,N2) |
 //! ```
 //!
-//! and the log prints `Join3/Join2` at `%.3lf`. The genetics behind it: where `R` is IBD
-//! to both sibs, a *grandparent* forces the sibs to have inherited the same parental
-//! haplotype, so the ratio is 1; an *avuncular* does not, so it sits near 2/3.
+//! and the log prints `Join3/Join2` at `%.3lf` ([`join_ratio`]). The genetics behind it:
+//! where `R` is IBD to both sibs, a *grandparent* forces the sibs to have inherited the
+//! same parental haplotype, so the ratio is 1; an *avuncular* does not, so it sits near
+//! 2/3.
 //!
-//! Re-scored on **34 `AV.FS` values over 16 filesets** — the corpus `bigish` plus fifteen
-//! purpose-built two- and three-family fixtures with sibships of 2…6, via
-//! `docs/research/fixtures/avfs_score.py` — the formula lands one-sided high on every one
-//! of them: mean **+0.0039**, range **+0.0003 … +0.0102**, and only **1 of 34** rounds to
-//! the printed three decimals. None of `bigish`'s five does; re-measured, they are
+//! ## What the correction was, and how it scores
 //!
-//! | triple (as the log names it) | reference | ours | residual |
-//! |---|---:|---:|---:|
-//! | `B02_F` uncle of `B01_C2`, `B01_C3` | 0.778 | 0.7828 | +0.0048 |
-//! | `B01_F` uncle of `B02_C3`, `B02_C4` | 0.801 | 0.8062 | +0.0052 |
-//! | `B14_F` uncle of `B13_C2`, `B13_C1` | 0.779 | 0.7828 | +0.0038 |
-//! | `B13_F` uncle of `B14_C1`, `B14_C2` | 0.827 | 0.8278 | +0.0008 |
-//! | `B25_F` uncle of `B26_C3`, `B26_C1` | 0.803 | 0.8065 | +0.0035 |
+//! The previous reading of this doc used the **raw calls** — every IBD1 call and every
+//! IBD2 call, unified — and that set is one-sided large: it keeps the sub-`--seglength`
+//! IBD1 fringe the pair never reports. It landed **1 of 34** triples on the printed three
+//! decimals, mean `+0.0039`, and the residual was written up here as a caller error that
+//! no variant of the formula would remove. It was a formula error. Cutting the IBD2 calls
+//! out of the IBD1 ones and floor-testing each piece — the same two clauses `IBD1Seg`
+//! itself is summed under — removes it completely:
 //!
-//! — so four of the five need the segment caller to move by 0.0035…0.0052 and the fifth by
-//! 0.0008, and writing the log today would turn `apps/bigish__build`'s 18 missing lines
-//! into 5 wrong numbers rather than a pass. Note also that `avfs_score.py` still prints
-//! the **retracted** `[0, dU_sib/(J2/D)]` bound as `OK` on all five: `bigish` is where that
-//! bound was measured in sample, and it is 11 of 34 out of it, so those `OK`s are not
-//! evidence.
+//! | interval set | exact at `%.3lf` |
+//! |---|---|
+//! | raw IBD1 and IBD2 calls unified (the old reading) | 13 of 297 |
+//! | **reported segments** (this one) | **296 of 297** |
+//! | reported segments, endpoints pushed to the marker-gap midpoint | 0 of 5 |
+//! | IBD2 calls alone | undefined, `Join2` is 0 |
 //!
-//! ## The residual is not the formula, and the old bound argument is now dead outright
+//! Those 297 are every `AV.FS` line every rig under `docs/research/fixtures/` has
+//! captured — `bigish` plus roughly 120 purpose-built filesets across `avfs.py`,
+//! `clusternum.py`, `build_shapes.py`, `dupkeep.py`, the genotype-surgery sweeps and the
+//! fresh-seed battery. The set was chosen on `bigish`'s five and then held out on the
+//! other 292. `bigish`'s five now read 0.7784, 0.8007, 0.7793, 0.8266, 0.8027 against the
+//! capture's 0.778, 0.801, 0.779, 0.827, 0.803 — **five of five**, and no triple anywhere
+//! is off by more than 0.0005.
 //!
-//! An earlier reading of this module claimed the residual was **entirely** accounted for
-//! by our sib-pair union over-call `ΔS`, since that can inflate `Join3` by at most `ΔS`
-//! and so the ratio by at most `ΔS / Join2` — quoted as *39 of 39 triples inside*
-//! `[0, ΔS / Join2]`. **That does not survive fresh shapes and seeds: it is 11 of 34.**
-//! It is now refuted on `bigish` itself. Re-measured against the *current* segment engine,
-//! all fifteen pair totals behind those five triples — every `IBD1Seg + IBD2Seg` for
-//! `(R,N1)`, `(R,N2)` and `(N1,N2)` — match the reference's to four decimals, so `ΔS` is
-//! **0.0000** and the bound is `0`, while the residual is unchanged at `+0.0008 … +0.0052`.
-//! Five of five now score `OUTSIDE`. The bound was always too crude to be evidence — `dU`
-//! is a *rounded total*, and `Join3/Join2` is an intersection of three sets, so it reads
-//! segment **placement**, which a matching total says nothing about — and the placement is
-//! where the residual lives. Its sign is the giveaway: dilating all three sets slightly
-//! grows a triple intersection proportionally more than a double one, so ours is high.
+//! The single miss is not ours. `clusternum.py`'s `po_fs` prints `Join3/Join2=2.555` — a
+//! ratio above 1, which no intersection of `Join3` inside `Join2` can produce. It is the
+//! only capture whose `AV.FS` line sits under a `Reconstruct parent-offspring pair (…)`
+//! rather than a `RULE FS0`, so whatever that branch divides by, it is not this `Join2`.
+//! One case in 297; recorded, not chased.
 //!
-//! What does survive is the conclusion, reached independently: **no variant of the
-//! formula removes the residual**, so it is an input problem, not an arithmetic one.
-//! Swept over the same 34 triples, every candidate is worse or no better —
+//! # The verdict is a **band**, not a cut — and that is why lines go missing
 //!
-//! | variant | exact/34 | mean |
-//! |---|---|---|
-//! | as above (base pairs, refined endpoints, `IBD1 ∪ IBD2`) | 1 | +0.0039 |
-//! | marker counts instead of base pairs | 1 | +0.0039 |
-//! | minimum piece length on `Join3` (0.1…3 Mb) | ≤4 | +0.0015…+0.0039 |
-//! | minimum piece length on both (0.25…5 Mb) | ≤4 | +0.0014…+0.0038 |
-//! | eroding every set by 1…63 markers | ≤10 | +0.0034…−0.0287 |
+//! The rule this doc used to carry, "below the cut it reads `uncle`, above it reads
+//! `grandfather, HS, or nephew`", is wrong in a way that hid an entire third branch:
 //!
-//! — and the residual is *heteroscedastic*, spanning thirtyfold across triples, which is
-//! the signature of data-dependent caller error rather than of a constant the formula is
-//! missing. (Eroding by 6 markers zeroes the *mean* at 10 of 34 exact; it is an
-//! unprincipled knob, it does not approach exactness, and it is not landed. Two variants
-//! measured earlier are also still worse: word-aligning the intervals gives mean −0.025,
-//! and re-calling at a different minimum segment length changes nothing below 5 Mb and
-//! hurts at 10.)
+//! ```text
+//! ratio < 0.85   ->  "<R> is uncle|aunt of N1 and N2"
+//! ratio > 0.90   ->  "<R> is grandfather|grandmother, HS, or nephew|niece of N1 and N2"
+//! otherwise      ->  nothing is printed at all
+//! ```
 //!
-//! So `apps/bigish__build` is blocked by the segment caller, but note the weaker claim:
-//! `docs/PARITY.md` §4.1 closing is *necessary*, and no longer demonstrably sufficient.
+//! ([`av_verdict`].) The word pairs follow `R`'s sex. The dead band is what explains every
+//! `AV.FS` line a candidate ought to have raised and did not — `bigish`'s `KING3`, where
+//! `B26_F` is 2nd-degree to all three `B25` children and stays silent, is a ratio of 0.889
+//! falling inside it.
 //!
-//! Three further rules, measured the same way. The second of them is the one that keeps
-//! the `INFERENCE` lines unwritten even where the ratio would be close enough to look
-//! right, and it is stated here as an open problem with its candidate space *closed*, not
-//! as a guess.
+//! ## How both edges were bisected
 //!
-//! * **Which `R` an `AV.FS` line can be raised for.** `R` must be an inferred
-//!   **2nd-degree** relative of *both* named members. That, and nothing weaker, reproduces
-//!   the candidate set every time it was checked: the three-father shape names exactly the
-//!   two children of the third family against the father sibship `(A_F B_F)`, the
-//!   four-father one exactly the six children of the third and fourth, and the shape whose
-//!   families have a single child each names exactly the one candidate — each family's own
-//!   children are 1st-degree to their own father and so are excluded. One `R` may print
-//!   the *same* line two to four times; the repeat count is per `(R, sibship)`, is not the
-//!   number of sib pairs, and is not identified.
-//! * **Which two sibs are named — unidentified, and here is the closed candidate space.**
-//!   The pair is a property of the sibship: every line raised against one sibship names the
-//!   same two whatever `R` is, verified on four sibships against three distinct `R` each
-//!   and two more against two each, including cases where the verdicts differ (`uncle` for
-//!   one `R`, `grandfather, HS, or nephew` for another). Where the sibship is one a
-//!   `RULE FS0`/`FS1` built, the named pair is its **first two members in the order the
-//!   rule line prints** — `RULE FS1: B_X joins in sibship (A_C2 A_C3 A_C1)` and the
-//!   `AV.FS` line naming `A_C2 and A_C3` come from the same fileset. So the open question
-//!   is one ordering, shared by both lines. What it is **not**:
-//!   - **not genotype-derived.** Four fresh seeds — complete genotype reseeding, the
-//!     sibship's own kinships moving over a 0.10 range — give byte-identical `FS1` orders
-//!     at each of three sibship sizes: `(C2 C3 C1)`, `(C3 C4 C2 C1)`, `(C4 C1 C5 C3 C2)`.
-//!   - **not the `.fam` row order.** Permuting a sibship's three rows inside the `.fam`
-//!     (genotypes moved with them) leaves the named pair on the same two *individuals*,
-//!     now at different positions.
-//!   - **not the absolute sample index.** Moving all 80 padding singletons of a
-//!     four-family fixture to the front of the `.fam` leaves the whole log byte-identical.
-//!   - **not the sibship's size or position.** Four three-child sibships in one cluster
-//!     print four different orders, and `bigish`'s `B01` and `B13` — structurally
-//!     identical three-child sibships, same cluster shape, same sexes, same phenotypes —
-//!     name `(C2, C3)` and `(C2, C1)`.
-//!   - **not any pairwise statistic.** Over the 27 measured sibships of three or more
-//!     children, no `argmin` or `argmax` of `HetHet`, `IBS0`, `HetConc`, `HomIBS0`,
-//!     `Kinship`, `IBD1Seg`, `IBD2Seg`, `PropIBD`, `N_SNP`, `Z0` or `Error` picks the
-//!     named pair more than **11 of 27** times, against a chance baseline of one in three
-//!     or worse; and neither does any of ten segment-level statistics computed here
-//!     (`|IBD1|`, `|IBD2|`, their union and complement, segment counts, longest segment):
-//!     best **6 of 20** on the subset those were run over. The named pair's rank on the
-//!     ratio itself runs from first to last — one sibship names the pair with the *lowest*
-//!     `Join3/Join2` of its three and another the *highest* of its fifteen.
+//! Not by collecting values and looking at the extremes — by walking one triple through
+//! each edge with a continuous knob. `docs/research/fixtures/work/bandcut.py` overwrites
+//! `N2`'s calls with `N1`'s over the first `f` of the markers: inside that stretch the sib
+//! pair is IBD everywhere, so it joins `Join3` wherever `R` already shared with `N1`, and
+//! the ratio walks up while the `.fam`, the ids and the pedigree stay put. Because
+//! [`join_ratio`] is now exact, the bracket carries **no rounding slop at all**:
 //!
-//!   The earlier reading in this doc — "a function of the pedigree shape alone",
-//!   with a positional map — is **withdrawn**: it was measured only on the first family of
-//!   two-family fixtures, where the answer happens to be constant, and the four-sibship
-//!   fixture refutes it directly.
-//! * **The verdict is a cut on the ratio.** Below it the line reads `<R> is uncle|aunt of
-//!   N1 and N2`; above it, `<R> is grandfather|grandmother, HS, or nephew|niece of N1 and
-//!   N2`, the word pairs following `R`'s sex. Over **259** values now — every `AV.FS` and
-//!   `AV.HS` line any of these rigs has produced, 133 `uncle|aunt` against 126 ambiguous,
-//!   `buildlog.py cut` — the largest `uncle` prints `0.850` and the smallest ambiguous
-//!   `0.900`. The log prints `%.3lf`, so those stand for true values in
-//!   `[0.8495, 0.8505)` and `[0.8995, 0.9005)`, and the cut lies in
-//!   **(0.8495, 0.9005)**: narrower than the (0.846, 0.902) of 53 values, and still not
-//!   narrow enough to separate 0.85, 0.875 and 0.9, all three of which survive.
+//! | edge | last value one side | first value the other | bracket |
+//! |---|---|---|---|
+//! | `uncle` / silent | 0.848718 prints `uncle 0.849` | 0.851164 is silent | **(0.848718, 0.851164]** |
+//! | silent / ambiguous | 0.896895 is silent | 0.900106 prints `… 0.900` | **(0.896895, 0.900106]** |
+//!
+//! `0.85` and `0.90` are the only round constants inside, and the previous single-cut
+//! bracket `(0.846, 0.902)` is superseded twice over: it was one interval where there are
+//! two, and each of the two is now about 0.003 wide instead of 0.056.
+//!
+//! Held out afterwards on 14 fresh-seed filesets built for it (`battery.py band`), each
+//! carrying two two-child sibships so the named pair is forced: **27 of 27** verdicts
+//! agree with the band — 14 `uncle`, 5 ambiguous, 8 silent, every silent one inside
+//! `[0.8532, 0.8902]`. (The 28th is a cluster whose only `FS` pair reconstruction
+//! rejected, so it raises no candidate at all and carries no evidence either way.)
+//!
+//! # The `HS` half — trigger found
+//!
+//! The three remaining templates are one pass over **candidate half-sib pairs**, and a
+//! candidate is a cross-family pair whose segments put it *well inside* 2nd degree:
+//!
+//! ```text
+//! PropIBD > 0.1875          (equivalently IBD1Seg > 0.375; every candidate has IBD2Seg 0)
+//! ```
+//!
+//! Bracketed to **(0.1868, 0.1878)** on 13 held-out candidate pairs from fresh five-child
+//! shapes plus the 13 the older rigs had left behind — 26 pairs, 0 refutations. It is not
+//! a kinship test: over the same 26 the `Kinship` column **overlaps** (silent as high as
+//! 0.0932, firing as low as 0.0897), so `2^-3.5` and every other kinship constant is
+//! refuted outright. `bigish` is decided by this gate: `B01_C3`/`B02_C4` at 0.1901 fires
+//! and `B01_C2`/`B02_C2` at 0.1799 does not, which is why `KING1` carries exactly one
+//! `HS.UN2` and not two.
+//!
+//! For each candidate `(p1, p2)` in id order the pass walks `p1`'s declared parents and
+//! prints one line per parent the *other* member is inferred unrelated to, then does the
+//! same for `p2`:
+//!
+//! ```text
+//!     HS <p2> unrelated to <a parent of p1>
+//!     HS <p1> unrelated to <a parent of p2>
+//!   Family KING1 INFERENCE HS.UN2: <p1> and <p2> are HS
+//! ```
+//!
+//! The fathers never appear because they are the cluster's `FS` pair and so *are* related
+//! to the other's children; the mothers do. `HS.UN2` closes the block when both sides
+//! produced a line — "UN2" is the two `unrelated` findings. The clean confirmation is a
+//! constructed one: `battery.py hsrel` makes the mothers full sibs too (double first
+//! cousins), so **no** parent check can pass, and the log carries nine candidate pairs
+//! above the gate, two `RULE FS0` lines, three `AV.FS` lines — and not one `HS` line.
+//!
+//! # `RULE FS2` — made to fire
+//!
+//! Never seen until now. It needs **two declared sibships in one component**, which no
+//! honest pedigree can produce: an inferred `FS` pair with one end in each sibship means
+//! the two ends share both parents, so at least one family's `.fam` must mis-declare them.
+//! Simulate four true full sibs, declare two under one couple and two under another, and
+//! the reference prints
+//!
+//! ```text
+//! Family KING1:
+//!   Family KING1 RULE FS2: Sibship (K_C1 K_C2) and sibship (K_C4 K_C3) are combined
+//! ```
+//!
+//! — and nothing else: no parents line, no `FS0`, no inference. Note `(K_C4 K_C3)`, which
+//! is the same internal order the next section is about.
+//!
+//! # What is still missing, and it is one thing
+//!
+//! **The sibship's internal order.** Every inference line names a sibship's *first two
+//! members in that order* — `RULE FS1: B_X joins in sibship (A_C2 A_C3 A_C1)` and
+//! `AV.FS: … of A_C2 and A_C3` come from the same fileset, `RULE FS2` prints it twice, and
+//! `rep3`'s father sibship, built by `FS0 (A_F B_F)`, is named `of A_F and B_F`. The pair
+//! is a property of the sibship and not of `R`: verified on four sibships against three
+//! distinct `R` each and two more against two each, including cases whose verdicts differ.
+//!
+//! It is a hash-table iteration order over a family-scoped id-keyed container — a function
+//! of the id **strings** and of the whole set, not a per-id ranking (13 subsets of one
+//! 8-id pool contradict each other 91 times; four families of two children in one cluster
+//! print `(C2 C1)`, `(C1 C2)`, `(C1 C2)`, `(C2 C1)`). It is **not** genotype-derived (four
+//! complete reseedings leave it byte-identical while the sibship's kinships move over a
+//! 0.10 range), **not** the `.fam` row order, **not** the absolute sample index, and
+//! **not** any pairwise statistic — including, now, `Join3/Join2` itself: `bigish`'s `B01`
+//! names the *lowest* of its three and `B02` names neither the lowest (0.7381) nor the
+//! highest (0.9107) of its six.
+//!
+//! This is the whole of the remaining gap. With it, `bigish`'s five `AV.FS` values are
+//! already exact; without it every one of them would name the wrong two people, so this
+//! module still writes none of them. The earlier judgement that the order is worth "3 of
+//! 59 shapes" was made when only `FS1` needed it; it now gates the entire inference half.
+//!
+//! # The blank lines — the `reject` rule is refuted
+//!
+//! Their count was previously fitted to `1 + the number of candidates examined and turned
+//! down before the first line prints` (107 of 113). That rule is now **refuted by a
+//! matched pair**: `battery.py band`'s `bnd07` and `bnd09` are the same shape, the same
+//! two two-child sibships, one candidate `R` each, and *both candidates silent in both
+//! filesets* — and they print **3** blanks and **2**. No function of the verdicts can
+//! separate them, and no threshold on the ratio can either, since `bnd07`'s pair straddles
+//! `bnd09`'s: 0.8532, 0.8902 against 0.8810, 0.8711.
+//!
+//! Whatever counts the blanks is the same unidentified iteration that decides how often a
+//! line **repeats**: the reference prints an identical `AV.FS` line 1 to 6 times, always
+//! the last candidate of a sibship block, and the count is not the number of sib pairs,
+//! not the number of candidates and not the number of families. `bigish` happens to sit at
+//! 1 everywhere, so the repeat count does not block it; the blank count does — 4 of its 18
+//! lines are blanks.
 //!
 //! # `<p>updateparents.txt` — implemented, and what pinned each clause
 //!

@@ -116,7 +116,12 @@ fn allsegs_is_byte_identical() {
         let Ok(want) = fs::read_to_string(&want_path) else {
             continue;
         };
-        let variants = king_io::bim::read_bim(&root.join(format!("{ds}.bim"))).unwrap();
+        // The genotype files are deliberately never committed (see .gitignore); a fresh
+        // checkout has the golden text but not the corpus. Skip rather than panic, and
+        // let the `checked` assertion below report the shortfall.
+        let Ok(variants) = king_io::bim::read_bim(&root.join(format!("{ds}.bim"))) else {
+            continue;
+        };
         let (au, x) = arrays(&variants);
         let auto = ibdseg::usable_segments(&au.chr, &au.pos);
         let xseg = ibdseg::usable_segments(&x.chr, &x.pos);
@@ -144,7 +149,12 @@ fn allsegs_is_byte_identical() {
         assert_eq!(got, want, "{ds}: allsegs.txt differs");
         checked += 1;
     }
-    assert!(checked >= 10, "only {checked} datasets checked");
+    assert!(
+        checked >= 10,
+        "only {checked} of {} datasets checked -- generate the corpus first:\n  \
+         python3 tests/parity/generate_corpus.py --outdir tests/parity/golden",
+        DATASETS.len()
+    );
 }
 
 #[test]
@@ -153,6 +163,7 @@ fn seg_rows_report() {
         eprintln!("KING_GOLDEN not set; skipping");
         return;
     };
+    let mut datasets_measured = 0usize;
     let (mut tot_rows, mut tot_exact, mut tot_extra, mut tot_missing) = (0, 0, 0, 0);
     let (mut tot_types, mut tot_dsum, mut tot_full) = (0usize, 0.0f64, 0usize);
     let mut worst: f64 = 0.0;
@@ -161,13 +172,16 @@ fn seg_rows_report() {
         let Ok(want) = fs::read_to_string(&want_path) else {
             continue;
         };
-        let fs_ = bed::read_fileset(
+        // Same as above: no corpus, no check. Never a panic.
+        let Ok(fs_) = bed::read_fileset(
             &root.join(format!("{ds}.bed")),
             VariantFilter::Autosomes,
             None,
             None,
-        )
-        .unwrap();
+        ) else {
+            continue;
+        };
+        datasets_measured += 1;
         let (au, _) = arrays(&fs_.variants);
         let ap = au.pos;
         let auto = ibdseg::usable_segments(&au.chr, &ap);
@@ -259,5 +273,14 @@ fn seg_rows_report() {
     eprintln!(
         "TOTAL gold={tot_rows} row={tot_full} est={tot_exact} infType={tot_types} missing={tot_missing} extra={tot_extra} meandPropIBD={:.6} worst={worst:.4}",
         tot_dsum / tot_rows as f64
+    );
+
+    // A report that measured nothing must not read as a pass: the corpus is
+    // gitignored, so an absent one would otherwise make this test silently green.
+    assert!(
+        datasets_measured >= 10,
+        "only {datasets_measured} of {} datasets measured -- generate the corpus first:\n  \\
+         python3 tests/parity/generate_corpus.py --outdir tests/parity/golden",
+        DATASETS.len()
     );
 }
