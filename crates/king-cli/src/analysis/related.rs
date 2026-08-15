@@ -898,14 +898,64 @@ fn effective_degree(opts: &Options) -> i32 {
 ///   screening statistic reads **sample-level allele frequencies**, which is also what
 ///   the `n` dependence above is.
 ///
-/// The lead that leaves, recorded because it is suggestive and **not landed because it
-/// fails out of sample**: a frequency-standardised estimate over a MAF-selected subset,
-/// `mean(z_i z_j)/2` with `z = (x - 2p)/sqrt(2p(1-p))` over the 32 768 highest-MAF
-/// markers, gives **36** on `bigish` at degree 2 and matches 48 of the 50 per-pair
-/// labels — but recomputed with each single-pair run's own 169-sample frequencies, which
-/// is what the reference saw in those runs, it predicts 44, matches 42 of 50, and gives
-/// 16 at degree 1 where the reference gives 18. Fitting it to `bigish` would be a
-/// fitted fiction; §5.7 of `docs/PARITY.md` states it as a lead.
+/// ## What the statistic weights, and the two families that are now dead
+///
+/// A second instrument, `docs/research/fixtures/screenweight.py`, asks what functional of
+/// the pair is being thresholded. Same canvas, same bisection, all of it out of sample.
+///
+/// * **The `m <= 32768` reading is exact, and it is the binding constraint.** 12 fresh
+///   bisections at m = 20 000 / 30 000 / 32 768 give `R = 1.00010 ± 0.00005` and a
+///   boundary kinship of 0.06252 against a printed 0.0625. So below the threshold the
+///   screen *is* the robust kinship on the whole map under a strict `>`, which leaves no
+///   room for a different estimator, denominator or standardisation — any of those would
+///   still be in force there.
+/// * **Above it the deflation is affine, confirmed by prediction.** `R = 1.01779 ±
+///   0.00062` at degree 2 (5 seeds). Carrying that to degree 1 predicts a boundary of
+///   0.13161, against 0.13979 for a multiplicative deflation of the same size; measured
+///   **0.1316** (4 seeds, `R = 1.01806 ± 0.00053`). This also kills every rule shaped
+///   "numerator over a selected set, denominator over the whole map", which is
+///   multiplicative by construction.
+/// * **The rule is additive over markers.** Pure-band boundaries are 3 978 markers for
+///   MAF `[0.35,0.50)` and 8 130 for `[0.147,0.249)`; mixing half of the first needs
+///   3 906 of the second against a parameter-free linear prediction of 4 065, and a
+///   quarter needs 6 001 against 6 098.
+/// * **The per-marker weight is `2p(1-p)` below 32 768 markers and is not above it.**
+///   Differential probe, ten in-sample MAF bands: at m = 32 768 the weight is flat at
+///   `2pq` (`w/2pq = 1.03 ± 0.05`), as any consistent kinship estimator must be, since
+///   `4pq(p²+q²) + 8p²q² = 4pq` exactly. At m = 50 000, same markers and same pair, it
+///   ramps — `w/2pq` = 0.48, 0.56, 0.65, 0.75, 0.77, 0.94, 1.00 at MAF 0.16…0.35 — and
+///   markers below MAF ≈ 0.15 carry **no weight at all**: the 0.05, 0.08, 0.11 and 0.14
+///   bands are rejected with every one of their 2 133 / 3 278 / 3 772 / 3 739 markers
+///   cloned.
+///
+/// That retires the lead this doc used to carry. **A frequency-standardised estimate is
+/// refuted, not merely unvalidated**: `mean(z_i z_j)/2` weights every marker equally and
+/// so predicts one boundary *marker count* whatever the band, where the measured counts
+/// are 3 978, 4 552 and 8 130 — a factor of two. Het-weighting predicts one boundary het
+/// *mass*, and the top two bands give 1 910 and 1 898, agreeing to 0.6 %. The refutation
+/// does not depend on which frequencies the lead is computed with, which is what the
+/// earlier out-of-sample failure (44 against 36, 16 against 18) turned on.
+///
+/// **And it is not this estimator on any subset of these markers.** Eight measured
+/// brackets — 5 random clone families, 3 confined to a MAF band — each pin
+/// `k_S(size-1) <= 0.0625 < k_S(size)` for the true screening set. Scanned over 3
+/// selectors (in-sample MAF, in-sample heterozygote count, heterozygote count over 24
+/// samples) × 11 sizes from 500 to 50 000, **none of the 33 satisfies all eight**, and
+/// the reason is structural: a uniformly drawn clone family meets any subset in its own
+/// proportion, so the five random boundaries read 0.069…0.072 for *every* subset and
+/// never the cutoff. A subset can bend the band boundaries — that is the ramp above —
+/// but it cannot supply the uniform deflation. So swapping the prefix below for a better
+/// subset cannot close this line, and searching for one is wasted effort.
+///
+/// What survives is a shape, recorded as a shape and **not** as a rule: a statistic that
+/// coincides with the robust kinship on the whole map at `m <= 32768`, is additive, is
+/// `2pq`-weighted times a ramp from 0 at MAF ≈ 0.15 to 1 at ≈ 0.35, and carries an affine
+/// `R ≈ 1.018` that varies pair to pair and falls with `n`. The robust kinship over a
+/// subset with a *pair-dependent* denominator does all four — `R = a_S/a_all` with `a_X`
+/// the pair's heterozygosity asymmetry `(h_i + h_j)/(2·min(h_i,h_j))` over `X` is exactly
+/// affine, is exactly 1 when `S` is the whole map, and is pair-specific — but for
+/// `S` = top-32 768 by in-sample MAF this pair's `a_S/a_all` is 0.998, not 1.018, so the
+/// subset that would carry it has not been found.
 ///
 /// The consequence is contained: the count reaches stdout and nothing else. `.kin0`'s row
 /// set comes from the exhaustive re-estimate below and is byte-correct at every degree,

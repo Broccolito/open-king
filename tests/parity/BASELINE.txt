@@ -201,7 +201,7 @@ PASS ibdseg/admixed__related_degree2_ibdseg
 PASS ibdseg/bigish__ibdseg
 PASS ibdseg/bigish__ibdseg_degree2
 FAIL ibdseg/bigish__ibdseg_seglength10 | king.seg!=(num)
-FAIL ibdseg/bigish__ibdseg_seglength5 | king.seg!=(num)
+PASS ibdseg/bigish__ibdseg_seglength5
 FAIL ibdseg/bigish__related_degree2_ibdseg | stdout!=
 PASS ibdseg/dups__ibdseg
 PASS ibdseg/dups__ibdseg_degree2
@@ -210,8 +210,8 @@ PASS ibdseg/dups__ibdseg_seglength5
 PASS ibdseg/dups__related_degree2_ibdseg
 PASS ibdseg/missing__ibdseg
 PASS ibdseg/missing__ibdseg_degree2
-FAIL ibdseg/missing__ibdseg_seglength10 | king.seg!=(num)
-FAIL ibdseg/missing__ibdseg_seglength5 | king.seg!=(num)
+PASS ibdseg/missing__ibdseg_seglength10
+PASS ibdseg/missing__ibdseg_seglength5
 PASS ibdseg/missing__related_degree2_ibdseg
 PASS ibdseg/monomorphic__ibdseg
 PASS ibdseg/monomorphic__ibdseg_degree2

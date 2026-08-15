@@ -1,0 +1,70 @@
+cff-version: 1.2.0
+title: open-king
+message: >-
+  open-king is an independent, clean-room reimplementation. If you use
+  relatedness inference in published research, cite the original KING
+  paper (Manichaikul et al. 2010) — listed below under
+  `references` — and, if it is useful to say which implementation
+  produced your numbers, this software as well.
+type: software
+authors:
+  - family-names: Gu
+    given-names: Wanjun
+repository-code: https://github.com/Broccolito/open-king
+abstract: >-
+  A clean-room, MIT-licensed Rust reimplementation of KING
+  (Kinship-based INference for Genome-wide association studies),
+  targeting byte-identical output with the reference KING 2.3.2 binary
+  on PLINK 1 filesets. Written from the published algorithms, the
+  public documentation and black-box observation of the reference
+  binary; no KING source code was read or copied.
+license: MIT
+keywords:
+  - kinship
+  - relatedness
+  - IBD segments
+  - GWAS quality control
+  - PLINK
+
+references:
+  # The method open-king implements. Cite this for the estimators.
+  - type: article
+    title: >-
+      Robust relationship inference in genome-wide association studies
+    authors:
+      - family-names: Manichaikul
+        given-names: Ani
+      - family-names: Mychaleckyj
+        given-names: Josyf C.
+      - family-names: Rich
+        given-names: Stephen S.
+      - family-names: Daly
+        given-names: Kathy
+      - family-names: Sale
+        given-names: Michèle
+      - family-names: Chen
+        given-names: Wei-Min
+    journal: Bioinformatics
+    year: 2010
+    volume: 26
+    issue: 22
+    start: 2867
+    end: 2873
+    doi: 10.1093/bioinformatics/btq559
+
+  # The original program. open-king is not affiliated with it, not endorsed
+  # by it, and not derived from its source; it is credited here because it
+  # is the work this project reimplements and measures itself against.
+  - type: software
+    title: KING — Kinship-based INference for Genome-wide association studies
+    authors:
+      - family-names: Chen
+        given-names: Wei-Min
+    version: 2.3.2
+    year: 2023
+    url: https://www.kingrelatedness.com/
+    notes: >-
+      The reference implementation, by Wei-Min Chen and colleagues at the
+      University of Virginia. It remains the work of its authors under its
+      own license terms. open-king reproduces its observable behaviour;
+      it contains none of its code.

@@ -150,6 +150,17 @@ class Params:
     # markers to the het-vs-A1A1 ones. Bisected at `MIN_INFORMATIVE`: against A1A1/A1A1
     # loads of 16, 24, 30 and 40, nine het-vs-A1A1 markers join and ten do not.
     merge_gate: int = 10
+    # --- `docs/research/21-push-merge.md` --------------------------------
+    # The IBD2 pass's own merge, re-measured. `merge21=False` is the engine as it stood
+    # after `20-…`: a two-word cap shared with the IBD1 pass, the interruption taken
+    # between the two *runs*, and `X = inf2`. True is the committed rule: no cap, the
+    # interruption taken between the two **gate windows**, and `X = HetHet` with the same
+    # switch at `merge_gate` the IBD1 pass has (§3-§5).
+    merge21: bool = True
+    # The one-word push (`17-…` §6) is conditional: a call arms it only when it reaches
+    # `min_bp // push_fraction` measured from its own gate-start word (§2). `None` is the
+    # retired unconditional form — every call after the first is pushed.
+    push_fraction: int = 2
 
     # --- marker-level boundary refinement --------------------------------
     # Where inside the flanking word a call stops. `last`/`first` name which IBS0 of that
@@ -206,17 +217,20 @@ BASE = Params()
 #: All three retired bundles pin `merge=False`: each is "the engine as it stood at
 #: write-up N", and the run merge did not land until `20-…`.
 RETIRED = Params(seg_rule="word", ibd2_dirty_ibs1=5, ibd1_sub="overlap",
-                 seg_prop="unrounded", merge=False)
+                 seg_prop="unrounded", merge=False,
+                 merge21=False, push_fraction=None)
 
 #: The engine of `docs/research/18-ibd1-caller.md`: everything `BASE` has except the
 #: IBD2 fringe of `19-…` (still `17-…` §5's unconditional "extend") and `.seg`'s own
 #: `PropIBD` rule (still the `.kin` one). Scores 747 exact rows / 896 exact `IBD2Seg` /
 #: MAE 0.000067 at 3 Mb. Kept so `18-…`'s numbers reproduce from this file too.
-FRINGE18 = Params(ibd2_fringe="extend", seg_prop="unrounded", merge=False)
+FRINGE18 = Params(ibd2_fringe="extend", seg_prop="unrounded", merge=False,
+                 merge21=False, push_fraction=None)
 
 #: `BASE`'s caller with the retired **`.kin`** `PropIBD` rule on `.seg` — the tree as it
 #: stood after `19-…` and before `20-…`. 806 exact rows against `BASE`'s 982.
-PROP19 = Params(seg_prop="unrounded", merge=False)
+PROP19 = Params(seg_prop="unrounded", merge=False,
+                 merge21=False, push_fraction=None)
 
 
 def seg_prop_ibd(ibd1_seg, ibd2_seg):
@@ -395,8 +409,16 @@ class SegScan:
         bad = int(sum(int(self.mz[k]) for k in mid))
         if pass2:
             bad += int(sum(int(self.mm[k]) for k in mid))
-            x = int(sum(int(self.mu2[k]) for k in mid))
             cost = p.merge_cost2
+            if p.merge21:
+                # `21-…` §5: `X` is the HetHet count, with the IBD1 pass's own switch.
+                # `mu` is the A1A1/A1A1 half of `inf2`; the rest of `mu2` is HetHet.
+                x = int(sum(int(self.mu[k]) for k in mid))
+                v = int(sum(int(self.mu2[k]) - int(self.mu[k]) for k in mid))
+                if v >= p.merge_gate:
+                    x = v
+            else:
+                x = int(sum(int(self.mu2[k]) for k in mid))
         else:
             x = int(sum(int(self.mu[k]) for k in mid))
             v = int(sum(int(self.mv[k]) for k in mid))
@@ -404,6 +426,38 @@ class SegScan:
                 x = v
             cost = p.merge_cost1
         return cost * max(0, bad - p.merge_free) <= x
+
+    def join_runs2(self, runs, ok, mis, pos, min_bp):
+        """The IBD2 merge of `docs/research/21-push-merge.md` §3-§4 — `Scan::join_runs2`.
+
+        No cap on the interruption's width, and what separates two runs is the space
+        between their **gate windows**: the earlier ends at `ge_of(b)`, the later opens
+        at its gate-start word. A word covered by any window — which is any unusable,
+        IBS0-free word right after a usable one — is not part of the interruption.
+        """
+        n = self.n
+
+        def ge_of(b):
+            return b + 1 if (b + 1 < n and int(self.n0[self.w0 + b + 1]) == 0
+                             and mis[b + 1]) else b
+
+        out = []
+        for a, b in runs:
+            if out:
+                pa, pb = out[-1]
+                q = ge_of(pb)
+                g2 = next((t for t in range(a, b + 1) if mis[t] == 0), a)
+                mid = [k for k in range(q + 1, a)
+                       if not ok[k] and not (k > 0 and ok[k - 1]
+                                             and int(self.n0[self.w0 + k]) == 0)]
+                gap = int(pos[WORD * (self.w0 + g2)]
+                          - pos[WORD * (self.w0 + q + 1) - 1])
+                if (any(not ok[k] for k in range(pb + 1, a)) and gap < min_bp
+                        and self.merge_ok([self.w0 + k for k in mid], True)):
+                    out[-1] = (pa, b)
+                    continue
+            out.append((a, b))
+        return out
 
     def join_runs(self, runs, usable, pos, min_bp, pass2):
         """Join adjacent gate-passing runs across a short interruption.
@@ -573,9 +627,14 @@ class SegScan:
                     continue
             kept.append((w0 + a, w0 + b))
         if p.merge:
-            kept = self.join_runs(kept, ok, pos, min_bp, True)
+            if p.merge21:
+                kept = self.join_runs2([(u - w0, v - w0) for u, v in kept],
+                                       ok, mis, pos, min_bp)
+                kept = [(w0 + a, w0 + b) for a, b in kept]
+            else:
+                kept = self.join_runs(kept, ok, pos, min_bp, True)
 
-        out, emitted = [], 0
+        out, armed = [], False
         for u, v in kept:
             a, b = u - w0, v - w0
             left = WORD * u
@@ -609,9 +668,8 @@ class SegScan:
                     ge = min(n - 1, right // WORD - w0)
                 if int(cum[w0 + ge + 1] - cum[w0 + gs]) < p.gate:
                     continue
-            if emitted:
+            if armed:
                 left = max(left, WORD * (w0 + gs + 1))
-            emitted += 1
             if p.ibd2_fringe == "extend":
                 # The retired `17-…` §5 clause, in the place it used to occupy.
                 if u == w0:
@@ -621,7 +679,17 @@ class SegScan:
             left, right = max(left, self.lo), min(right, self.hi)
             if out:
                 left = max(left, out[-1][1])   # calls may touch, but not overlap
-            if left <= right and pos[right] - pos[left] >= min_bp:
+            if left > right:
+                continue
+            # `21-…` §2: the push is armed by a call reaching half the floor, measured
+            # from its own gate-start word. `push_fraction=None` is the retired
+            # unconditional form.
+            if p.push_fraction is None:
+                armed = True
+            else:
+                g0 = min(max(WORD * (w0 + gs), self.lo), right)
+                armed = armed or pos[right] - pos[g0] >= min_bp // p.push_fraction
+            if pos[right] - pos[left] >= min_bp:
                 out.append((left, right))
         return out
 

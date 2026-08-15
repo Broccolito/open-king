@@ -61,7 +61,22 @@
 //! purpose-built two- and three-family fixtures with sibships of 2…6, via
 //! `docs/research/fixtures/avfs_score.py` — the formula lands one-sided high on every one
 //! of them: mean **+0.0039**, range **+0.0003 … +0.0102**, and only **1 of 34** rounds to
-//! the printed three decimals. None of `bigish`'s five does.
+//! the printed three decimals. None of `bigish`'s five does; re-measured, they are
+//!
+//! | triple (as the log names it) | reference | ours | residual |
+//! |---|---:|---:|---:|
+//! | `B02_F` uncle of `B01_C2`, `B01_C3` | 0.778 | 0.7828 | +0.0048 |
+//! | `B01_F` uncle of `B02_C3`, `B02_C4` | 0.801 | 0.8062 | +0.0052 |
+//! | `B14_F` uncle of `B13_C2`, `B13_C1` | 0.779 | 0.7828 | +0.0038 |
+//! | `B13_F` uncle of `B14_C1`, `B14_C2` | 0.827 | 0.8278 | +0.0008 |
+//! | `B25_F` uncle of `B26_C3`, `B26_C1` | 0.803 | 0.8065 | +0.0035 |
+//!
+//! — so four of the five need the segment caller to move by 0.0035…0.0052 and the fifth by
+//! 0.0008, and writing the log today would turn `apps/bigish__build`'s 18 missing lines
+//! into 5 wrong numbers rather than a pass. Note also that `avfs_score.py` still prints
+//! the **retracted** `[0, dU_sib/(J2/D)]` bound as `OK` on all five: `bigish` is where that
+//! bound was measured in sample, and it is 11 of 34 out of it, so those `OK`s are not
+//! evidence.
 //!
 //! ## The residual is not the formula, and the old bound argument for it is wrong
 //!

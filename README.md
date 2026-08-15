@@ -34,7 +34,7 @@ suite.
 
 ## Status
 
-**472 of the 480 captured reference invocations reproduce byte-identically (98.3 %)**,
+**475 of the 480 captured reference invocations reproduce byte-identically (99.0 %)**,
 including all 220 flag-plumbing and error probes. Run the suite yourself:
 
 ```bash
@@ -51,30 +51,36 @@ auto-QC, unrelated-set selection, clustering, `--ibs`, the whole X-chromosome su
 (`X.kin`, `X.kin0`, `X.seg`) and the whole command-line surface are byte-identical
 everywhere, and so is the IBD-segment engine at its default settings. **Twenty-nine of the
 thirty-one output files this project writes are byte-identical in every case that produces
-them**; only `<prefix>.seg` (45 of 50 cases) and `<prefix>build.log` (7 of 8) differ
+them**; only `<prefix>.seg` (48 of 50 cases) and `<prefix>build.log` (7 of 8) differ
 anywhere. On the
 primary `--ibdseg` capture all **982** rows are byte-exact on all four printed fields —
 `IBD1Seg`, `IBD2Seg`, `PropIBD` and `InfType` — with **0 spurious and 0 missing rows on
 every output file in the corpus**.
 
-The 8 cases that are not byte-identical are three named causes:
+The 5 cases that are not byte-identical are three named causes:
 
 | cases | cause |
 | ---: | --- |
-| 5 | `IBD1Seg`/`IBD2Seg` under `--seglength 5` and `--seglength 10` — 74 rows of 1 658, the residual left after the run merge landed (`docs/research/20-seglength-floor.md`) |
+| 2 | `IBD1Seg`/`IBD2Seg` under `--seglength 10` — 12 rows of the 867 in those two captures (12 of 4 172 `.seg` rows corpus-wide), the residual left after the push and the IBD2 merge were re-measured (`docs/research/21-push-merge.md`) |
 | 2 | one stdout line: `--related`'s two-stage screening count on `bigish` |
 | 1 | `--build`'s `<prefix>build.log` is unimplemented |
 
-**Raised reporting floors are where the remaining work is, and the numbers are published
-rather than hidden.** Row-level, over the same 982 pairs:
+**The one raised reporting floor still short is `--seglength 10`, and the numbers are
+published rather than hidden.** Row-level, over the same 982 pairs:
 
 | `--seglength` | all four columns | `IBD1Seg` | `IBD2Seg` | extra | missing |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | 3 Mb (default) | **982 / 982** | **982** | **982** | 0 | 0 |
-| 5 Mb | 947 / 982 | 959 | 947 | 0 | 0 |
-| 10 Mb | 943 / 982 | 960 | 945 | 0 | 0 |
+| 5 Mb | **982 / 982** | **982** | **982** | 0 | 0 |
+| 10 Mb | 970 / 982 | 970 | 972 | 0 | 0 |
 
 (`python3 tests/parity/fit/scorecard.py`.)
+
+**One caveat that applies to every number on this page.** All of it is measured against a
+single reference build — `KING 2.3.2`, Mach-O arm64, on macOS. KING's own release notes
+record repeated changes to the IBD-segment algorithm across 2.1.x–2.2.x, and that algorithm
+has never been published, so "byte-identical" here means *to 2.3.2*. No cross-build or
+cross-platform differential has been run. `docs/PARITY.md` opens with the full statement.
 
 Two further differences sit outside the 480 captures entirely, so they cost no case but a
 user could still hit them: `--ibdseg` does not apply the reference's 100 Mb usable-total
@@ -98,12 +104,15 @@ move it by 28:
 | `.seg`'s two writer rules (`20-seg-writer.md`) | no estimate changed at all; byte-exact rows 806 → **982 of 982** | 436 → **464** |
 | `<prefix>X.seg` implemented (`crate::analysis::xseg`) | a new file, 28 rows, byte-exact | 464 → **466** |
 | the `--seglength` run merge (`20-seglength-floor.md`) | at the 10 Mb floor `IBD1Seg` 844 → **960 of 982** and byte-exact rows 832 → **943**; mean `PropIBD` error ÷3.2, worst row 0.0916 → 0.0111. Nothing at 3 Mb, where the rule cannot fire | 466 → **472** |
+| the push and the IBD2 merge, re-measured (`21-push-merge.md`) | `--seglength 5` becomes as exact as the default floor: both estimate columns 982 of 982 and byte-exact rows 947 → **982**. At 10 Mb `IBD2Seg` 945 → **972**, byte-exact rows 943 → **970** | 472 → **475** |
 
 The `20-seg-writer.md` row is the point about graders: `PropIBD` computed from the printed
 columns instead of the totals, and rows listed in 16-sample blocks instead of by index.
 Neither touches a segment, an estimate or a reported pair — and between them they were worth
-28 cases, because the numbers underneath had finally stopped being wrong. The last row is
-the opposite case: a real change to the caller, worth both 6 cases and 116 rows.
+28 cases, because the numbers underneath had finally stopped being wrong. The last two rows
+are the opposite case: real changes to the caller. The run merge was worth 6 cases and 158
+exact rows (47 at the 5 Mb floor, 111 at 10); the push and IBD2-merge corrections 3 cases and
+62 more (35 at 5 Mb, 27 at 10), which took `--seglength 5` to exact.
 
 So read both. `docs/PARITY.md` §4.4 is the row-level scoreboard, §3 the file-level one, and
 §5.0 says which grader to use for what, what is left, and which experiment to run next.
@@ -126,7 +135,7 @@ cases, not files.
 | `--cluster` | `allsegs.txt`, `updateids.txt`, `cluster.kin` | **byte-identical** (13/13) |
 | `--build` | `updateids.txt`, `updateparents.txt`, `build.log`, `allsegs.txt` | 12/13 — `updateids.txt` and `updateparents.txt` are byte-identical in all 8 cases that write them; on `bigish` only `build.log` is missing, and its one variable statistic is segment-derived (`docs/PARITY.md` §6.2) |
 | `--related` | `.kin` (16 col), `.kin0` (14 col), `X.kin`, `allsegs.txt` | 64/65 — every file byte-identical in every case, all 4 805 16-column rows exact on all sixteen. The one failure is a single stdout line, the two-stage screening count on `bigish` (`docs/PARITY.md` §5.7) |
-| `--ibdseg` | `.seg`, `allsegs.txt`, `splitped.txt`, `X.seg` | 59/65 (47/52 alone, 12/13 with `--related`) — `allsegs.txt`, `splitped.txt` and `X.seg` byte-identical everywhere; `.seg` byte-identical on all 13 datasets at the default 3 Mb floor, 74 of 4 172 rows differing at `--seglength 5` and `10`; `splitped.txt` is written unconditionally, which the reference does not always do (`docs/PARITY.md` §5.10) |
+| `--ibdseg` | `.seg`, `allsegs.txt`, `splitped.txt`, `X.seg` | 62/65 (50/52 alone, 12/13 with `--related`) — `allsegs.txt`, `splitped.txt` and `X.seg` byte-identical everywhere; `.seg` byte-identical on all 13 datasets both at the default 3 Mb floor and at `--seglength 5`, 12 of 4 172 rows differing and all of them at `--seglength 10`; `splitped.txt` is written unconditionally, which the reference does not always do (`docs/PARITY.md` §5.10) |
 
 `--related` is **not** a synonym for `--kinship`: it emits six extra columns
 (`HetConc`, `HomIBS0`, `IBD1Seg`, `IBD2Seg`, `PropIBD`, `InfType`), four of which come from
@@ -190,7 +199,7 @@ cargo build --release
 ```
 
 The binary is emitted as `target/release/king`. It builds from a clean checkout in
-about eight seconds with no external toolchain: `Cargo.lock` has 15 packages, three of which
+**about 8.3 seconds** with no external toolchain: `Cargo.lock` has 15 packages, three of which
 are this workspace. `cargo test --workspace` is 314 tests; CI additionally replays all 480
 captured invocations against `tests/parity/BASELINE.txt` on every push, and fails on any
 difference **in either direction** — an unrecorded improvement is a failure too, so the
@@ -212,11 +221,27 @@ No KING source code was read or copied. The original KING remains the work of it
 authors under its own license terms; if you use relatedness inference in published
 research, cite the original paper.
 
+`docs/MAINTAINING.md` §1 states the clean-room rule, why it is absolute rather than
+best-effort, and exactly which three sources of information are permitted. Every rule in the
+segment engine names the black-box experiment that established it.
+
 ## Citation
 
+**Cite the method, not this reimplementation.** The estimators are Manichaikul *et al.*:
+
 > Manichaikul A, Mychaleckyj JC, Rich SS, Daly K, Sale M, Chen WM. Robust relationship
-> inference in genome-wide association studies. *Bioinformatics*. 2010;26(22):2867-2873.
+> inference in genome-wide association studies. *Bioinformatics*. 2010;26(22):2867–2873.
+> doi:10.1093/bioinformatics/btq559
+
+**Credit for KING itself belongs to Wei-Min Chen and colleagues** (University of Virginia),
+whose program — <https://www.kingrelatedness.com/> — this project reimplements and measures
+itself against. The IBD-segment algorithm in particular is theirs and is unpublished;
+open-king recovered its behaviour by observation, not by reading their work.
+
+If a paper needs to say which implementation produced a number, `CITATION.cff` in this
+repository carries machine-readable metadata for open-king alongside both references above.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). This license covers open-king's own code only; it makes no
+claim about the original KING, which is separately licensed by its authors.

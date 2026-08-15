@@ -366,6 +366,14 @@ trial. With the merge live at 20 000 bp spacing it is 56–58 of 60 — see §11
 
 ## 11. What is still open
 
+**Superseded by `docs/research/21-push-merge.md`.** Items 1 and 2 were the whole of that
+campaign and are closed: the push is conditional (`21-…` §2), the IBD2 merge has no word
+cap (§4), its interruption runs between gate windows rather than between runs (§3), and
+its `X` is the HetHet count rather than `inf2` (§5) — so §7's last clause above is the one
+reading in this document that `21-…` retracts. Item 3 is closed the other way: §3's
+two-word cap is confirmed on the **IBD1** pass on a fresh fixture, and it is the IBD2 pass
+that has none. Items 4 and 5 stand.
+
 1. **The IBD2 merge is not closed.** Its gap rule, its cap and its budget are bisected
    (§7) and it is worth 1 row at 5 Mb and 8 at 10 on the corpus, but on random IBD2-native
    canvases it is 56/60 at `L = 3` and 58/60 at 5 and 10, in **both** directions. The
