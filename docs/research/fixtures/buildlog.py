@@ -32,8 +32,12 @@ failure sets; what separates them by hand is `three_fs` and `ord3`.  See
 `crates/king-cli/src/analysis/build.rs`.
 
 **`cut`** re-reads every `AV.FS`/`AV.HS` line under `work/` and brackets the
-`uncle|aunt` / `grandfather|…` cut: 259 values, `(0.8495, 0.9005)` once the `%.3lf`
-rounding is accounted for.
+`uncle|aunt` / `grandfather|…` boundary from printed values alone: 259 values,
+`(0.8495, 0.9005)`.  **Superseded.**  There is no single cut — there are two, with a dead
+band between them in which the reference prints no line at all, and `bandcut.py` walks a
+triple through each edge with a genotype knob and brackets them to `(0.848718, 0.851164]`
+and `(0.896895, 0.900106]`.  What this section still shows is the shape of the evidence
+that hid the band: nothing is ever printed between 0.850 and 0.900.
 
 **`order`** reads the sibship order off the reference's `RULE FS1: X joins in sibship (…)`
 line, which prints the whole list.  Four seeds at each of three sibship sizes give the same

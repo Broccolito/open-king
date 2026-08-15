@@ -215,9 +215,13 @@ Measured on the tree this document describes:
 | `docs/research/fixtures/buildlog.py rules` | **out of sample**, the `--build` log's rule half over 59 held-out pedigree shapes: **53 match, 6 differ** — 2 out-of-scope `<FID>-><IID>` renamings, 3 sibship member order, 1 the unimplemented `PO.S` branch (§6.2) |
 | `docs/research/fixtures/build_shapes.py` | **out of sample**, `updateparents.txt` + the console tail over 20 held-out merge shapes: **18 OK, 0 MISMATCH, 2 skipped** (the renaming shapes) |
 | `docs/research/fixtures/clusternum.py score` | **out of sample**, the merge queue over 19 discriminating shapes: queue **19/19** and our binary **19/19**, against family order 7, size 7, largest-kinship 11 (§6.2) |
+| `docs/research/fixtures/avscore.py 1 work/*` | **out of sample**, `Join3/Join2` over **297** captured `AV.FS` lines from ~120 filesets: **296 exact** at `%.3lf` on the *reported*-segment reading, against **13** on the raw-call reading it replaces; the miss is the reference's own `2.555` (§6.2) |
+| `docs/research/fixtures/bandcut.py sweep` | genotype surgery walking one triple through each verdict edge: `uncle`/silent bisected to **(0.848718, 0.851164]**, silent/ambiguous to **(0.896895, 0.900106]** — two cuts where the doc had one, superseding the 0.056-wide `(0.846, 0.902)` |
+| `docs/research/fixtures/battery.py band` | **out of sample**, 14 fresh-seed filesets of forced two-child sibships: **27 / 27** verdicts agree with the three-branch band |
+| `docs/research/fixtures/battery.py hs` | **out of sample**, the half-sib candidate gate over 26 candidate pairs: `PropIBD` bracketed to **(0.1868, 0.1878)**, 0 refutations; `Kinship` **refuted**, its silent and firing ranges overlapping |
 | `docs/research/fixtures/dupkeep.py` | **out of sample**, which duplicate copy is removed, 10 shapes × 3 seeds: **27/27**, against 21 for "keep the later id" and 6 for "keep the earlier"; the line appears with no `INFERENCE` line in 23 of 27 runs, which is what makes it rule-half |
 | `docs/research/fixtures/screenfold.py separation` | **the screen impossibility result**: the kept 32 768 markers' genotypes held bit-identical while the printed count falls **46 → 37** (§5.7) |
-| `cargo test --workspace` | **325 passed, 0 failed, 1 ignored** |
+| `cargo test --workspace` | **329 passed, 0 failed, 1 ignored** |
 | `cargo clippy --workspace --all-targets -- -D warnings` | clean |
 | `cargo fmt --all --check` | clean |
 | a pristine copy of the tree, `cargo build --release` | succeeds in **9.5 s** from cold; `Cargo.lock` has 15 packages — the 3 workspace crates and 12 external |
@@ -781,21 +785,26 @@ are byte-exact on all four printed fields at 3, 5 and 10 Mb, printed-column MAE 
 2. **`<prefix>build.log` is written only down to its `RULE` lines** (§6.2). 1 case. Its
    header, `Duplicate … is removed.` and `RULE FS0`/`FS1` lines now land — 6 of `bigish`'s 18
    lines, 243 of its 806 bytes, every one byte-identical, and byte-identical on **53 of 59**
-   held-out shapes. Its
-   `INFERENCE` half is blocked twice over: by exact segment **placement** and by the
-   still-unidentified rule that names two members of a sibship, whose candidate space is now
-   closed by measurement rather than open — see §6.2.
+   held-out shapes.
 
-   **And this is the sharpest thing the release knows about the caller.** `Join3/Join2`
-   intersects three pairs' segment *sets*, so it is the only statistic anywhere in KING's
-   output that reads segment **placement** rather than a total. Re-measured with the shipped
-   binary: on 10 of 14 measured triples **every one of the three pair totals behind them
-   matches the reference's printed `IBD1Seg + IBD2Seg` exactly** (`dU = 0.0000`), and the
-   ratio is still high by +0.0008…+0.0064, mean **+0.0040**, with **0 of 14** rounding to the
-   printed three decimals. Byte-identical totals therefore do **not** imply identical
-   segments. The earlier claim that `--build` closes when the `.seg` residual closes is
-   **refuted**, not merely retracted: the `.seg` residual has closed and the `AV.FS`
-   residual has not moved. `fixtures/avfs_score.py`.
+   **The segment blocker is gone.** `Join3/Join2` intersects three pairs' segment *sets*, so
+   it is the only statistic in KING's output that reads segment **placement** rather than a
+   total — and this release reproduces it. The sets are the pairs' **reported** segments
+   (IBD2 calls plus the IBD1 pieces that clear `--seglength` once the IBD2 calls are cut
+   out), not the raw calls; on that reading the ratio is exact at `%.3lf` on **296 of 297**
+   captured `AV.FS` lines, `bigish`'s five included, with no triple off by more than 0.0005.
+   The single miss is the reference printing `2.555`, a ratio above 1, in the one capture
+   where the line sits under a `Reconstruct parent-offspring pair`. The previous entry here
+   — that byte-identical totals do not imply identical segments, so `--build` was blocked by
+   the caller — measured a formula error, not a caller error; it is **withdrawn**, and the
+   caller is exonerated. `fixtures/segprobe`, `fixtures/avscore.py`.
+
+   What remains is one thing: **the sibship's internal member order**, which every inference
+   line uses to pick the two people it names. It gates all five `AV.FS` lines, and through
+   them the blank lines and the `HS` block. The verdict rule around it is settled — a
+   three-branch band, `< 0.85` uncle, `> 0.90` grandparent-or-HS-or-nephew, **nothing at all
+   in between** — with both edges bisected to about 0.003 by genotype surgery, and the HS
+   candidate gate is `PropIBD > 0.1875`, bracketed to 0.001. See §6.2.
 
 3. **`--related`'s two-stage screening count**, 2 cases (§5.7). Not a segment problem: one
    stdout line, `36 pairs` against our `50`; every output file in both cases, `.kin0` and

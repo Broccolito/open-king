@@ -126,6 +126,40 @@
 //! On `bigish` all six lines this module writes are byte-identical to the capture, 243 of
 //! its 806 bytes, and every byte written is a byte the reference wrote.
 //!
+//! ## `bigish`'s eighteen lines, one at a time
+//!
+//! Six land; the twelve that do not each need exactly one of the three things below, and
+//! after this round **two of the three are settled**.
+//!
+//! | # | line | state | what it needs |
+//! |---|---|---|---|
+//! | 1, 9, 14 | `Family KING<k>:` | **written** | — |
+//! | 2, 10, 15 | `RULE FS0: Sibship (…)'s parents are (…)` | **written** | — |
+//! | 3, 11 | blank (one each in `KING1`, `KING2`) | missing | the blank count |
+//! | 16, 17 | blank ×2 in `KING3` | missing | the blank count |
+//! | 4 | `AV.FS: B02_F is uncle of B01_C2 and B01_C3, …=0.778` | missing | the named pair; value **exact** |
+//! | 5 | `AV.FS: B01_F is uncle of B02_C3 and B02_C4, …=0.801` | missing | the named pair; value **exact** |
+//! | 12 | `AV.FS: B14_F is uncle of B13_C2 and B13_C1, …=0.779` | missing | the named pair; value **exact** |
+//! | 13 | `AV.FS: B13_F is uncle of B14_C1 and B14_C2, …=0.827` | missing | the named pair; value **exact** |
+//! | 18 | `AV.FS: B25_F is uncle of B26_C3 and B26_C1, …=0.803` | missing | the named pair; value **exact** |
+//! | 6 | `    HS B02_C4 unrelated to B01_M` | missing | nothing but the pass — trigger settled |
+//! | 7 | `    HS B01_C3 unrelated to B02_M` | missing | nothing but the pass — trigger settled |
+//! | 8 | `INFERENCE HS.UN2: B01_C3 and B02_C4 are HS` | missing | nothing but the pass — trigger settled |
+//!
+//! Lines 6, 7 and 8 are now fully determined: `B01_C3`/`B02_C4` is the cluster's only
+//! cousin pair over [`HS_CANDIDATE_PROP_IBD`] (0.1901 against `B01_C2`/`B02_C2`'s 0.1799),
+//! and both mothers are unrelated to every cross-family individual even at `--degree 4`,
+//! so both checks pass and `HS.UN2` closes the block. `KING2` and `KING3` have no cousin
+//! pair 2nd-degree at all, which is why the block appears once in the file.
+//!
+//! The three missing `AV.FS` values are byte-exact under [`join_ratio`] and the three
+//! `uncle` verdicts fall out of [`av_verdict`]; what none of them can supply is *which two
+//! of the sibship to name*. `KING3`'s single line is the band at work: `B26_F` is
+//! 2nd-degree to all three `B25` children, and of that sibship's three pairs only
+//! `(C2, C3)` at **0.892** sits in the dead band — the other two, 0.815 and 0.789, would
+//! have printed `uncle`. So the reference's silence there is itself a measurement of the
+//! named pair: it must be `{B25_C2, B25_C3}`.
+//!
 //! ## The blank lines, and why they are still not written
 //!
 //! Their count is a function of the inference half, so a binary that writes no inference

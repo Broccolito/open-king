@@ -9,6 +9,27 @@ of the rules it scores.
     python3 battery.py rep   <nseeds>   # how many times one AV.FS line repeats
     python3 battery.py fs2              # can RULE FS2 be made to fire
     python3 battery.py hsrel            # HS candidate whose parent check fails
+
+# What each section established
+
+**`band`** builds two-child sibships so the named pair is *forced*, which is what makes a
+verdict readable without knowing the sibship's internal order.  27 of 27 agree with the
+three-branch rule `< 0.85 uncle | 0.85..0.90 silent | > 0.90 ambiguous`.  The 28th row is a
+cluster whose only `FS` pair reconstruction refused (kinship 0.1699, under `2^-2.5`, while
+the segments still call it `FS`); it raises no candidate and carries no evidence.  It is
+also the shape that shows a merged cluster can produce a **zero-byte** log.
+
+**`hs`** brackets the half-sib candidate gate to `PropIBD` in `(0.1868, 0.1878)` — 3/16 —
+and refutes `Kinship` as the test outright, its silent and firing ranges overlapping.
+
+**`rep`** is the open one.  An identical `AV.FS` line is printed 1 to 6 times, always the
+last candidate of a sibship block; the count is not the number of sib pairs, of candidates
+or of families.  The same unidentified iteration governs the blank-line count, which
+`bnd07`/`bnd09` show is not a function of the verdicts.
+
+**`fs2`** and **`hsrel`** are constructed one-shot answers: `RULE FS2` fires only under a
+`.fam` that mis-declares parents, and an HS candidate whose every parent check fails
+(double first cousins) prints no `HS` line at all.
 """
 import importlib.util, itertools, os, re, subprocess, sys
 

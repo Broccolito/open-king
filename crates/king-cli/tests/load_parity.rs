@@ -127,7 +127,16 @@ fn load_output(scratch: &Scratch, args: &[&Path]) -> String {
         .find("Loading genotype data")
         .or_else(|| stdout.find("\nFATAL ERROR"))
         .unwrap_or_else(|| panic!("no load section in:\n{stdout}"));
-    stdout[start..].replace(&scratch.0.to_string_lossy().to_string(), "<DIR>")
+    let body = stdout[start..].replace(&scratch.0.to_string_lossy().to_string(), "<DIR>");
+    // The expectations below spell the scratch paths `<DIR>/t.fam`. On Windows the path
+    // the binary echoes is joined with a backslash, so normalise the separator in the
+    // part we substituted. This is a property of the fixture, not of the program: the
+    // reference prints whatever separator its platform uses, and so do we.
+    if std::path::MAIN_SEPARATOR == '\\' {
+        body.replace("<DIR>\\", "<DIR>/")
+    } else {
+        body
+    }
 }
 
 /// The loading sequence must *begin* with `expected`; what an analysis prints after it is

@@ -19,10 +19,17 @@ Writes a PLINK fileset into `<outdir>`; run the reference's `--build` on it and 
 `kingbuild.log`. Nothing here is committed as data — `docs/research/fixtures/work/` is
 gitignored and these filesets are regenerated on demand.
 
-**The scorer is not preserved.** Measuring `Join3/Join2` also needed a scratch crate that
-dumped every called segment through `king_core::ibdseg::Scan`, plus an intersector over
-those intervals. Only the fixture generators survive; rebuilding the scorer is described in
-`build.rs`'s module doc, which carries the formula and the 53-value scorecard it produced.
+**The scorer is preserved now** — losing it once cost a whole round. `segprobe/` is a
+standalone crate that dumps each pair's reported IBD intervals through
+`king_core::ibdseg::Scan` and intersects them; `avscore.py` drives it over every
+`kingbuild.log` any rig has left behind and scores `Join3/Join2` at `%.3lf`:
+
+    cd segprobe && cargo build --release
+    python3 avscore.py 1 work/avfs work/clusternum work/battery ...
+
+The `1` is the interval-set variant, and it is the answer: **reported** segments (IBD2
+calls plus the IBD1 pieces that clear `--seglength` once the IBD2 calls are cut out), which
+scores 296 of 297. Variant 0, the raw calls, is the reading that was wrong and scores 13.
 """
 
 import importlib.util
