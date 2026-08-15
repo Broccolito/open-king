@@ -1,16 +1,9 @@
-# The parity suite compares captured reference output BYTE FOR BYTE, and 486 of the
-# goldens contain bare CR characters — the reference's own `\r`-separated progress
-# tokens (`10%20%…`), which are mid-line, not line terminators. Git for Windows
-# defaults to `core.autocrlf=true`, which would rewrite those files on checkout and
-# make every affected case fail on a platform where nothing is actually wrong.
+# This repository's core asset is byte-exact captured output from the reference KING
+# binary. Git's automatic end-of-line conversion would rewrite those bytes on checkout
+# under Windows (core.autocrlf), turning every golden file and console fixture into CRLF
+# and making byte comparisons fail for a reason that has nothing to do with the program.
 #
-# `-text` disables all end-of-line translation for these paths, on every platform.
-# Do not relax it: a golden is evidence, and evidence must survive a checkout.
-tests/parity/golden/** -text
-
-# Same reasoning: these are the reference's own cached canvas readings (see
-# docs/MAINTAINING.md §8.3). They are data, not source.
-docs/research/fixtures/*_measured.json -text
-
-# The recorded parity outcome CI asserts against, compared line by line.
-tests/parity/BASELINE.txt -text
+# `-text` marks every path as binary for conversion purposes: no CRLF translation, in
+# either direction, on any platform. Do not narrow this to specific extensions — the
+# corpus grows, and a fixture that silently gains \r is a confusing failure.
+* -text

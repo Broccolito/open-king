@@ -378,6 +378,7 @@
 use std::io::Write;
 use std::path::Path;
 
+use king_core::ibdseg::Called;
 use king_core::infer::{pedigree_kinship, KinshipCache, Pedigree};
 use king_io::Sample;
 
@@ -392,6 +393,129 @@ use crate::load::Loaded;
 /// `PropIBD` is twice a kinship, so this is [`band::FIRST`] doubled — the same cut-point
 /// the segment `InfType` uses to open its `PO`/`FS` band.
 const FIRST_DEGREE_PROP_IBD: f64 = 2.0 * band::FIRST;
+
+/// `Join3/Join2` at or above which an `INFERENCE AV.FS` candidate stops reading `uncle`.
+///
+/// Bisected to `(0.848718, 0.851164]` with a continuous genotype knob on one triple, with
+/// no rounding slop because [`join_ratio`] reproduces the reference's own value — see the
+/// module doc. `0.85` is the only round constant inside.
+pub const AV_UNCLE_MAX: f64 = 0.85;
+
+/// `Join3/Join2` above which an `INFERENCE AV.FS` candidate reads
+/// `grandfather|grandmother, HS, or nephew|niece`.
+///
+/// Bisected to `(0.896895, 0.900106]` the same way. Between this and [`AV_UNCLE_MAX`] the
+/// reference prints **nothing**, which is the branch that had been missed entirely.
+pub const AV_AMBIGUOUS_MIN: f64 = 0.90;
+
+/// `PropIBD` above which a cross-family 2nd-degree pair becomes a **half-sib candidate**
+/// — the pair that can raise `HS <a> unrelated to <b>` and `INFERENCE HS.UN2`.
+///
+/// `3/16`, bracketed to `(0.1868, 0.1878)` on 26 candidate pairs, 13 of them from fresh
+/// five-child shapes built for it. Equivalently `IBD1Seg > 0.375`: every candidate seen
+/// carries `IBD2Seg 0`, so nothing here separates the two readings. The `Kinship` column
+/// is refuted as the test — over the same 26 its silent and firing ranges overlap.
+pub const HS_CANDIDATE_PROP_IBD: f64 = 0.1875;
+
+/// The base pairs a pair **reports** as IBD, which is the set `Join3/Join2` is built over.
+///
+/// Every IBD2 call, plus the pieces of each IBD1 call left once the IBD2 calls are cut out
+/// — at marker granularity, excluding the IBD2 call's own end markers — with each piece
+/// facing `seglength_bp` on its own. Those are the two clauses `IBD1Seg` is summed under,
+/// so this is exactly the interval set `<prefix>.seg` lists for the pair.
+///
+/// Using the **raw** calls instead is the error that made the old `Join3/Join2` read
+/// one-sided high by ~0.004: the raw set keeps the sub-`--seglength` IBD1 fringe that the
+/// pair never reports. See the module doc for the 297-triple scorecard.
+///
+/// `ibd1` and `ibd2` are one pair's merged calls over one usable segment, as
+/// [`king_core::ibdseg::Scan`] returns them; `pos` is the autosomal position array the
+/// scan was run against. The result is sorted and non-overlapping.
+pub fn reported_intervals(
+    pos: &[i64],
+    ibd1: &[Called],
+    ibd2: &[Called],
+    seglength_bp: i64,
+) -> Vec<(i64, i64)> {
+    let mut out: Vec<(i64, i64)> = ibd2.iter().map(|c| (pos[c.lo], pos[c.hi])).collect();
+    for call in ibd1 {
+        let mut cur = call.lo;
+        let piece = |lo: usize, hi: usize, out: &mut Vec<(i64, i64)>| {
+            if lo <= hi && pos[hi] - pos[lo] >= seglength_bp {
+                out.push((pos[lo], pos[hi]));
+            }
+        };
+        for o in ibd2 {
+            if o.hi < call.lo || o.lo > call.hi {
+                continue;
+            }
+            if o.lo > cur {
+                piece(cur, o.lo - 1, &mut out);
+            }
+            cur = cur.max(o.hi + 1);
+        }
+        if cur <= call.hi {
+            piece(cur, call.hi, &mut out);
+        }
+    }
+    out.sort_unstable();
+    let mut merged: Vec<(i64, i64)> = Vec::new();
+    for iv in out {
+        match merged.last_mut() {
+            Some(last) if iv.0 <= last.1 => last.1 = last.1.max(iv.1),
+            _ => merged.push(iv),
+        }
+    }
+    merged
+}
+
+/// Intersect two sorted, non-overlapping interval sets.
+fn intersect(a: &[(i64, i64)], b: &[(i64, i64)]) -> Vec<(i64, i64)> {
+    let (mut x, mut y, mut out) = (0, 0, Vec::new());
+    while x < a.len() && y < b.len() {
+        let (lo, hi) = (a[x].0.max(b[y].0), a[x].1.min(b[y].1));
+        if lo < hi {
+            out.push((lo, hi));
+        }
+        if a[x].1 < b[y].1 {
+            x += 1;
+        } else {
+            y += 1;
+        }
+    }
+    out
+}
+
+/// `Join3/Join2` for the triple `(R; N1, N2)`, or `None` when `Join2` is empty.
+///
+/// The three arguments are [`reported_intervals`] for `(R,N1)`, `(R,N2)` and `(N1,N2)`,
+/// concatenated across every usable segment. Positions must be comparable across
+/// chromosomes — lay them end to end first, since a `.bim` restarts at 1 on every one.
+pub fn join_ratio(r_n1: &[(i64, i64)], r_n2: &[(i64, i64)], n1_n2: &[(i64, i64)]) -> Option<f64> {
+    let total = |v: &[(i64, i64)]| v.iter().map(|(a, b)| b - a).sum::<i64>();
+    let join2 = intersect(r_n1, r_n2);
+    let denom = total(&join2);
+    (denom != 0).then(|| total(&intersect(&join2, n1_n2)) as f64 / denom as f64)
+}
+
+/// What an `INFERENCE AV.FS` candidate reads, given its ratio and `R`'s sex — or `None`
+/// when the ratio lands in the dead band and the reference prints no line at all.
+///
+/// `sex` is the `.fam` code: 2 is female, anything else takes the masculine wording (the
+/// reference has no third form, and every capture with `sex 0` reads masculine).
+pub fn av_verdict(ratio: f64, sex: u8) -> Option<&'static str> {
+    if ratio < AV_UNCLE_MAX {
+        Some(if sex == 2 { "aunt" } else { "uncle" })
+    } else if ratio > AV_AMBIGUOUS_MIN {
+        Some(if sex == 2 {
+            "grandmother, HS, or niece"
+        } else {
+            "grandfather, HS, or nephew"
+        })
+    } else {
+        None
+    }
+}
 
 /// Run the pass. The caller has already printed `Options in effect:`.
 pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
@@ -894,6 +1018,71 @@ fn first_degree_warnings(opts: &Options, loaded: &Loaded) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The IBD1 fringe an IBD2 call cuts off is dropped when it is under the floor and
+    /// kept when it is over — the clause that took `Join3/Join2` from 13 of 297 to 296.
+    #[test]
+    fn reported_intervals_cuts_ibd2_out_and_floors_each_piece() {
+        // Markers every 1 Mb, so index and megabase agree.
+        let pos: Vec<i64> = (0..40).map(|k| k * 1_000_000).collect();
+        let ibd1 = [Called { lo: 0, hi: 30 }];
+        let ibd2 = [Called { lo: 4, hi: 20 }];
+        // Floor 3 Mb: the left piece [0, 3] is 3 Mb and stays, the right [21, 30] is 9.
+        assert_eq!(
+            reported_intervals(&pos, &ibd1, &ibd2, 3_000_000),
+            vec![
+                (0, 3_000_000),
+                (4_000_000, 20_000_000),
+                (21_000_000, 30_000_000)
+            ]
+        );
+        // Floor 5 Mb: the left piece is now under it and is not reported at all, while
+        // the IBD2 call it was cut by is untouched.
+        assert_eq!(
+            reported_intervals(&pos, &ibd1, &ibd2, 5_000_000),
+            vec![(4_000_000, 20_000_000), (21_000_000, 30_000_000)]
+        );
+        // With no IBD2 call the whole IBD1 call is one piece.
+        assert_eq!(
+            reported_intervals(&pos, &ibd1, &[], 3_000_000),
+            vec![(0, 30_000_000)]
+        );
+    }
+
+    #[test]
+    fn join_ratio_is_the_triple_over_the_double_intersection() {
+        let a = [(0, 100), (200, 300)];
+        let b = [(50, 250)];
+        // Join2 = [50,100] + [200,250] = 100.
+        let s = [(60, 90)];
+        assert_eq!(join_ratio(&a, &b, &s), Some(0.3));
+        // Disjoint from R: no denominator, so no line.
+        assert_eq!(join_ratio(&a, &[(400, 500)], &s), None);
+    }
+
+    /// The three branches, including the one the old single-cut reading did not have.
+    #[test]
+    fn av_verdict_has_a_dead_band() {
+        assert_eq!(av_verdict(0.8487, 1), Some("uncle"));
+        assert_eq!(av_verdict(0.8487, 2), Some("aunt"));
+        assert_eq!(av_verdict(0.8512, 1), None);
+        assert_eq!(av_verdict(0.8969, 1), None);
+        assert_eq!(av_verdict(0.9001, 1), Some("grandfather, HS, or nephew"));
+        assert_eq!(av_verdict(0.9001, 2), Some("grandmother, HS, or niece"));
+        // Both edges are measured as closed on the silent side.
+        assert_eq!(av_verdict(AV_UNCLE_MAX, 1), None);
+        assert_eq!(av_verdict(AV_AMBIGUOUS_MIN, 1), None);
+    }
+
+    /// `bigish`'s two `KING1` cousin pairs, which is why it prints one `HS.UN2` not two.
+    #[test]
+    fn hs_candidate_gate_splits_bigish_two_cousin_pairs() {
+        let candidate = |prop_ibd: f64| prop_ibd > HS_CANDIDATE_PROP_IBD;
+        assert!(candidate(0.1901), "B01_C3/B02_C4 raises HS.UN2");
+        assert!(!candidate(0.1799), "B01_C2/B02_C2 does not");
+        // The bracket the 26 measured pairs leave the constant in.
+        assert!(candidate(0.1878) && !candidate(0.1868));
+    }
 
     fn person(fid: &str, iid: &str, pat: &str, mat: &str) -> Sample {
         Sample {

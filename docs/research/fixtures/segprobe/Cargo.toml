@@ -1,0 +1,14 @@
+[package]
+name = "segprobe"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+king-io = { path = "../../../../crates/king-io" }
+king-core = { path = "../../../../crates/king-core" }
+king-cli = { path = "../../../../crates/king-cli" }
+
+[profile.release]
+opt-level = 3
+
+[workspace]

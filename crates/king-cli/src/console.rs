@@ -880,6 +880,68 @@ pub fn build_duplicate_removed(removed: &str, kept: &str) -> String {
     format!("  Duplicate {removed} (of {kept}) is removed.\n")
 }
 
+/// `  Family KING1 RULE FS2: Sibship (K_C1 K_C2) and sibship (K_C4 K_C3) are combined`.
+///
+/// Raised when one component holds **two declared sibships** — two groups that each name
+/// their own non-missing couple, tied together by an inferred full-sib pair. No honest
+/// pedigree produces one, because an `FS` pair with an end in each group means the two
+/// ends share both parents; it takes a `.fam` that mis-declares them, and under one it
+/// fires and is the cluster's *only* line — no parents line, no `FS0`, no inference.
+///
+/// Both sibships are listed in the same internal order every inference line uses, which is
+/// why the second reads `(K_C4 K_C3)` and not `(K_C3 K_C4)`.
+pub fn build_rule_fs2(key: &str, first: &[&str], second: &[&str]) -> String {
+    format!(
+        "  Family {key} RULE FS2: Sibship ({}) and sibship ({}) are combined\n",
+        first.join(" "),
+        second.join(" ")
+    )
+}
+
+/// `  Family KING1 INFERENCE AV.FS: B02_F is uncle of B01_C2 and B01_C3, Join3/Join2=0.778`.
+///
+/// Raised for a candidate `R` inferred 2nd-degree to both named members of a sibship. The
+/// two named are the sibship's **first two members in its internal order** — the same order
+/// `RULE FS1` and `RULE FS2` print, and the one thing about this line still unidentified.
+///
+/// `verdict` comes from [`crate::analysis::build::av_verdict`], which returns `None` when
+/// the ratio falls in the dead band `[0.85, 0.90]`; there the reference prints no line at
+/// all, so there is nothing for this function to render.
+pub fn build_inference_av_fs(
+    key: &str,
+    r: &str,
+    verdict: &str,
+    n1: &str,
+    n2: &str,
+    ratio: f64,
+) -> String {
+    format!(
+        "  Family {key} INFERENCE AV.FS: {r} is {verdict} of {n1} and {n2}, \
+         Join3/Join2={ratio:.3}\n"
+    )
+}
+
+/// `    HS B02_C4 unrelated to B01_M` — four spaces, not two.
+///
+/// One line per declared parent of one half-sib candidate that the *other* candidate is
+/// inferred unrelated to. The candidate's own father is normally the cluster's `FS` pair
+/// and so is related to the other's children, which is why in practice only the mothers
+/// are ever named. When neither side can produce a line the whole block vanishes: a
+/// double-first-cousin fixture, whose mothers are full sibs too, prints nine candidate
+/// pairs' worth of nothing.
+pub fn build_hs_unrelated(other: &str, parent: &str) -> String {
+    format!("    HS {other} unrelated to {parent}\n")
+}
+
+/// `  Family KING1 INFERENCE HS.UN2: B01_C3 and B02_C4 are HS`.
+///
+/// Closes the block above when **both** sides produced an `unrelated` line — the `UN2` is
+/// those two findings. The pair has to have cleared
+/// [`crate::analysis::build::HS_CANDIDATE_PROP_IBD`] to have been a candidate at all.
+pub fn build_inference_hs_un2(key: &str, a: &str, b: &str) -> String {
+    format!("  Family {key} INFERENCE HS.UN2: {a} and {b} are HS\n")
+}
+
 // ---------------------------------------------------------------------------
 // Time
 // ---------------------------------------------------------------------------

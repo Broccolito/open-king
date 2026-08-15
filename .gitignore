@@ -6,6 +6,8 @@
 /tests/parity/work/
 # Fixture-rig scratch: filesets built on the fly by docs/research/fixtures/*.py.
 /docs/research/fixtures/work/
+# and the scratch scorer's build output; its source is tracked.
+/docs/research/fixtures/segprobe/target/
 __pycache__/
 /tests/parity/golden/**/*.bed
 /tests/parity/golden/**/*.bim
