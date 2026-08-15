@@ -34,7 +34,7 @@ suite.
 
 ## Status
 
-**475 of the 480 captured reference invocations reproduce byte-identically (99.0 %)**,
+**477 of the 480 captured reference invocations reproduce byte-identically (99.4 %)**,
 including all 220 flag-plumbing and error probes. Run the suite yourself:
 
 ```bash
@@ -48,33 +48,46 @@ is a summary of it and says nothing it does not support.
 
 The one-paragraph version: the relatedness estimators, the QC reports, duplicate detection,
 auto-QC, unrelated-set selection, clustering, `--ibs`, the whole X-chromosome surface
-(`X.kin`, `X.kin0`, `X.seg`) and the whole command-line surface are byte-identical
-everywhere, and so is the IBD-segment engine at its default settings. **Twenty-nine of the
-thirty-one output files this project writes are byte-identical in every case that produces
-them**; only `<prefix>.seg` (48 of 50 cases) and `<prefix>build.log` (7 of 8) differ
-anywhere. On the
-primary `--ibdseg` capture all **982** rows are byte-exact on all four printed fields —
-`IBD1Seg`, `IBD2Seg`, `PropIBD` and `InfType` — with **0 spurious and 0 missing rows on
-every output file in the corpus**.
+(`X.kin`, `X.kin0`, `X.seg`), the whole command-line surface **and the IBD-segment engine at
+every captured reporting floor** are byte-identical everywhere. **Thirty of the thirty-one
+output files this project writes are byte-identical in every case that produces them**; only
+`<prefix>build.log` (7 of 8) differs anywhere. On the primary `--ibdseg` capture all **982**
+rows are byte-exact on all four printed fields — `IBD1Seg`, `IBD2Seg`, `PropIBD` and
+`InfType` — with **0 spurious and 0 missing rows on every output file in the corpus**.
 
-The 5 cases that are not byte-identical are three named causes:
+The 3 cases that are not byte-identical fall under two named causes, and neither is a
+segment estimate:
 
 | cases | cause |
 | ---: | --- |
-| 2 | `IBD1Seg`/`IBD2Seg` under `--seglength 10` — 12 rows of the 867 in those two captures (12 of 4 172 `.seg` rows corpus-wide), the residual left after the push and the IBD2 merge were re-measured (`docs/research/21-push-merge.md`) |
-| 2 | one stdout line: `--related`'s two-stage screening count on `bigish` |
-| 1 | `--build`'s `<prefix>build.log` is unimplemented |
+| 2 | one stdout line: `--related`'s two-stage screening count on `bigish`. Every output file in both cases, `.kin`, `.kin0` and `.seg` alike, is byte-identical |
+| 1 | `--build`'s `<prefix>build.log` — its `RULE` half lands, its `INFERENCE` half does not |
 
-**The one raised reporting floor still short is `--seglength 10`, and the numbers are
-published rather than hidden.** Row-level, over the same 982 pairs:
+**Row-level, over the same 982 pairs, at all three captured floors:**
 
-| `--seglength` | all four columns | `IBD1Seg` | `IBD2Seg` | extra | missing |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| 3 Mb (default) | **982 / 982** | **982** | **982** | 0 | 0 |
-| 5 Mb | **982 / 982** | **982** | **982** | 0 | 0 |
-| 10 Mb | 970 / 982 | 970 | 972 | 0 | 0 |
+| `--seglength` | all four columns | `IBD1Seg` | `IBD2Seg` | extra | missing | MAE |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 3 Mb (default) | **982 / 982** | **982** | **982** | 0 | 0 | 0.000000 |
+| 5 Mb | **982 / 982** | **982** | **982** | 0 | 0 | 0.000000 |
+| 10 Mb | **982 / 982** | **982** | **982** | 0 | 0 | 0.000000 |
 
 (`python3 tests/parity/fit/scorecard.py`.)
+
+**Both of those numbers are saturated, and that is a fact about the corpus as much as about
+the caller.** So this release also measures the segment engine on filesets it has never
+seen — 24 of them, on 8 seeds used nowhere else in the repository, at all three floors,
+byte-diffed against the reference:
+
+```
+72 runs, 6 713 reference rows   ->   66 byte-identical
+rows: 0 extra, 2 missing, 4 value-differing
+```
+
+**66 of 72 runs and 6 707 of 6 713 rows.** The 6 wrong rows are one IBD2 deficit of
+0.0182 on a full-sib pair (identical on two independent seeds — one missed piece in one
+place) and one distant pair we drop that the reference reports. Both are written up with
+their next experiment in `docs/PARITY.md` §4.6, and neither is visible to the 480 captures.
+`python3 docs/research/fixtures/oosseg.py --ref /path/to/king` reproduces it.
 
 **One caveat that applies to every number on this page.** All of it is measured against a
 single reference build — `KING 2.3.2`, Mach-O arm64, on macOS. KING's own release notes
@@ -105,6 +118,8 @@ move it by 28:
 | `<prefix>X.seg` implemented (`crate::analysis::xseg`) | a new file, 28 rows, byte-exact | 464 → **466** |
 | the `--seglength` run merge (`20-seglength-floor.md`) | at the 10 Mb floor `IBD1Seg` 844 → **960 of 982** and byte-exact rows 832 → **943**; mean `PropIBD` error ÷3.2, worst row 0.0916 → 0.0111. Nothing at 3 Mb, where the rule cannot fire | 466 → **472** |
 | the push and the IBD2 merge, re-measured (`21-push-merge.md`) | `--seglength 5` becomes as exact as the default floor: both estimate columns 982 of 982 and byte-exact rows 947 → **982**. At 10 Mb `IBD2Seg` 945 → **972**, byte-exact rows 943 → **970** | 472 → **475** |
+| the gate window's own length bound and the IBD1 merge's budget word set (`23-gap-bound.md`) | `--seglength 10` becomes exact too: `IBD1Seg` 970 → **982**, `IBD2Seg` 972 → **982**, byte-exact rows 970 → **982**, printed-column MAE 0.000046 → **0** | 475 → **477** |
+| `<prefix>build.log`'s header and `RULE` lines (`crate::analysis::build`) | 0 → **243 of 806 bytes**, 6 of 18 lines, every one byte-identical; byte-identical on 23 of 30 held-out pedigree shapes | **+0** — a case is all-or-nothing |
 
 The `20-seg-writer.md` row is the point about graders: `PropIBD` computed from the printed
 columns instead of the totals, and rows listed in 16-sample blocks instead of by index.
@@ -114,8 +129,15 @@ are the opposite case: real changes to the caller. The run merge was worth 6 cas
 exact rows (47 at the 5 Mb floor, 111 at 10); the push and IBD2-merge corrections 3 cases and
 62 more (35 at 5 Mb, 27 at 10), which took `--seglength 5` to exact.
 
-So read both. `docs/PARITY.md` §4.4 is the row-level scoreboard, §3 the file-level one, and
-§5.0 says which grader to use for what, what is left, and which experiment to run next.
+The last two rows are the two ends of that spectrum in one pass: `23-gap-bound.md` moved
+both scoreboards, and `build.log`'s `RULE` lines moved neither while being byte-exact as far
+as they go. A fourth track this pass landed **nothing on purpose** — `docs/research/22-screen.md`
+closed most of the screening count's hypothesis space by measurement and declined to fit the
+one constant that would have reproduced `bigish` and nothing else.
+
+So read both. `docs/PARITY.md` §4.4 is the row-level scoreboard, §3 the file-level one, §4.6
+the out-of-sample one — the only one that still discriminates — and §5.0 says which grader to
+use for what, what is left, and which experiment to run next.
 
 ## Scope (v1)
 
@@ -133,9 +155,9 @@ cases, not files.
 | `--unrelated` | `unrelated.txt`, `unrelated_toberemoved.txt`, `allsegs.txt` | **byte-identical** (26/26) |
 | `--ibs` | `.ibs`, `.ibs0`, `allsegs.txt` | **byte-identical** (13/13) — every column, `MaxIBD2` and `Pr_IBD2` included, on all 21 561 rows |
 | `--cluster` | `allsegs.txt`, `updateids.txt`, `cluster.kin` | **byte-identical** (13/13) |
-| `--build` | `updateids.txt`, `updateparents.txt`, `build.log`, `allsegs.txt` | 12/13 — `updateids.txt` and `updateparents.txt` are byte-identical in all 8 cases that write them; on `bigish` only `build.log` is missing, and its one variable statistic is segment-derived (`docs/PARITY.md` §6.2) |
+| `--build` | `updateids.txt`, `updateparents.txt`, `build.log`, `allsegs.txt` | 12/13 — `updateids.txt` and `updateparents.txt` are byte-identical in all 8 cases that write them; on `bigish` only `build.log` differs, and only in its `INFERENCE` half — its header and `RULE` lines are byte-identical (6 of 18 lines, 243 of 806 bytes, a strict subsequence of the reference's file), while the rest needs exact segment *placement* and one still-unidentified ordering (`docs/PARITY.md` §6.2) |
 | `--related` | `.kin` (16 col), `.kin0` (14 col), `X.kin`, `allsegs.txt` | 64/65 — every file byte-identical in every case, all 4 805 16-column rows exact on all sixteen. The one failure is a single stdout line, the two-stage screening count on `bigish` (`docs/PARITY.md` §5.7) |
-| `--ibdseg` | `.seg`, `allsegs.txt`, `splitped.txt`, `X.seg` | 62/65 (50/52 alone, 12/13 with `--related`) — `allsegs.txt`, `splitped.txt` and `X.seg` byte-identical everywhere; `.seg` byte-identical on all 13 datasets both at the default 3 Mb floor and at `--seglength 5`, 12 of 4 172 rows differing and all of them at `--seglength 10`; `splitped.txt` is written unconditionally, which the reference does not always do (`docs/PARITY.md` §5.10) |
+| `--ibdseg` | `.seg`, `allsegs.txt`, `splitped.txt`, `X.seg` | 64/65 — **52/52 alone**, 12/13 with `--related`. `.seg`, `allsegs.txt`, `splitped.txt` and `X.seg` are byte-identical in **every** case, on all 4 172 `.seg` rows, at 3, 5 and 10 Mb alike; the one loss is `bigish --related --degree 2 --ibdseg` on the stdout line above, with its `.seg` byte-identical. Off-corpus: `docs/PARITY.md` §4.6, and `splitped.txt` is written unconditionally where the reference does not always do so (§5.10) |
 
 `--related` is **not** a synonym for `--kinship`: it emits six extra columns
 (`HetConc`, `HomIBS0`, `IBD1Seg`, `IBD2Seg`, `PropIBD`, `InfType`), four of which come from
@@ -200,7 +222,7 @@ cargo build --release
 
 The binary is emitted as `target/release/king`. It builds from a clean checkout in
 **about 8.3 seconds** with no external toolchain: `Cargo.lock` has 15 packages, three of which
-are this workspace. `cargo test --workspace` is 314 tests; CI additionally replays all 480
+are this workspace. `cargo test --workspace` is 320 tests; CI additionally replays all 480
 captured invocations against `tests/parity/BASELINE.txt` on every push, and fails on any
 difference **in either direction** — an unrecorded improvement is a failure too, so the
 committed baseline can never drift from what the tree actually does. Contributing,

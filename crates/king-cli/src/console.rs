@@ -826,6 +826,44 @@ fn percent(min_conc: f64) -> i64 {
 }
 
 // ---------------------------------------------------------------------------
+// The pedigree-reconstruction log (`<prefix>build.log`, echoed to stdout)
+// ---------------------------------------------------------------------------
+//
+// Every line below is a template mined from the reference binary's `__cstring`
+// section and then confirmed against captured runs; the derivation, including the
+// lines this module deliberately does not build, is in `analysis::build`'s module
+// doc. The block is written to the log file and to stdout **verbatim and
+// identically** — stdout adds one blank line after it and nothing else.
+
+/// `Family KING1:` — opens a cluster's block, printed once before its first line.
+pub fn build_family_header(key: &str) -> String {
+    format!("Family {key}:\n")
+}
+
+/// `  Family KING1 RULE FS0: Sibship (B01_F B02_F)'s parents are (1 2)`.
+///
+/// Raised when the inference *creates* a sibship out of a full-sib pair: the two members
+/// are named in the order the cluster holds them, and the parent pair is either a couple
+/// one of them already declares or the next synthetic pair.
+pub fn build_rule_fs0(key: &str, members: &[&str], pat: &str, mat: &str) -> String {
+    format!(
+        "  Family {key} RULE FS0: Sibship ({})'s parents are ({pat} {mat})\n",
+        members.join(" ")
+    )
+}
+
+/// `  Family KING1 RULE FS1: C_F joins in sibship (A_F B_F)`.
+///
+/// Raised when one individual joins a sibship that already exists — either a declared one
+/// or one a `RULE FS0` just created. `members` is the sibship *before* the join.
+pub fn build_rule_fs1(key: &str, joiner: &str, members: &[&str]) -> String {
+    format!(
+        "  Family {key} RULE FS1: {joiner} joins in sibship ({})\n",
+        members.join(" ")
+    )
+}
+
+// ---------------------------------------------------------------------------
 // Time
 // ---------------------------------------------------------------------------
 

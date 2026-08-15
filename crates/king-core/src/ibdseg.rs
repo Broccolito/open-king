@@ -113,31 +113,38 @@
 //! artefact of comparing two different formulas, and `20-seg-writer.md` is the correction.
 //! **Do not re-derive the sub-ulp IBD1 argument; it is dead.**
 //!
-//! `--seglength 5` is now **982 of 982 on both estimate columns**, with the same MAE and
-//! the same worst row as the default floor (`docs/research/21-push-merge.md` §6). The only
-//! floor still wrong is `--seglength 10`: `IBD1Seg` 970 and `IBD2Seg` 972 of 982, a
-//! residual of 12 and 10 rows on `bigish` and `multifam`. Two causes are known:
+//! **All three captured floors are now exact.** `--seglength` 3, 5 and 10 each reproduce
+//! **982 of 982** rows on all four printed columns, MAE 0.000000, worst row 0.0000, 0
+//! extra and 0 missing pairs (`tests/parity/fit/scorecard.py`). The last two `.seg` parity
+//! cases closed with `docs/research/23-gap-bound.md`, which found that the 10 Mb residual
+//! was neither the merge's gap nor an invented merge — the diagnosis `…/21-…` §8.1 handed
+//! on, and which `chrprobe.py` refuted by reading the reference one chromosome at a time:
 //!
-//! * **The IBD2 merge now fires where the reference does not, at 10 Mb only**
-//!   (`…/21-…` §8.1). The residual is one-sided and inverted from what `20-…` left: every
-//!   wrong `IBD2Seg` too **high** and every wrong `IBD1Seg` too **low**, with `d1 = -d2` on
-//!   ten of the twelve rows, so it is again one fault seen twice — this caller invents an
-//!   IBD2 merge and [`ibd1_pieces`] then subtracts it. It is not the word cap (capping the
-//!   IBD2 merge changes nothing on this corpus) and not the budget (bisected at equality);
-//!   the gap is the only floor-dependent term left. Two parity cases turn on it:
-//!   `bigish__ibdseg_seglength10` and `multifam__ibdseg_seglength10`.
-//! * **A call whose length is right to a fraction of an ulp can still fall on the wrong side
-//!   of the floor**, and then the whole call is kept or dropped. `dups`' duplicate pair is
-//!   the sharpest instance: the reference prints the same `IBD2Seg 0.9877` at 5 and 10 Mb
-//!   while this caller falls 0.9018 → 0.8804. One row, the largest single error in the
-//!   corpus, and floor-independent on the reference's side.
+//! * **The floor is asked twice.** A run is reported only if its **gate window** spans
+//!   [`WINDOW_FRACTION`]-th of `--seglength`, whatever the reported call measures. On the
+//!   corpus an 11.2066 Mb IBD2 call is reported at 6 290 751 bp and gone at 6 290 752,
+//!   which is twice its 3.1 Mb one-word window. Both passes have it, with different
+//!   strictness, and it is asked at emit — a run the bound refuses still merges.
+//! * **The IBD1 merge's budget is summed over every word between the two runs**, a
+//!   gate-refused run included, while [`MERGE_MAX_WORDS`] still counts only the unusable
+//!   ones. That is `20-…` §11 item 4, left undecided there and bisected in `23-…` §5.
 //!
-//! **How to grade work on it.** Not with the `.seg` exact-row count at 3 Mb, which is
-//! saturated, and not with `--ibs`, whose IBD2 columns have been exact under every candidate
-//! since [`Scan::ibd2_words`]. Grade `IBD1Seg` and `IBD2Seg` at 5 and 10 Mb
-//! (`tests/parity/fit/engine.py`), require the 3 Mb column to stay at 982, and confirm out
-//! of sample on the canvases — `gradebinary.py --ibd1`'s one open family is 43/60 and is the
-//! same phenomenon in its smallest reproduction. Do **not** re-sweep this function's
+//! **What is still wrong is out of sample, and measured.** `docs/PARITY.md` §4.6:
+//! `docs/research/fixtures/oosseg.py` runs 24 fresh filesets on unused seeds through both
+//! binaries at all three floors and gets **66 of 72** byte-identical — 6 wrong rows in
+//! 6 713. An IBD2 deficit of 0.0182 on one full-sib pair, identical on two independent
+//! seeds (so: one missed piece in one place, not a distribution), and one distant pair
+//! that [`pair_segments`]'s longest-segment filter drops at 5 and 10 Mb while the
+//! reference reports it at every floor. Neither is visible to the corpus.
+//!
+//! **How to grade work on it.** Not with the `.seg` row counts, which are now saturated at
+//! all three floors, and not with `--ibs`, whose IBD2 columns have been exact under every
+//! candidate since [`Scan::ibd2_words`]. Grade out of sample — `oosseg.py` for the whole
+//! program, the canvases (`docs/research/fixtures/window1.py` §7, `mergelab.py`,
+//! `push1.py`) for one clause at a time — and, when a real row does go wrong, localise it
+//! with `chrprobe.py` before theorising: every campaign before `23-…` had to guess which
+//! segment of which pair a wrong row came from, and the two guesses `21-…` §8.1 recorded
+//! were both wrong. Do **not** re-sweep this function's
 //! constants: forty single-knob perturbations and all 32 combinations of the two IBD1
 //! endpoint rules crossed with the two IBD1 fringe rules were scored in the final pass, and
 //! the committed values are the unique maximum on both exact rows and mean error
@@ -208,6 +215,21 @@ const MERGE_MAX_WORDS: usize = 2;
 /// gate-start word. The integer division is the reference's own: at a floor of 5 080 001
 /// bp a 2 540 000 bp call still arms it, at 5 080 100 it does not.
 const PUSH_FRACTION: i64 = 2;
+
+/// The fraction of `--seglength` a run's **gate window** must span to be reported.
+///
+/// `23-gap-bound.md`: the floor is asked twice, and the second question is not about
+/// the reported call at all. A call whose window is one word is dropped once the floor
+/// passes twice that window's span, however long the call itself measures — on the corpus
+/// an 11.2066 Mb IBD2 call is reported at `--seglength 6.290751` and gone at 6.290752,
+/// which is `2 * 3 145 375 + 1`, its window being one 3.1 Mb word. Bisected to the base
+/// pair on two independent corpus calls (§1) and on purpose-built canvases at four
+/// spacings (§2), with the same integer division [`PUSH_FRACTION`] uses.
+///
+/// The two passes ask it with different strictness, which is bisected and not a guess:
+/// IBD2 keeps a window of exactly `min_bp / 2` and IBD1 does not (§4). Equivalently the
+/// IBD1 span is measured one base pair shorter; no fixture can separate the two readings.
+const WINDOW_FRACTION: i64 = 2;
 
 /// Bad markers a merge gets for nothing, and what each further one costs.
 ///
@@ -620,8 +642,16 @@ impl Scan {
 
     /// Whether two runs may be joined across the words `mid` — `20-seglength-floor.md` §4.
     ///
-    /// `mid` lists the **unusable** words between them (a gate-refused run's words are not
-    /// in it). The budget is `cost * (bad - MERGE_FREE) <= X`:
+    /// `mid` lists the words the budget is summed over. On the IBD1 pass that is **every**
+    /// word between the two runs, gate-refused runs included: `20-…` §11 item 4 left it
+    /// undecided and `23-gap-bound.md` §5 settles it, sweeping a refused run's own
+    /// het-vs-A1A1 load from 0 to 9 with the budget on its boundary and finding the merge
+    /// turn on at 2, which is where that run's markers take `V` from 8 to 10. The
+    /// [`MERGE_MAX_WORDS`] cap still counts only the *unusable* words, so a refused run is
+    /// stepped over by the cap and paid for by the budget. On the IBD2 pass `mid` is what
+    /// `21-…` §3 measured: the words no gate window covers.
+    ///
+    /// The budget is `cost * (bad - MERGE_FREE) <= X`:
     ///
     /// * IBD1 — `bad` is the opposite homozygotes; `X` is the A1A1/A1A1 markers, unless
     ///   the het-vs-A1A1 ones alone reach [`MIN_INFORMATIVE`], in which case it is those.
@@ -705,9 +735,13 @@ impl Scan {
     /// `runs` are the runs that already cleared the gate, in order; `usable` marks every
     /// word of the scan. Two runs join iff at most [`MERGE_MAX_WORDS`] unusable words lie
     /// between them, the gap from the earlier run's last marker to the later run's first
-    /// is **strictly** under `--seglength`, and [`Scan::merge_ok`] passes over those
-    /// unusable words. The merged run then takes the gate, the endpoints and the floor
-    /// exactly as an unmerged one does.
+    /// is **strictly** under `--seglength`, and [`Scan::merge_ok`] passes.
+    ///
+    /// The cap and the budget do **not** read the same words: the cap counts only the
+    /// unusable ones, so a gate-refused run between them is stepped over (`20-…` §6),
+    /// while the budget is summed over every word in the interruption, that run included
+    /// (`23-gap-bound.md` §5). The merged run then takes the gate, the endpoints and the
+    /// floor exactly as an unmerged one does.
     fn join_runs(
         &self,
         runs: Vec<(usize, usize)>,
@@ -719,9 +753,10 @@ impl Scan {
         let mut out: Vec<(usize, usize)> = Vec::with_capacity(runs.len());
         for (a, b) in runs {
             if let Some(&(pa, pb)) = out.last() {
-                let mid: Vec<usize> = (pb + 1..a).filter(|&k| !usable[k]).collect();
-                if !mid.is_empty()
-                    && mid.len() <= MERGE_MAX_WORDS
+                let bad_words = (pb + 1..a).filter(|&k| !usable[k]).count();
+                let mid: Vec<usize> = (pb + 1..a).collect();
+                if bad_words > 0
+                    && bad_words <= MERGE_MAX_WORDS
                     && pos[self.marker(a, 0)] - pos[self.marker(pb + 1, 0) - 1] < min_bp
                     && self.merge_ok(&mid, pass2)
                 {
@@ -840,6 +875,14 @@ impl Scan {
         }
         let mut out: Vec<Called> = Vec::new();
         for (k0, k1) in kept {
+            // The window bound (`23-gap-bound.md` §4). The IBD1 window is the run's own
+            // complete words — the very span [`Scan::informative`] counts over — and the
+            // comparison is **strict**, one unit of `min_bp / 2` tighter than the IBD2
+            // pass's. Asked here, after the merge, so a merged run is measured whole.
+            let window = pos[self.marker(k1, 63)] - pos[self.marker(k0, 0)];
+            if window <= min_bp / WINDOW_FRACTION {
+                continue;
+            }
             let hi = self.right_end(k1);
             let mut lo = self.left_end(k0);
             if let Some(prev) = out.last() {
@@ -1141,6 +1184,14 @@ impl Scan {
                 continue;
             };
             if !gate_ok(gs, b) {
+                continue;
+            }
+            // The same window, asked a second time — for its **length** rather than its
+            // informative content (`23-gap-bound.md`). It is asked here, at emit and
+            // after the merge, not with the gate: a run the bound refuses still merges
+            // with its neighbour, and the merged window is then measured whole (§6).
+            let window = pos[self.marker(ge_of(b), 63)] - pos[self.marker(gs, 0)];
+            if window < min_bp / WINDOW_FRACTION {
                 continue;
             }
 
@@ -2120,6 +2171,109 @@ mod tests {
         assert_eq!(calls(1, 65_001), (1, 2));
         // At the default floor with real spacing the clause is live; with none, dead.
         assert_eq!(calls(1, 0), (2, 2));
+    }
+
+    /// The gate window's length bound on the IBD2 pass — `23-gap-bound.md` §2.
+    ///
+    /// Words 0..=3 carry two het-vs-hom mismatches each, so they are unusable and none of
+    /// them can bridge; word 4 is untouched and is a one-word run; word 5 carries an
+    /// opposite homozygote, which stops the right reach and keeps `ge_of(4) = 4`. The
+    /// call therefore reaches back over the whole of word 3 and measures 189 000 bp while
+    /// its window is one word, 63 000. Markers are 1 kb apart, so the bound cuts at
+    /// `2 * 63 000 + 1`, far under the call's own length.
+    #[test]
+    fn an_ibd2_call_is_dropped_when_its_gate_window_is_under_half_the_floor() {
+        let mut edits: Vec<(usize, usize, u8)> = Vec::new();
+        for w in 0..4 {
+            edits.push((1, w * WORD, 1));
+            edits.push((1, w * WORD + 1, 1));
+        }
+        edits.push((1, 5 * WORD, 2));
+        let (scan, pos) = scan_over(&edits, whole());
+        let call = |min_bp| scan.ibd2(&pos, min_bp, false);
+
+        // The call itself clears both floors: 130 .. 319 is 189 000 bp.
+        let kept = call(126_001);
+        assert_eq!(kept.first(), Some(&Called { lo: 130, hi: 319 }));
+        assert_eq!(pos[319] - pos[130], 189_000);
+        assert_eq!(pos[319] - pos[256], 63_000); // ...and its window is 63 000
+        assert_eq!(kept.len(), 2);
+
+        // One base pair of `--seglength` more and that window is under half the floor.
+        assert_eq!(call(126_002), vec![Called { lo: 384, hi: 639 }]);
+
+        // §6: the bound is asked at emit, after the merge. With the merge live the two
+        // runs join across word 5 and the merged window — 383 000 bp — passes, so the
+        // very call the bound refuses on its own comes back as one segment.
+        assert_eq!(
+            scan.ibd2(&pos, 126_002, true),
+            vec![Called { lo: 130, hi: 639 }]
+        );
+    }
+
+    /// The same bound on the IBD1 pass, over the run's own words and with the **strict**
+    /// comparison — one unit of `min_bp / 2` tighter than the IBD2 pass's
+    /// (`23-gap-bound.md` §4). Word 3 and word 5 carry one opposite homozygote each, so
+    /// word 4 is a one-word run whose call reaches over both flanks; the merge is off so
+    /// the three runs stay separate.
+    #[test]
+    fn the_ibd1_window_bound_is_strict_where_the_ibd2_one_is_not() {
+        let edits = [(1usize, 3 * WORD + 1, 2u8), (1, 5 * WORD + 62, 2)];
+        let (scan, pos) = scan_over(&edits, whole());
+        let call = |min_bp| scan.ibd1(&pos, min_bp, false);
+
+        let kept = call(125_999);
+        assert!(kept.contains(&Called { lo: 194, hi: 382 }));
+        assert_eq!(pos[382] - pos[194], 188_000);
+        assert_eq!(pos[319] - pos[256], 63_000); // the run's own window
+
+        // `63 000 > 126 000 / 2` is false, where the IBD2 pass keeps the equal case.
+        assert!(!call(126_000).contains(&Called { lo: 194, hi: 382 }));
+    }
+
+    /// The IBD1 merge budget is summed over **every** word between the two runs, a
+    /// gate-refused run included — `23-gap-bound.md` §5, which is `20-…` §11 item 4.
+    ///
+    /// Words 3 and 5 are the interruption: two opposite homozygotes and four het-vs-A1A1
+    /// markers each, the rest A2A2/A2A2 and so worth nothing. Word 4 has no opposite
+    /// homozygote, so it is a run of its own, and the gate refuses it while it carries
+    /// under [`MIN_INFORMATIVE`] informative markers. `bad = 4` and `4 * (4 - 2) = 8`,
+    /// against `X = V if V >= 10 else U` with `U = 0`: over the unusable words alone
+    /// `V = 8` and nothing merges, and word 4's own markers are what take it to 10.
+    #[test]
+    fn a_gate_refused_run_pays_into_the_ibd1_merge_budget() {
+        let calls = |v: usize| {
+            let mut edits: Vec<(usize, usize, u8)> = Vec::new();
+            for w in [3usize, 5] {
+                edits.push((1, w * WORD, 2));
+                edits.push((1, w * WORD + 1, 2));
+                for b in 2..6 {
+                    edits.push((1, w * WORD + b, 1));
+                }
+                for b in 6..WORD {
+                    edits.push((0, w * WORD + b, 2));
+                    edits.push((1, w * WORD + b, 2));
+                }
+            }
+            for b in 0..v {
+                edits.push((1, 4 * WORD + b, 1));
+            }
+            for b in v..WORD {
+                edits.push((0, 4 * WORD + b, 2));
+                edits.push((1, 4 * WORD + b, 2));
+            }
+            let (scan, pos) = scan_over(&edits, whole());
+            scan.ibd1(&pos, 200_000, true)
+        };
+        // V = 8 + v. Under ten the budget has nothing to spend and the runs stay apart,
+        // so only the right-hand one clears the floor.
+        for v in [0usize, 1] {
+            assert_eq!(calls(v), vec![Called { lo: 322, hi: 639 }], "v = {v}");
+        }
+        // At ten `X` switches to those markers and the whole canvas is one call.
+        for v in [2usize, 4, 9] {
+            assert_eq!(calls(v), vec![Called { lo: 0, hi: 639 }], "v = {v}");
+        }
     }
 
     /// The same canvas read by the IBD1 pass, so the two fringe predicates can be

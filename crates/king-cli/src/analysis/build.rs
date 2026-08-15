@@ -33,11 +33,67 @@
 //! fileset large enough for the hundred-sample clustering gate to fire, is also the one
 //! that logs rules and inferences and writes all three files.
 //!
-//! Of the three, **`<p>updateparents.txt` is implemented and byte-identical** — see the
-//! section on it below. `<p>build.log` is not: it is left empty, because the `INFERENCE`
-//! lines that dominate it carry a segment-derived statistic this engine cannot yet
-//! reproduce, and a half-written log would be no closer to the capture than an empty one.
-//! That is what remains of `docs/PARITY.md` §6.2.
+//! Of the three, **`<p>updateparents.txt` is implemented and byte-identical**, and
+//! `<p>build.log`'s **rule half is too** — see the two sections on them below. What the
+//! log still omits is its `INFERENCE` half, which needs both an ordering rule this module
+//! has *falsified every candidate for* and a segment statistic this engine reproduces only
+//! to about 0.005. That is what remains of `docs/PARITY.md` §6.2.
+//!
+//! # `<p>build.log` — the format, and which half is written
+//!
+//! The file is a per-cluster narration of the reconstruction. It is written to disk and
+//! echoed to **stdout byte for byte**: the console block between the segment prepass and
+//! `Details of pedigree reconstruction …` is the file's contents verbatim, plus one blank
+//! line after it that the file does not carry (`bigish`'s capture ends `0.803\n`, 806
+//! bytes, and its stdout repeats those 18 lines exactly). A cluster contributes nothing at
+//! all unless it raises a line — a duplicate-joined or `PO`-joined merge leaves a
+//! zero-byte log — and when it does, its first line is the header `Family KING<k>:`.
+//!
+//! Inside a cluster the order is fixed: the `RULE` lines that build sibships, then one or
+//! more blank lines, then the `INFERENCE` lines, grouped by the sibship they are about.
+//! The templates, all of them mined from the reference binary's `__cstring` section and
+//! then confirmed against runs, are
+//!
+//! ```text
+//! Family KING1:
+//!   Family KING1 RULE FS0: Sibship (B01_F B02_F)'s parents are (1 2)
+//!   Family KING1 RULE FS1: C_F joins in sibship (A_F B_F)
+//!   Family KING1 RULE FS2: Sibship (…) and sibship (…) are combined
+//!   Reconstruct parent-offspring pair (C_F, D_F)...
+//!
+//!   Family KING1 INFERENCE AV.FS: B02_F is uncle of B01_C2 and B01_C3, Join3/Join2=0.778
+//!   Family KING1 INFERENCE AV.FS: A_F is grandfather, HS, or nephew of B_C2 and B_C3, …
+//!     HS B02_C4 unrelated to B01_M
+//!   Family KING1 INFERENCE HS.UN2: B01_C3 and B02_C4 are HS
+//! ```
+//!
+//! `FS0` **creates** a sibship out of a full-sib pair and names the parents it takes;
+//! `FS1` adds one more member to a sibship that already exists; `FS2` merges two declared
+//! sibships and has never been observed to fire. [`sibship_parents`] documents which of
+//! the three a component raises and why. All three word pairs in the `INFERENCE` lines —
+//! `uncle`/`aunt`, `grandfather`/`grandmother`, `nephew`/`niece` — follow `R`'s `.fam` sex
+//! code, and the choice between the two templates is a cut on the ratio: over 53 measured
+//! values the largest `uncle` is 0.846 and the smallest ambiguous one 0.902, which still
+//! does not separate 0.85, 0.875 and 0.9.
+//!
+//! **This module writes the header and the `RULE FS0`/`FS1` lines and stops there.**
+//! Scored against the reference on the 30 held-out shapes of
+//! `docs/research/fixtures/buildlog.py` (`rules`, over `build_shapes.py`'s twenty merge
+//! shapes and ten `avfs.py` ones), the rule lines are
+//! byte-identical on **23**; of the other seven, three differ only in which cluster is
+//! called `KING1` (the numbering bug at the bottom of this doc), two are the `<FID>-><IID>`
+//! renaming shapes that are out of scope for this binary, and two differ only in the
+//! *order* the `FS1` line lists an existing sibship's members — the same unidentified
+//! ordering that picks the `AV.FS` pair, below. On `bigish` all six lines this module
+//! writes are byte-identical to the capture, 243 of its 806 bytes, and every byte written
+//! is a byte the reference wrote.
+//!
+//! The blank lines are **not** written, because their count is a function of the
+//! `INFERENCE` half: one is printed before each sibship's block *until the family prints
+//! its first inference*, and if it never prints one, every block still prints its blank.
+//! That reproduces 1, 1, 2 for `bigish`'s three clusters and 3, 2, 1 for `three_clusters`'s
+//! (whose first cluster infers nothing at all), and 12 of the 13 other measured clusters;
+//! the one it misses is `three_fs`, which prints three where the rule says two.
 //!
 //! # `INFERENCE AV.FS` and its `Join3/Join2` — measured, not implemented
 //!
@@ -78,17 +134,21 @@
 //! bound was measured in sample, and it is 11 of 34 out of it, so those `OK`s are not
 //! evidence.
 //!
-//! ## The residual is not the formula, and the old bound argument for it is wrong
+//! ## The residual is not the formula, and the old bound argument is now dead outright
 //!
 //! An earlier reading of this module claimed the residual was **entirely** accounted for
 //! by our sib-pair union over-call `ΔS`, since that can inflate `Join3` by at most `ΔS`
 //! and so the ratio by at most `ΔS / Join2` — quoted as *39 of 39 triples inside*
 //! `[0, ΔS / Join2]`. **That does not survive fresh shapes and seeds: it is 11 of 34.**
-//! Worse, on the **8 triples where all three pair unions match the reference's reported
-//! `IBD1Seg + IBD2Seg` to four decimals** the residual is still `+0.0003 … +0.0049`, mean
-//! `+0.0031`. The bound is simply too crude to be evidence — `dU` is a *rounded total*,
-//! and `Join3/Join2` is an intersection of three sets, so it reads segment **placement**,
-//! which a matching total says nothing about.
+//! It is now refuted on `bigish` itself. Re-measured against the *current* segment engine,
+//! all fifteen pair totals behind those five triples — every `IBD1Seg + IBD2Seg` for
+//! `(R,N1)`, `(R,N2)` and `(N1,N2)` — match the reference's to four decimals, so `ΔS` is
+//! **0.0000** and the bound is `0`, while the residual is unchanged at `+0.0008 … +0.0052`.
+//! Five of five now score `OUTSIDE`. The bound was always too crude to be evidence — `dU`
+//! is a *rounded total*, and `Join3/Join2` is an intersection of three sets, so it reads
+//! segment **placement**, which a matching total says nothing about — and the placement is
+//! where the residual lives. Its sign is the giveaway: dilating all three sets slightly
+//! grows a triple intersection proportionally more than a double one, so ours is high.
 //!
 //! What does survive is the conclusion, reached independently: **no variant of the
 //! formula removes the residual**, so it is an input problem, not an arithmetic one.
@@ -113,39 +173,66 @@
 //! So `apps/bigish__build` is blocked by the segment caller, but note the weaker claim:
 //! `docs/PARITY.md` §4.1 closing is *necessary*, and no longer demonstrably sufficient.
 //!
-//! Two further rules, measured the same way:
+//! Three further rules, measured the same way. The second of them is the one that keeps
+//! the `INFERENCE` lines unwritten even where the ratio would be close enough to look
+//! right, and it is stated here as an open problem with its candidate space *closed*, not
+//! as a guess.
 //!
-//! * **Which two sibs are named is a property of the sibship, not of `R`.** Every
-//!   `AV.FS` line raised against one sibship names the same pair whatever `R` is (three
-//!   distinct `R` in one fixture, two in another), and where the sibship is the
-//!   `RULE FS0`/`FS1` one it is that sibship's first two members in the order the rule
-//!   line prints them.
+//! * **Which `R` an `AV.FS` line can be raised for.** `R` must be an inferred
+//!   **2nd-degree** relative of *both* named members. That, and nothing weaker, reproduces
+//!   the candidate set every time it was checked: the three-father shape names exactly the
+//!   two children of the third family against the father sibship `(A_F B_F)`, the
+//!   four-father one exactly the six children of the third and fourth, and the shape whose
+//!   families have a single child each names exactly the one candidate — each family's own
+//!   children are 1st-degree to their own father and so are excluded. One `R` may print
+//!   the *same* line two to four times; the repeat count is per `(R, sibship)`, is not the
+//!   number of sib pairs, and is not identified.
+//! * **Which two sibs are named — unidentified, and here is the closed candidate space.**
+//!   The pair is a property of the sibship: every line raised against one sibship names the
+//!   same two whatever `R` is, verified on four sibships against three distinct `R` each
+//!   and two more against two each, including cases where the verdicts differ (`uncle` for
+//!   one `R`, `grandfather, HS, or nephew` for another). Where the sibship is one a
+//!   `RULE FS0`/`FS1` built, the named pair is its **first two members in the order the
+//!   rule line prints** — `RULE FS1: B_X joins in sibship (A_C2 A_C3 A_C1)` and the
+//!   `AV.FS` line naming `A_C2 and A_C3` come from the same fileset. So the open question
+//!   is one ordering, shared by both lines. What it is **not**:
+//!   - **not genotype-derived.** Four fresh seeds — complete genotype reseeding, the
+//!     sibship's own kinships moving over a 0.10 range — give byte-identical `FS1` orders
+//!     at each of three sibship sizes: `(C2 C3 C1)`, `(C3 C4 C2 C1)`, `(C4 C1 C5 C3 C2)`.
+//!   - **not the `.fam` row order.** Permuting a sibship's three rows inside the `.fam`
+//!     (genotypes moved with them) leaves the named pair on the same two *individuals*,
+//!     now at different positions.
+//!   - **not the absolute sample index.** Moving all 80 padding singletons of a
+//!     four-family fixture to the front of the `.fam` leaves the whole log byte-identical.
+//!   - **not the sibship's size or position.** Four three-child sibships in one cluster
+//!     print four different orders, and `bigish`'s `B01` and `B13` — structurally
+//!     identical three-child sibships, same cluster shape, same sexes, same phenotypes —
+//!     name `(C2, C3)` and `(C2, C1)`.
+//!   - **not any pairwise statistic.** Over the 27 measured sibships of three or more
+//!     children, no `argmin` or `argmax` of `HetHet`, `IBS0`, `HetConc`, `HomIBS0`,
+//!     `Kinship`, `IBD1Seg`, `IBD2Seg`, `PropIBD`, `N_SNP`, `Z0` or `Error` picks the
+//!     named pair more than **11 of 27** times, against a chance baseline of one in three
+//!     or worse; and neither does any of ten segment-level statistics computed here
+//!     (`|IBD1|`, `|IBD2|`, their union and complement, segment counts, longest segment):
+//!     best **6 of 20** on the subset those were run over. The named pair's rank on the
+//!     ratio itself runs from first to last — one sibship names the pair with the *lowest*
+//!     `Join3/Join2` of its three and another the *highest* of its fifteen.
 //!
-//!   For a *declared* sibship — the children of one `.fam` couple, which is what `bigish`
-//!   names — the order is **not** the `.fam` order, and the earlier reading that it is
-//!   "data-dependent" is wrong. It survives complete genotype reseeding: the 4:4 shape
-//!   gives `(A_C3 A_C4)` and `(B_C1 B_C2)` on **all nine** seeds tried, and seven other
-//!   shapes agree across three seeds each, though every printed `Join3/Join2` differs.
-//!   It is also unchanged by each child's sex (five sex patterns, including all-male and
-//!   all-female) and by sliding the whole pedigree down the `.fam` behind 0…8 extra
-//!   singletons — so it is a *position* inside the sibship, not a sample index.
-//!   What it is **not** a function of: the sibship's size alone, nor any pairwise
-//!   statistic — over 19 measured triples the named pair's rank on `Join2`, `Join3`, the
-//!   ratio itself, the sibs' mutual `PropIBD` and `Kinship`, and `PropIBD` to `R` each
-//!   range from first to last. A four-child second family names positions `(1,2)`,
-//!   `(1,3)`, `(3,4)` or `(3,2)` according to how many children the *first* family has
-//!   and how many unrelated singletons pad the cohort — the one input that moves it
-//!   while genotypes do not. `avfs_score.py --pairs` re-measures the map.
+//!   The earlier reading in this doc — "a function of the pedigree shape alone",
+//!   with a positional map — is **withdrawn**: it was measured only on the first family of
+//!   two-family fixtures, where the answer happens to be constant, and the four-sibship
+//!   fixture refutes it directly.
 //! * **The verdict is a cut on the ratio.** Below it the line reads `<R> is uncle|aunt of
 //!   N1 and N2`; above it, `<R> is grandfather|grandmother, HS, or nephew|niece of N1 and
-//!   N2`, the word pairs following `R`'s sex. Over the same 53 values the cut is bracketed
-//!   to **(0.848, 0.901)** — largest `uncle` 0.848, smallest ambiguous 0.901 — which does
-//!   not separate 0.85, 0.875 and 0.9.
+//!   N2`, the word pairs following `R`'s sex. Over 53 values the cut is bracketed to
+//!   **(0.846, 0.902)** — largest `uncle` 0.846, smallest ambiguous 0.902 — which still
+//!   does not separate 0.85, 0.875 and 0.9.
 //!
 //! # `<p>updateparents.txt` — implemented, and what pinned each clause
 //!
 //! This file needs none of the segment statistic: it carries only what the `RULE FS*`
-//! lines decided. [`sibship_parents`] implements it and [`updateparents_text`] writes it.
+//! lines decided. [`sibship_parents`] implements it and [`reconstruct`] writes it, in the
+//! same walk that writes those rule lines, so the two cannot disagree.
 //! Every clause below was measured against the reference on **twenty held-out merge
 //! shapes** built for it, not on `bigish`; the rig is
 //! `docs/research/fixtures/build_shapes.py`, which re-runs the scorecard end to end.
@@ -248,14 +335,13 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
     // Console only: `monomorphic`'s warned run leaves a zero-byte `build.log`.
     let _ = out.write_all(first_degree_warnings(opts, loaded).as_bytes());
 
-    // The log, echoed to stdout and written to the file. Its `RULE` lines are known but
-    // its `INFERENCE AV.FS` ones carry a segment-derived statistic this engine cannot yet
-    // reproduce, so it is left empty rather than half written; see the module doc.
-    let log = String::new();
+    // The log, echoed to stdout and written to the file byte for byte. Only its `RULE`
+    // half is built: the `INFERENCE AV.FS` lines need two rules this engine has not
+    // identified as well as a statistic it reproduces only to ~0.005, so they are left
+    // out rather than invented. See the module doc.
+    let Reconstruction { parents, log } = reconstruct(opts, loaded, &clustering);
     let _ = out.write_all(log.as_bytes());
     let _ = out.write_all(b"\n");
-
-    let parents = updateparents_text(opts, loaded, &clustering);
 
     let log_path = out_path(opts, "build.log");
     let parents_path = out_path(opts, "updateparents.txt");
@@ -297,20 +383,34 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
     );
 }
 
-/// `<prefix>updateparents.txt`, or `None` when reconstruction assigned nobody a parent.
+/// What one `--build` pass reconstructed: the update file, and the log that narrates it.
+struct Reconstruction {
+    /// `<prefix>updateparents.txt`, or `None` when reconstruction assigned nobody a parent.
+    ///
+    /// `None` is the whole-run verdict the console tail prints as `No pedigrees can be
+    /// reconstructed.`; the caller still writes the (empty) file, exactly as the reference
+    /// leaves a zero-byte one behind.
+    parents: Option<String>,
+    /// `<prefix>build.log`, which is also echoed to stdout unchanged.
+    log: String,
+}
+
+/// Reconstruct every merged cluster, building both outputs in one walk.
 ///
-/// `None` is the whole-run verdict the console tail prints as `No pedigrees can be
-/// reconstructed.`; the caller still writes the (empty) file, exactly as the reference
-/// leaves a zero-byte one behind. The clause-by-clause evidence is in the module doc.
-fn updateparents_text(
+/// The two are two views of the same decisions — `updateparents.txt` records the parent a
+/// sibship ended up with, the log records the rule that gave it one — so they are built
+/// together and cannot drift apart. The clause-by-clause evidence for both is in the
+/// module doc.
+fn reconstruct(
     opts: &Options,
     loaded: &Loaded,
     clustering: &unrelated::Clustering,
-) -> Option<String> {
+) -> Reconstruction {
     let samples = &loaded.fileset.samples;
     let types = InfTypes::new(opts, loaded);
 
     let mut text = String::new();
+    let mut log = String::new();
     let mut next_synthetic = 1u32;
     let mut reconstructed = false;
 
@@ -322,9 +422,23 @@ fn updateparents_text(
         }
         let is_fs = |i: usize, j: usize| types.of(loaded, i, j) == Some("FS");
         let assigned = sibship_parents(samples, members, &is_fs, &mut next_synthetic);
-        reconstructed |= !assigned.is_empty();
+        reconstructed |= !assigned.parents.is_empty();
+        // The header is printed once, immediately before the cluster's first line — a
+        // cluster that raises no rule at all does not appear in the log.
+        if !assigned.rules.is_empty() {
+            log.push_str(&console::build_family_header(key));
+            let name = |n: &usize| samples[members[*n]].iid.as_str();
+            for rule in &assigned.rules {
+                let names: Vec<&str> = rule.members.iter().map(name).collect();
+                log.push_str(&match rule.joiner {
+                    None => console::build_rule_fs0(key, &names, &rule.pat, &rule.mat),
+                    Some(j) => console::build_rule_fs1(key, name(&j), &names),
+                });
+            }
+        }
         for (n, &i) in members.iter().enumerate() {
             let (pat, mat) = assigned
+                .parents
                 .iter()
                 .find(|(m, _)| *m == n)
                 .map(|(_, p)| (p.0.as_str(), p.1.as_str()))
@@ -332,7 +446,29 @@ fn updateparents_text(
             text.push_str(&format!("{key}\t{}\t{pat}\t{mat}\n", samples[i].iid));
         }
     }
-    reconstructed.then_some(text)
+    Reconstruction {
+        parents: reconstructed.then_some(text),
+        log,
+    }
+}
+
+/// One `RULE FS0` or `RULE FS1` line, with its people held as positions in the cluster.
+///
+/// `joiner` is `None` for `FS0` — the rule that *creates* a sibship and names its parents —
+/// and `Some(who)` for `FS1`, where `members` is the sibship as it stood before the join
+/// and `pat`/`mat` are unused.
+struct Rule {
+    joiner: Option<usize>,
+    members: Vec<usize>,
+    pat: String,
+    mat: String,
+}
+
+/// The parent pairs and the rule lines one cluster's reconstruction produces.
+struct Assignment {
+    /// `(position in the cluster, (father, mother))`.
+    parents: Vec<(usize, (String, String))>,
+    rules: Vec<Rule>,
 }
 
 /// Every unordered pair of positions in `members`, as index pairs into it.
@@ -341,19 +477,36 @@ fn pairs(members: &[usize]) -> impl Iterator<Item = (usize, usize)> + '_ {
         .flat_map(move |a| (a + 1..members.len()).map(move |b| (members[a], members[b])))
 }
 
-/// The parent pair each sibship in one cluster takes, as `(position in members, pair)`.
+/// The parent pair each sibship in one cluster takes, and the rules that gave it one.
 ///
 /// A sibship is a connected component of `inferred FS` ∪ `declares the same non-missing
 /// couple`, and only a component the *inference* touched is given parents — a declared
 /// sibship nobody was joined to keeps what the `.fam` already says. `next_synthetic`
 /// carries the `1 2`, `3 4`, … counter across clusters, so it advances only where a
 /// sibship actually needed inventing.
+///
+/// # Which rule a component raises
+///
+/// A component that already contains a **declared sibship** — two or more members naming
+/// the same couple — did not have to be created, so every other member of the component
+/// `FS1`-joins it, one line each, and no `FS0` is raised: `fs_kids`'s `B_X joins in
+/// sibship (A_C2 A_C3 A_C1)` is exactly that. Every other component *is* created, by the
+/// full-sib pair that opens it: `FS0` names those two and the couple they take, and the
+/// third and later members `FS1`-join in turn — `m43`'s `FS0 (A_F B_F)`, then `C_F joins
+/// in sibship (A_F B_F)`, then `D_F joins in sibship (A_F B_F C_F)`. One member declaring
+/// a couple is not a declared sibship: `fs_one_declared` raises `FS0` and the pair takes
+/// that member's parents rather than a synthetic one.
+///
+/// A component holding **two** declared sibships is the reference's `RULE FS2: Sibship
+/// (…) and sibship (…) are combined`. Nothing here has ever raised it and no capture
+/// contains one, so no rule is emitted for such a component — its parents are still
+/// assigned, which is what `updateparents.txt` needs.
 fn sibship_parents(
     samples: &[Sample],
     members: &[usize],
     is_fs: &dyn Fn(usize, usize) -> bool,
     next_synthetic: &mut u32,
-) -> Vec<(usize, (String, String))> {
+) -> Assignment {
     let n = members.len();
     let mut parent: Vec<usize> = (0..n).collect();
     fn find(parent: &mut [usize], mut x: usize) -> usize {
@@ -391,7 +544,10 @@ fn sibship_parents(
 
     // Components in the order of their first member, which is the ID comparator order the
     // cluster is already held in.
-    let mut out: Vec<(usize, (String, String))> = Vec::new();
+    let mut out = Assignment {
+        parents: Vec::new(),
+        rules: Vec::new(),
+    };
     let mut seen: Vec<usize> = Vec::new();
     for a in 0..n {
         let root = find(&mut parent, a);
@@ -416,11 +572,75 @@ fn sibship_parents(
                 *next_synthetic += 2;
                 pair
             });
+        out.rules
+            .extend(component_rules(samples, members, &group, &couple));
         for b in group {
-            out.push((b, couple.clone()));
+            out.parents.push((b, couple.clone()));
         }
     }
     out
+}
+
+/// The `RULE FS0`/`FS1` lines one component raises, in the order the log prints them.
+///
+/// Empty for the `FS2` shape — two declared sibships in one component — which is
+/// unimplemented and documented as such on [`sibship_parents`].
+fn component_rules(
+    samples: &[Sample],
+    members: &[usize],
+    group: &[usize],
+    couple: &(String, String),
+) -> Vec<Rule> {
+    // The declared sibships inside the component: each named couple, with the members
+    // that name it, in cluster order.
+    let mut declared: Vec<(&str, &str, Vec<usize>)> = Vec::new();
+    for &b in group {
+        let s = &samples[members[b]];
+        if s.pat == "0" {
+            continue;
+        }
+        match declared
+            .iter_mut()
+            .find(|(pat, mat, _)| *pat == s.pat && *mat == s.mat)
+        {
+            Some((_, _, who)) => who.push(b),
+            None => declared.push((&s.pat, &s.mat, vec![b])),
+        }
+    }
+    declared.retain(|(_, _, who)| who.len() > 1);
+    if declared.len() > 1 {
+        return Vec::new();
+    }
+
+    let mut rules = Vec::new();
+    let mut sibship: Vec<usize> = match declared.first() {
+        Some((_, _, who)) => who.clone(),
+        None => {
+            let opening: Vec<usize> = group.iter().take(2).copied().collect();
+            rules.push(Rule {
+                joiner: None,
+                members: opening.clone(),
+                pat: couple.0.clone(),
+                mat: couple.1.clone(),
+            });
+            opening
+        }
+    };
+    let joiners: Vec<usize> = group
+        .iter()
+        .filter(|b| !sibship.contains(b))
+        .copied()
+        .collect();
+    for b in joiners {
+        rules.push(Rule {
+            joiner: Some(b),
+            members: sibship.clone(),
+            pat: String::new(),
+            mat: String::new(),
+        });
+        sibship.push(b);
+    }
+    rules
 }
 
 /// The `InfType` of a cross-family pair that clustering treated as 1st-degree.
@@ -583,6 +803,7 @@ mod tests {
             .enumerate()
             .map(|(n, &i)| {
                 let (pat, mat) = got
+                    .parents
                     .iter()
                     .find(|(m, _)| *m == n)
                     .map(|(_, p)| (p.0.clone(), p.1.clone()))
@@ -652,6 +873,71 @@ mod tests {
         assert_eq!(next, 1);
     }
 
+    /// The rule lines one cluster raises, rendered the way the log renders them.
+    fn rule_lines(samples: &[Sample], fs: &[(usize, usize)], next: &mut u32) -> Vec<String> {
+        let members: Vec<usize> = (0..samples.len()).collect();
+        let is_fs = |i: usize, j: usize| fs.contains(&(i, j)) || fs.contains(&(j, i));
+        let got = sibship_parents(samples, &members, &is_fs, next);
+        let name = |n: &usize| samples[members[*n]].iid.as_str();
+        got.rules
+            .iter()
+            .map(|r| {
+                let names: Vec<&str> = r.members.iter().map(name).collect();
+                match r.joiner {
+                    None => console::build_rule_fs0("KING1", &names, &r.pat, &r.mat),
+                    Some(j) => console::build_rule_fs1("KING1", name(&j), &names),
+                }
+            })
+            .collect()
+    }
+
+    /// A sibship the inference creates opens with `FS0` naming the pair and the couple it
+    /// takes; the third and later members `FS1`-join it one line at a time, each naming the
+    /// sibship as it stood. `m43`'s capture is exactly these three lines.
+    #[test]
+    fn a_created_sibship_opens_with_fs0_and_grows_by_fs1() {
+        let mut samples = two_families();
+        samples.push(person("FC", "C_F", "0", "0"));
+        let mut next = 1;
+        // The three fathers — A_F (2), B_F (6), C_F (8) — are mutual full sibs.
+        let got = rule_lines(&samples, &[(2, 6), (2, 8), (6, 8)], &mut next);
+        assert_eq!(
+            got,
+            vec![
+                "  Family KING1 RULE FS0: Sibship (A_F B_F)'s parents are (1 2)\n",
+                "  Family KING1 RULE FS1: C_F joins in sibship (A_F B_F)\n",
+            ]
+        );
+    }
+
+    /// A component that already holds a declared sibship was never created, so it raises no
+    /// `FS0` — the outsider just `FS1`-joins what the `.fam` already declared.
+    #[test]
+    fn joining_a_declared_sibship_raises_only_fs1() {
+        let mut samples = two_families();
+        samples.push(person("FB", "B_X", "0", "0"));
+        let mut next = 1;
+        let got = rule_lines(&samples, &[(0, 8), (1, 8)], &mut next);
+        assert_eq!(
+            got,
+            vec!["  Family KING1 RULE FS1: B_X joins in sibship (A_C1 A_C2)\n"]
+        );
+        assert_eq!(next, 1, "a declared couple costs no synthetic pair");
+    }
+
+    /// `FS2` — two declared sibships combined — is unimplemented, and the component still
+    /// gets its parents so `updateparents.txt` is unaffected.
+    #[test]
+    fn two_declared_sibships_in_one_component_raise_no_rule() {
+        let samples = two_families();
+        let mut next = 1;
+        // A_C1 (0) and B_C1 (4) are inferred full sibs, so both declared sibships merge.
+        let got = rule_lines(&samples, &[(0, 4)], &mut next);
+        assert!(got.is_empty(), "{got:?}");
+        let rows = assign(&samples, &[(0, 4)], &mut 1);
+        assert_eq!(rows[4], ("B_C1".into(), "A_F".into(), "A_M".into()));
+    }
+
     /// Nobody joined, nobody reassigned: a cluster merged by something other than a full
     /// sib pair leaves every parent column exactly as the `.fam` had it.
     #[test]
@@ -659,7 +945,9 @@ mod tests {
         let samples = two_families();
         let members: Vec<usize> = (0..samples.len()).collect();
         let mut next = 1;
-        assert!(sibship_parents(&samples, &members, &|_, _| false, &mut next).is_empty());
+        let got = sibship_parents(&samples, &members, &|_, _| false, &mut next);
+        assert!(got.parents.is_empty());
+        assert!(got.rules.is_empty());
         assert_eq!(next, 1);
     }
 

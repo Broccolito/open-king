@@ -6,7 +6,7 @@ PASS apps/admixed__cluster
 PASS apps/admixed__unrelated
 PASS apps/admixed__unrelated_degree2
 PASS apps/bigish__autoQC
-FAIL apps/bigish__build | stdout!=; kingbuild.log!=(bytes)
+FAIL apps/bigish__build | stdout!=; kingbuild.log!=(num)
 PASS apps/bigish__bySNP
 PASS apps/bigish__bysample
 PASS apps/bigish__cluster
@@ -200,7 +200,7 @@ PASS ibdseg/admixed__ibdseg_seglength5
 PASS ibdseg/admixed__related_degree2_ibdseg
 PASS ibdseg/bigish__ibdseg
 PASS ibdseg/bigish__ibdseg_degree2
-FAIL ibdseg/bigish__ibdseg_seglength10 | king.seg!=(num)
+PASS ibdseg/bigish__ibdseg_seglength10
 PASS ibdseg/bigish__ibdseg_seglength5
 FAIL ibdseg/bigish__related_degree2_ibdseg | stdout!=
 PASS ibdseg/dups__ibdseg
@@ -220,7 +220,7 @@ PASS ibdseg/monomorphic__ibdseg_seglength5
 PASS ibdseg/monomorphic__related_degree2_ibdseg
 PASS ibdseg/multifam__ibdseg
 PASS ibdseg/multifam__ibdseg_degree2
-FAIL ibdseg/multifam__ibdseg_seglength10 | king.seg!=(num)
+PASS ibdseg/multifam__ibdseg_seglength10
 PASS ibdseg/multifam__ibdseg_seglength5
 PASS ibdseg/multifam__related_degree2_ibdseg
 PASS ibdseg/nuclear__ibdseg

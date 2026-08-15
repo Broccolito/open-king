@@ -94,8 +94,13 @@ def _join(runs, st, pos, min_bp, mult, pass2, usable=None, span="unusable"):
     return out
 
 
-def ibd1(st, pos, min_bp, lo=None, hi=None, span="unusable"):
-    """`18-…` §7 with the merge — IBD1 calls as marker intervals."""
+def ibd1(st, pos, min_bp, lo=None, hi=None, span="unusable", window=None):
+    """`18-…` §7 with the merge — IBD1 calls as marker intervals.
+
+    `window` is `23-gap-bound.md` §4's bound: a run whose own complete words span at most
+    `min_bp // window` is not reported, however long its call measures. `None` is this
+    document's engine, which did not have it.
+    """
     n = len(st)
     lo = 0 if lo is None else lo
     hi = WORD * n - 1 if hi is None else hi
@@ -113,6 +118,9 @@ def ibd1(st, pos, min_bp, lo=None, hi=None, span="unusable"):
     # refused outright and cannot take part in a merge (`20-…` §5).
     runs = [r for r in runs if sum(st[t]["inf1"] for t in range(r[0], r[1] + 1)) >= GATE]
     runs = _join(runs, st, pos, min_bp, MULT1, False, usable=ok, span=span)
+    if window is not None:
+        runs = [(a, b) for a, b in runs
+                if pos[WORD * b + WORD - 1] - pos[WORD * a] > min_bp // window]
     out = []
     for a, b in runs:
         left = lo if a == 0 else (WORD * (a - 1) + st[a - 1]["zl"] + 1
@@ -128,11 +136,12 @@ def ibd1(st, pos, min_bp, lo=None, hi=None, span="unusable"):
     return out
 
 
-def model1(cv, seglen_bp, span="unusable"):
+def model1(cv, seglen_bp, span="unusable", window=None):
     """`IBD1Seg`'s chr2 numerator in marker intervals, for an IBD2-free canvas."""
     _, p2 = cv.positions()
     st = [wstat(x) for x in cv.words]
-    return sum(p2[b] - p2[a] for a, b in ibd1(st, p2, seglen_bp, span=span)) / cv.s
+    return sum(p2[b] - p2[a]
+               for a, b in ibd1(st, p2, seglen_bp, span=span, window=window)) / cv.s
 
 
 # ---------------------------------------------------------------------------
@@ -169,7 +178,7 @@ def rword(rng):
 
 
 def battery(seed, count, seglen, width=12, nw2=70, spacing=20_000, verbose=False,
-            span="unusable"):
+            span="unusable", window=None):
     """`model1()` against the reference on random IBD2-free canvases at one floor."""
     import random
     rng = random.Random(seed)
@@ -182,7 +191,8 @@ def battery(seed, count, seglen, width=12, nw2=70, spacing=20_000, verbose=False
         if float(r["row"]["IBD2Seg"]) != 0.0:
             dirty += 1
             continue
-        got, want = S.mk(c, r, 1), model1(c, int(round(seglen * 1e6)), span=span)
+        got, want = S.mk(c, r, 1), model1(c, int(round(seglen * 1e6)), span=span,
+                                          window=window)
         if abs(got - want) <= 0.3:
             ok += 1
         else:

@@ -161,6 +161,17 @@ class Params:
     # `min_bp // push_fraction` measured from its own gate-start word (§2). `None` is the
     # retired unconditional form — every call after the first is pushed.
     push_fraction: int = 2
+    # --- `docs/research/23-gap-bound.md` ---------------------------------
+    # The floor is asked twice, and the second question is about the run's **gate
+    # window** rather than the reported call: a call whose window spans under
+    # `min_bp // window_fraction` is dropped however long the call itself measures.
+    # The IBD2 pass keeps a window of exactly that span and the IBD1 pass does not, so
+    # the IBD1 comparison is the strict one (§2, §4). `None` retires the clause.
+    window_fraction: int = 2
+    # Which words between two runs the IBD1 merge's budget is summed over: "all" is the
+    # committed rule (a gate-refused run stepped over by the cap is still paid for by
+    # the budget, `23-…` §5), "unusable" is `20-…`'s reading.
+    merge_span: str = "all"
 
     # --- marker-level boundary refinement --------------------------------
     # Where inside the flanking word a call stops. `last`/`first` name which IBS0 of that
@@ -218,19 +229,22 @@ BASE = Params()
 #: write-up N", and the run merge did not land until `20-…`.
 RETIRED = Params(seg_rule="word", ibd2_dirty_ibs1=5, ibd1_sub="overlap",
                  seg_prop="unrounded", merge=False,
-                 merge21=False, push_fraction=None)
+                 merge21=False, push_fraction=None,
+                 window_fraction=None, merge_span="unusable")
 
 #: The engine of `docs/research/18-ibd1-caller.md`: everything `BASE` has except the
 #: IBD2 fringe of `19-…` (still `17-…` §5's unconditional "extend") and `.seg`'s own
 #: `PropIBD` rule (still the `.kin` one). Scores 747 exact rows / 896 exact `IBD2Seg` /
 #: MAE 0.000067 at 3 Mb. Kept so `18-…`'s numbers reproduce from this file too.
 FRINGE18 = Params(ibd2_fringe="extend", seg_prop="unrounded", merge=False,
-                 merge21=False, push_fraction=None)
+                 merge21=False, push_fraction=None,
+                 window_fraction=None, merge_span="unusable")
 
 #: `BASE`'s caller with the retired **`.kin`** `PropIBD` rule on `.seg` — the tree as it
 #: stood after `19-…` and before `20-…`. 806 exact rows against `BASE`'s 982.
 PROP19 = Params(seg_prop="unrounded", merge=False,
-                 merge21=False, push_fraction=None)
+                 merge21=False, push_fraction=None,
+                 window_fraction=None, merge_span="unusable")
 
 
 def seg_prop_ibd(ibd1_seg, ibd2_seg):
@@ -473,11 +487,16 @@ class SegScan:
         for u, v in runs:
             if out:
                 pu, pv = out[-1]
-                mid = [k for k in range(pv + 1, u) if not usable[k - self.w0]]
+                bad_words = [k for k in range(pv + 1, u) if not usable[k - self.w0]]
+                # The cap counts only the unusable words, so a gate-refused run between
+                # the two is stepped over (`20-…` §6); the budget is summed over every
+                # word in the interruption, that run included (`23-…` §5).
+                mid = (list(range(pv + 1, u)) if p.merge_span == "all" and not pass2
+                       else bad_words)
                 # `pos[first marker of the later run] - pos[last marker of the earlier]`,
                 # strictly under the floor. `WORD*(pv+1) - 1` is the earlier run's last
                 # marker; `WORD*u` the later run's first.
-                if (mid and len(mid) <= p.merge_words
+                if (bad_words and len(bad_words) <= p.merge_words
                         and int(pos[WORD * u] - pos[WORD * (pv + 1) - 1]) < min_bp
                         and self.merge_ok(mid, pass2)):
                     out[-1] = (pu, v)
@@ -533,6 +552,12 @@ class SegScan:
             kept = self.join_runs(kept, ok, pos, min_bp, False)
         out = []
         for u, v in kept:
+            # `23-…` §4: the run's own complete words must span more than half the floor.
+            # Strict, one unit of `min_bp // 2` tighter than the IBD2 pass's test.
+            if p.window_fraction is not None and not (
+                    int(pos[WORD * v + WORD - 1] - pos[WORD * u])
+                    > min_bp // p.window_fraction):
+                continue
             hi = self.right_end(v)
             lo = self.left_end(u)
             out = self._emit(out, lo, hi, pos, min_bp)
@@ -661,6 +686,12 @@ class SegScan:
                 continue
             if p.gate_end == "next":
                 if not gate_ok(gs, b):
+                    continue
+                # `23-…` §2: the same window, now for its length. Asked here, after the
+                # merge, so a run the bound refuses still merges with its neighbour.
+                if p.window_fraction is not None and (
+                        int(pos[WORD * (w0 + ge_of(b)) + WORD - 1]
+                            - pos[WORD * (w0 + gs)]) < min_bp // p.window_fraction):
                     continue
             else:
                 ge = b

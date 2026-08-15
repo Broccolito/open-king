@@ -862,104 +862,94 @@ fn effective_degree(opts: &Options) -> i32 {
 /// It reproduces `bigish` at degree 1 (18) but not at degree 2 (50 against the
 /// reference's 36) — the one stdout line in the corpus that `--related` still gets wrong.
 ///
-/// **The marker prefix above is a placeholder that happens to match at degree 1, and the
-/// reference demonstrably does not use it.** `docs/research/fixtures/screencanvas.py`
-/// builds the pair whose kinship one cloned marker set tunes, and drives the reference
-/// over it; `--facts` re-measures everything below in about two minutes. What it found,
-/// all of it on constructed filesets rather than on `bigish`'s own numbers:
+/// Full record: **`docs/research/22-screen.md`**, instrument
+/// `docs/research/fixtures/screendeflate.py` (`facts` re-measures everything below;
+/// `screencanvas.py` and `screenweight.py` are the two earlier rigs it builds on). The
+/// headline is that the reference's screen is **not the kinship over any subset of
+/// markers**, so the placeholder below cannot be repaired by choosing a better subset —
+/// and neither can anything else of that shape.
 ///
-/// * **The stage is per-pair.** Rebuild `bigish` as its 167 unrelated fillers (which on
-///   their own print `No close relatives are inferred.`) plus exactly one candidate pair,
-///   47 times, and the printed count is 0 or 1 each time. It is 1 on **36** of them —
-///   the whole fileset's number. Not a budget, a cap, a ranking or a per-block bound;
-///   six sample permutations move it not at all.
-/// * **Every marker contributes, wherever it sits.** A 10 000-marker clone window at
-///   `[40000, 50000)`, where the prefix estimate reads 0.0020, is accepted at the same
-///   true kinship as one at `[0, 10000)`. Stride-2/3/4 clone sets at every offset agree
-///   to within the bisection's own noise. So the screen is not a prefix, not a stride and
-///   not a word decimation.
-/// * **It is a threshold on kinship, sitting above the printed cutoff.** Bisecting the
-///   clone count puts the boundary at kinship **0.0700** against a printed 0.0625
-///   (n = 167, m = 50 000) — lossy in exactly the direction that turns 50 into 36. Read
-///   as `k_screen = 0.5 + R*(k - 0.5)` the same `R` fits both degrees (1.0186 at 0.1250,
-///   1.0176 at 0.0625); an additive offset disagrees by 18 % across the two and a plain
-///   multiplicative one by a factor of two.
-/// * **`R` is exactly 1 while `m <= 32768`** (0.99995 at 32 768, 0.99993 at 33 280) and
-///   grows with the map — 1.0106 at 36 864, 1.0128 at 40 000, 1.0204 at 45 000, 1.0176 at
-///   50 000 — while *falling* with the sample count, 1.033 at n = 100 to 1.018 at n = 167,
-///   smoothly and with no 16- or 32-sample block structure. It varies pair to pair
-///   (1.018…1.026 over six filler pairs) and was never measured below 1.
-/// * **The estimate for a pair depends on the other samples' genotypes.** Drive the
-///   fillers to one homozygote at a random 17 232 markers and a pair related *only*
-///   there is rejected at kinship 0.154, while the same pair related on the remaining
-///   markers is accepted at 0.062. Replace the whole background with HWE-consistent
-///   random genotypes and the threshold moves past 0.25. No marker subset can do that —
-///   a uniformly spread clone set meets any subset in its own proportion — so the
-///   screening statistic reads **sample-level allele frequencies**, which is also what
-///   the `n` dependence above is.
+/// ## The law the screen obeys
 ///
-/// ## What the statistic weights, and the two families that are now dead
+/// A **dilution bisection** — replace one member of a real `bigish` pair, at a growing
+/// random marker set, with genotypes drawn from the fileset's own allele frequencies, so
+/// the pair's kinship falls continuously while no new relative appears — locates the
+/// acceptance boundary to one marker, i.e. to ~1e-5 in kinship. 36 bisections at each
+/// cutoff on `bigish` (m = 50 000, n = 169):
 ///
-/// A second instrument, `docs/research/fixtures/screenweight.py`, asks what functional of
-/// the pair is being thresholded. Same canvas, same bisection, all of it out of sample.
+/// ```text
+/// cutoff 0.0625:  R = 1.02257 ± 0.00065   boundary kinship 0.07216
+/// cutoff 0.1250:  R = 1.02079 ± 0.00062   boundary kinship 0.13264
+/// ```
 ///
-/// * **The `m <= 32768` reading is exact, and it is the binding constraint.** 12 fresh
-///   bisections at m = 20 000 / 30 000 / 32 768 give `R = 1.00010 ± 0.00005` and a
-///   boundary kinship of 0.06252 against a printed 0.0625. So below the threshold the
-///   screen *is* the robust kinship on the whole map under a strict `>`, which leaves no
-///   room for a different estimator, denominator or standardisation — any of those would
-///   still be in force there.
-/// * **Above it the deflation is affine, confirmed by prediction.** `R = 1.01779 ±
-///   0.00062` at degree 2 (5 seeds). Carrying that to degree 1 predicts a boundary of
-///   0.13161, against 0.13979 for a multiplicative deflation of the same size; measured
-///   **0.1316** (4 seeds, `R = 1.01806 ± 0.00053`). This also kills every rule shaped
-///   "numerator over a selected set, denominator over the whole map", which is
-///   multiplicative by construction.
-/// * **The rule is additive over markers.** Pure-band boundaries are 3 978 markers for
-///   MAF `[0.35,0.50)` and 8 130 for `[0.147,0.249)`; mixing half of the first needs
-///   3 906 of the second against a parameter-free linear prediction of 4 065, and a
-///   quarter needs 6 001 against 6 098.
-/// * **The per-marker weight is `2p(1-p)` below 32 768 markers and is not above it.**
-///   Differential probe, ten in-sample MAF bands: at m = 32 768 the weight is flat at
-///   `2pq` (`w/2pq = 1.03 ± 0.05`), as any consistent kinship estimator must be, since
-///   `4pq(p²+q²) + 8p²q² = 4pq` exactly. At m = 50 000, same markers and same pair, it
-///   ramps — `w/2pq` = 0.48, 0.56, 0.65, 0.75, 0.77, 0.94, 1.00 at MAF 0.16…0.35 — and
-///   markers below MAF ≈ 0.15 carry **no weight at all**: the 0.05, 0.08, 0.11 and 0.14
-///   bands are rejected with every one of their 2 133 / 3 278 / 3 772 / 3 739 markers
-///   cloned.
+/// with `k_screen = 0.5 + R*(k - 0.5)`. The two agree to 0.2 %; a multiplicative rule
+/// would need 0.866 and 0.943, an additive offset 0.0097 and 0.0076. On a synthetic
+/// flat-MAF fileset, where the deflation is four times larger and so the lever arm 25
+/// times longer, the same holds (`R` = 1.0798 / 1.0838 while `cut/k*` moves 0.659 →
+/// 0.812). **The law is affine about 0.5, and `R` is exactly 1 whenever `m <= 32768`**
+/// (0.99999 ± 0.00001 on `bigish`; 1.00000 on three synthetic MAF spectra).
 ///
-/// That retires the lead this doc used to carry. **A frequency-standardised estimate is
-/// refuted, not merely unvalidated**: `mean(z_i z_j)/2` weights every marker equally and
-/// so predicts one boundary *marker count* whatever the band, where the measured counts
-/// are 3 978, 4 552 and 8 130 — a factor of two. Het-weighting predicts one boundary het
-/// *mass*, and the top two bands give 1 910 and 1 898, agreeing to 0.6 %. The refutation
-/// does not depend on which frequencies the lead is computed with, which is what the
-/// earlier out-of-sample failure (44 against 36, 16 against 18) turned on.
+/// The deflation is **systematic, not sampling noise**: realisation spread of the
+/// boundary is 0.0018 against a deflation of 0.0089, and the per-pair labels are a sharp
+/// threshold — every `bigish` pair above 0.0731 accepted, every one below 0.0718
+/// rejected, one inversion inside a 0.0009 window. The per-pair labels also re-confirm
+/// that the stage is per-pair: they sum to 36 at degree 2 (and to 17 against 18 at degree
+/// 1, so "per-pair" is exact only to ±1).
 ///
-/// **And it is not this estimator on any subset of these markers.** Eight measured
-/// brackets — 5 random clone families, 3 confined to a MAF band — each pin
-/// `k_S(size-1) <= 0.0625 < k_S(size)` for the true screening set. Scanned over 3
-/// selectors (in-sample MAF, in-sample heterozygote count, heterozygote count over 24
-/// samples) × 11 sizes from 500 to 50 000, **none of the 33 satisfies all eight**, and
-/// the reason is structural: a uniformly drawn clone family meets any subset in its own
-/// proportion, so the five random boundaries read 0.069…0.072 for *every* subset and
-/// never the cutoff. A subset can bend the band boundaries — that is the ramp above —
-/// but it cannot supply the uniform deflation. So swapping the prefix below for a better
-/// subset cannot close this line, and searching for one is wasted effort.
+/// ## Why no marker subset can be the answer
 ///
-/// What survives is a shape, recorded as a shape and **not** as a rule: a statistic that
-/// coincides with the robust kinship on the whole map at `m <= 32768`, is additive, is
-/// `2pq`-weighted times a ramp from 0 at MAF ≈ 0.15 to 1 at ≈ 0.35, and carries an affine
-/// `R ≈ 1.018` that varies pair to pair and falls with `n`. The robust kinship over a
-/// subset with a *pair-dependent* denominator does all four — `R = a_S/a_all` with `a_X`
-/// the pair's heterozygosity asymmetry `(h_i + h_j)/(2·min(h_i,h_j))` over `X` is exactly
-/// affine, is exactly 1 when `S` is the whole map, and is pair-specific — but for
-/// `S` = top-32 768 by in-sample MAF this pair's `a_S/a_all` is 0.998, not 1.018, so the
-/// subset that would carry it has not been found.
+/// For a pair with IBD probabilities `(k0, k1, k2)`, at a marker of frequency `p`,
+/// `E[N_l] = 4pq(1 - 2φ)` and `E[het_l] = 2pq` — the `p²q²` terms cancel exactly. Both the
+/// numerator `N = het_i + het_j + 4·IBS0 - 2·HetHet` and the denominator
+/// `min(het_i, het_j)` are therefore proportional to `Σ pq` over whatever index set they
+/// are summed on, so **the KING robust kinship over any marker subset, under any
+/// non-negative per-marker weighting, is unbiased for the same φ**. That is a proof, not
+/// a failed search, and three measurements agree with it:
 ///
-/// The consequence is contained: the count reaches stdout and nothing else. `.kin0`'s row
-/// set comes from the exhaustive re-estimate below and is byte-correct at every degree,
-/// including on the two `bigish` cases whose stdout this line spoils.
+/// * top-K-by-MAF subsets of `bigish` count 47/45/44/48 pairs over `2^-4` at
+///   K = 50 000/32 768/25 000/16 384, and 41/41/41/40 on its first 16 384 markers — flat,
+///   where the reference gives 36;
+/// * **replicating a map `r` times** leaves every kinship bit-identical (KING's own
+///   `.kin0` confirms it) and still moves the count: 41 → 36 → 33 → 29 → 27 at
+///   r = 2…6 from `bigish`'s first 16 384 markers, i.e. `R` = 1.000, 1.021, 1.037, 1.055,
+///   1.065. Every sub-multiset of a replicated map is a weighting of the base map;
+/// * the one loophole — a subset chosen from data that includes the pair — is simulated
+///   and closed: top-32 768 by in-sample MAF gives `R` = 0.995 ± 0.002 (no bias), by
+///   in-sample heterozygote count 0.916 ± 0.003 (bias of the wrong sign).
+///
+/// Nine permutations of `bigish`'s marker order print 36/18 every time, which retires
+/// prefixes, strides and word decimations; the boundary bisection, forty times finer,
+/// moves by 0.0004 (5 % of the deflation), which is the size of a tie-break inside an
+/// informativeness ranking and no more.
+///
+/// ## What the deflation does track
+///
+/// It needs the markers that overflow the 32 768 budget to be *informative*, and it
+/// grows with how much equally-informative material overflows. Appending 17 232 markers
+/// at MAF 0.02 to `bigish`'s first 32 768 leaves the printed count at exactly its
+/// m = 32 768 value (50/18, where a `bigish`-sized deflation would read 42); appending the
+/// real tail gives 36/18. Two-point MAF maps at m = 65 536 put `R`'s minimum (1.008)
+/// exactly where the budget need not split a tied group, climbing to 1.060 at K = 40 000
+/// and 1.078 at K = 50 000. Across spectra at m = 50 000: flat 1.080, uniform 1.033,
+/// `bigish` 1.022, a low-MAF-heavy beta 1.007 — and one beta point sits *below* one
+/// (0.9980 ± 0.0003), so "never below 1" is retired too. `R` is not a function of `(m, n)`
+/// alone: `bigish` at m = 50 000 reads 1.0216 while its first 25 000 markers replicated
+/// twice — same `m`, same `n` — read 1.0280.
+///
+/// What that leaves is a shape, recorded as a shape and **not** as a rule: when a map
+/// holds more equally-informative markers than 32 768, the reference reaches its budget by
+/// something lossy applied *uniformly across markers* rather than by keeping some and
+/// dropping others. The uniformity is measured directly — on a flat-MAF map a contiguous
+/// clone block at markers `[0,·)`, `[20000,·)`, `[32768,·)` or at the tail gives boundary
+/// kinships 0.0957/0.0957/0.0930/0.0940, with no preference for the head of the file.
+/// `22-screen.md` §5 lists the two candidate mechanisms that survive.
+///
+/// Landing the affine law with a fitted `R` would reproduce `bigish` and nothing else, so
+/// it is deliberately not landed. The consequence is contained: the count reaches stdout
+/// and nothing else. `.kin0`'s row set comes from the exhaustive re-estimate below and is
+/// byte-correct at every degree, including on the two `bigish` cases whose stdout this
+/// line spoils — the 14 pairs the reference's screen drops all sit below the 0.08839
+/// reporting threshold, so no reported row depends on it.
 fn detected_pairs(kinships: &[f64], n_samples: usize, degree: i32, screening: bool) -> usize {
     if screening && n_samples < SCREEN_MIN_SAMPLES {
         return 0;
