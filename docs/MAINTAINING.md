@@ -112,8 +112,14 @@ docs/
                          21-push-merge.md corrects that merge's IBD2 half and makes
                          the one-word push conditional -- --seglength 5 becomes as
                          byte-exact as the default floor; 22-screen.md is the
-                         --related screening count, and proves the screen is NOT
-                         the kinship over any marker subset (nothing landed);
+                         --related screening count -- it proves the screen is NOT
+                         the kinship over any marker subset (exact algebra, covers
+                         every subset AND every weighting), then closes marker
+                         merging and proves the count is not a function of the
+                         markers the budget keeps at all. NOTHING LANDED, on
+                         purpose: its §13 lists what is closed and the three leads
+                         still worth an experiment. Read it before touching
+                         --related's screen;
                          23-gap-bound.md is the LAST segment document -- the gate
                          window's own length bound and the IBD1 merge's budget word
                          set, which make --seglength 10 byte-exact too and refute
@@ -138,7 +144,17 @@ docs/
                          screendeflate.py is the dilution bisection that closed the
                          subset search for good (22-screen.md) -- read it before
                          proposing any subset rule, and note its warning that KING
-                         rejects a fileset whose A1 is not the minor allele;
+                         rejects a fileset whose A1 is not the minor allele (§8.3
+                         hazard 2);
+                         screenfold.py is the FOURTH screening rig and the one that
+                         closed the space: it refutes marker MERGING and proves the
+                         count is not a function of the markers the budget KEEPS
+                         (separation), finds a second necessary condition with no
+                         budget involved (gate), and shows the threshold is sharp
+                         (sharp). Its ladder fileset -- 48 pairs climbing through
+                         the cutoff -- reads the effective threshold in ONE run,
+                         17x cheaper than a bisection. `facts` re-measures all of
+                         it. Read 22-screen.md §13 before attempting the screen;
                          window1.py is 23-...'s window-bound canvas and carries
                          its held-out draws;
                          chrprobe.py reads the reference ONE CHROMOSOME AT A TIME on
@@ -155,8 +171,24 @@ docs/
                          segwriter.py proves the two writer rules from the CAPTURES
                          alone — no binary, no fileset, no engine (§8.5);
                          avfs.py / avfs_score.py are the --build AV.FS rig, and
-                         buildlog.py scores <prefix>build.log itself (rules | order
-                         | pairs) with build_shapes.py generating held-out shapes
+                         buildlog.py scores <prefix>build.log itself (rules |
+                         blanks | cut | order | pairs) with build_shapes.py
+                         generating held-out shapes. `rules` is the --build
+                         scorecard: 53 of 59 held-out shapes byte-identical on the
+                         lines we write. Three more --build rigs, all black-box,
+                         all scored on shapes the corpus does not contain:
+                         clusternum.py pins the STAGED MERGE QUEUE that numbers
+                         KING1, KING2, ... and the clustering GATE (19 shapes; its
+                         `seeds` mode kills the largest-kinship hypothesis on 4 of
+                         8 fresh seeds); dupkeep.py pins which copy of a duplicate
+                         is removed and proves the line is rule-half, not
+                         inference-half (10 shapes x 3 seeds); siborder.py bounds
+                         the ONE open --build question, the sibship member order --
+                         it is a hash-table iteration order over a family-scoped,
+                         id-keyed container, NOT any sort by f(id) (13 subsets
+                         contradict each other 91 times). Reproducing it means
+                         identifying the hash; it is worth 3 of 59 shapes and no
+                         corpus case
 
 tests/parity/
   generate_corpus.py     builds the 13 input datasets from a fixed seed
@@ -236,10 +268,14 @@ which caches nothing at all. `git diff --stat docs/research/fixtures/` before co
 those five files should only ever change when the reference was the thing being run.
 
 A second hazard in that rig, worth knowing before you trust a single probe: the reference
-has a **major-allele QC check seeded from the clock**, which aborts a run with
-`FATAL ERROR - Too many first alleles as the major allele` at random on small constructed
-filesets. `segcanvas.py` retries up to 24 times with a sleep between attempts for exactly
-this reason. A one-shot probe of a fixture is not evidence — run it a dozen times and count.
+has a **major-allele QC check**, which aborts a run with
+`FATAL ERROR - Too many first alleles as the major allele`. It fires for two unrelated
+reasons — a synthetic map that codes `A1` as the *major* allele (deterministic, fatal to
+every run, and the cause of many a phantom "no bracket"), and a clock seed (random, roughly
+one run in three on small skewed fixtures). `segcanvas.py` retries up to 24 times with a
+sleep between attempts for the second. A one-shot probe of a fixture is not evidence — run it
+a dozen times and count. **§8.3 hazards 2 and 3 spell both out; read them before you build a
+fileset or write a rig.**
 
 Three rules of thumb the tree already follows:
 
@@ -305,7 +341,7 @@ captured output, add it there too.
 ```bash
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace                                             # 320 passed, 0 failed
+cargo test --workspace                                             # 325 passed, 0 failed
 cargo clean && cargo build --release            # must work from a clean checkout
 python3 tests/parity/run_parity.py --impl target/release/king      # record the exact count
 python3 tests/parity/run_parity.py --impl target/release/king --baseline   # must MATCH
@@ -324,16 +360,23 @@ python3 tests/parity/probes/xseg_probe.py --impl target/release/king  # 1040/104
 python3 tests/parity/probes/degree_filter.py --ref "<reference>"   # 0 false-keep, 0 false-drop
 python3 docs/research/fixtures/oosseg.py --ref "<reference>"       # OUT OF SAMPLE: 66/72 runs
 python3 docs/research/fixtures/avfs_score.py                       # the AV.FS residual, 0/14 exact
+# the --build rigs: all four are out-of-sample, none is visible to the 480 captures
+cd docs/research/fixtures
+python3 buildlog.py rules                                          # 53 match, 6 differ
+python3 build_shapes.py                                            # 18 OK, 0 MISMATCH, 2 skipped
+python3 clusternum.py score                                        # type 19/19, open-king 19/19
+python3 dupkeep.py                                                 # connectivity_then_later 27/0
 git ls-files | grep -E '\.(bed|bim|fam|vcf|bcf)$'                  # must print nothing
 find . -path ./.git -prune -o -size +95M -print                    # must print nothing
 # the caches: 0 keys dropped and 0 VALUES changed -- see §8.3, `git diff --stat` cannot
 # tell you this, because inserting into a sorted-key JSON reflows the whole file
 ```
 
-The last release measured **477 PASS / 3 FAIL / 480**, self-check **480/480**, 320 tests
+The last release measured **477 PASS / 3 FAIL / 480**, self-check **480/480**, **325** tests
 passing (1 ignored), the row scorecard **982/982/982** at 3 / 5 / 10 Mb with MAE 0.000000 at
-each, the out-of-sample differential **66/72** runs and 6 of 6 713 rows, a clean build in
-**7.8 s** from a pristine copy of the tree, and that clean-tree binary re-measured at 477/480
+each, the out-of-sample differential **66/72** runs and 6 of 6 713 rows, the four `--build`
+rigs at **53/59**, **18/18**, **19/19** and **27/27**, a clean build in **9.5 s** from a
+pristine copy of the tree, and that clean-tree binary re-measured at 477/480
 with `baseline: MATCH` — from a cold tree with no `target/` and no pre-generated corpus,
 which is the configuration CI runs in. Do not publish a count you have not just re-run: the
 parity number is the project's entire claim, and it is cheap to check (the suite takes about
@@ -680,7 +723,7 @@ proportion is not an approximation here — it is a lossless encoding of a small
 every rule in the segment engine was read out of one. If you build a new rig and do not check
 that ratio, you are reading noise.
 
-**Three hazards.**
+**Four hazards.**
 
 1. **The caches are reference-only.** `segcanvas_measured.json` (6 416 answers),
    `ibd1canvas_measured.json` (1 013), `fringecanvas_measured.json` (576) and
@@ -709,14 +752,41 @@ that ratio, you are reading noise.
    non-reference binary wrote into the cache and the file must be restored from git.
    (This release: `mergelab_measured.json` went 2 357 → 35 088 entries, 0 dropped,
    0 changed.)
-2. **The reference aborts at random on small constructed filesets.** It has a major-allele QC
-   check seeded from the clock which raises
-   `FATAL ERROR - Too many first alleles as the major allele` on maybe one run in three for
-   skewed fixtures. `segcanvas.py` retries up to 24 times with a sleep for exactly this
-   reason. **A one-shot probe of a fixture is not evidence** — run it a dozen times and count.
+2. **THE A1-MINOR-ALLELE TRAP — code `A1` as the *minor* allele in every synthetic fileset
+   you build.** This is the single most expensive footgun in the repository, because it fails
+   *silently* rather than loudly. The reference runs a QC check on the ratio of first alleles
+   that are the major allele across the map; if too many `.bim` rows name the major allele in
+   the `A1` column, it aborts the whole run with
+
+   ```
+   FATAL ERROR - Too many first alleles as the major allele
+   ```
+
+   A rig that treats a non-zero exit as "the reference said no" then reads that abort as a
+   *data point*. In a bisection every probe on one side of the bracket dies the same way, the
+   rig concludes there is **no bracket**, and you spend a day debugging a search that never
+   ran. The tell is a bisection that reports no bracket on a fixture where you can see by
+   construction that the answer must lie inside it, or a sweep whose "rejected" side is
+   suspiciously uniform. **Any rig that shells out to the reference must treat this string as
+   an error, not as an answer** — the rigs in `docs/research/fixtures/` all do, and a new one
+   must too.
+
+   The fix at construction time is one line: when you emit a `.bim`, put the allele you gave
+   the *lower* frequency in the `A1` (5th) column, and the higher-frequency one in `A2`.
+   `generate_corpus.py` and every rig here already do; copy one of them rather than writing a
+   `.bim` writer from scratch. Note this is a property of the *whole map*, not of any single
+   marker — a handful of major-`A1` rows is fine, a systematically flipped map is fatal.
+
+3. **The same error also fires at random, and that is a different problem.** Independently of
+   how you coded `A1`, the check is seeded from the clock, so on small or skewed constructed
+   filesets it raises the same string on maybe one run in three even when the map is coded
+   correctly. `segcanvas.py` retries up to 24 times with a sleep for exactly this reason.
+   **A one-shot probe of a fixture is not evidence** — run it a dozen times and count.
    (`docs/PARITY.md` §5.10's two divergences were each measured 12 times per condition for
-   this reason.)
-3. **`--seglength` only behaves like a floor inside `1 ≤ L ≤ 10` Mb** (`21-push-merge.md`
+   this reason.) Distinguish the two cases by retrying: a miscoded map fails *every* attempt,
+   the clock-seeded abort fails *some*.
+
+4. **`--seglength` only behaves like a floor inside `1 ≤ L ≤ 10` Mb** (`21-push-merge.md`
    §8.2). Above ~10 Mb a 14.06 Mb call reports as a constant 8.93 Mb at every larger floor, on
    canvases of quite different content; below 1.0 the flag behaves as though absent. Any sweep
    that wanders outside that window is measuring a different regime. Relatedly, the `.seg`

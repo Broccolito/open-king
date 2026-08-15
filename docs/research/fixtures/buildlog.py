@@ -2,40 +2,47 @@
 """Instruments for `--build`'s `<prefix>build.log`, the pedigree-reconstruction log.
 
 `avfs.py` builds the shapes that make the reference log `INFERENCE AV.FS`; `avfs_score.py`
-scores the `Join3/Join2` statistic; `build_shapes.py` scores `updateparents.txt`.  This
-file is the fourth piece: it scores the **log itself**, and it carries the two rigs that
-closed the candidate space for the one rule that is still open — *which two members of a
-sibship an `AV.FS` line names*.
+scores the `Join3/Join2` statistic; `build_shapes.py` scores `updateparents.txt`;
+`clusternum.py` pins the merge queue that numbers the clusters; `dupkeep.py` pins the
+duplicate rule; `siborder.py` chases the sibship order.  This file scores the **log
+itself** and carries the rigs for the three questions the log alone can answer.
 
 Nothing here reads KING's source.  Everything is black-box: build a fileset, run the
 reference, read its log.  Filesets land in `work/buildlog/` (gitignored).
 
-    python3 buildlog.py rules     # our RULE/header lines vs the reference's, all shapes
+    python3 buildlog.py rules     # our rule-half lines vs the reference's, 59 shapes
+    python3 buildlog.py blanks    # what predicts a family block's blank-line count
+    python3 buildlog.py cut       # the uncle/grandparent cut on Join3/Join2, bracketed
     python3 buildlog.py order     # the internal sibship order, over seeds and sizes
     python3 buildlog.py pairs     # the named pair vs every pairwise statistic
 
 # What each section is evidence for
 
-**`rules`** replays every shape in `build_shapes.py` plus the `avfs.py` two- and
-multi-family shapes and compares the lines this binary writes — `Family KING<k>:`,
-`RULE FS0`, `RULE FS1` — with the reference's, after dropping the lines we do not build.
-23 of 30 match byte for byte; the seven that do not are three cluster-numbering
-differences, two `<FID>-><IID>` renaming shapes that are out of scope, and two whose only
-difference is the sibship member *order* that `order` below is about.
+**`rules`** replays 59 held-out shapes and compares the lines this binary writes — the
+`Family KING<k>:` header, `Duplicate … is removed.`, `RULE FS0` and `RULE FS1` — with the
+reference's, after dropping the inference half from both sides (`_INFERENCE_HALF`).  53
+match byte for byte; the six that do not are two `<FID>-><IID>` renaming shapes that are
+out of scope, three that differ only in the sibship member *order* that `order` is about,
+and one where the unimplemented `PO.S` branch consumes a synthetic id.
 
-**`order`** reads that order straight off the reference's `RULE FS1: X joins in sibship
-(…)` line, which prints the whole list.  Run over four seeds at each of three sibship
-sizes it prints the same order every time while the sibship's own kinships move by 0.06 —
-i.e. under complete genotype reseeding — which is what rules genotypes out as an input.
+**`blanks`** scores the two candidate rules for a family block's blank-line count over
+every cluster whose sibships are all pairs, which is where the named pair is forced and the
+candidate `R` set can be read off a degree-2 `.kin0`.  Both score 107 of 113, on different
+failure sets; what separates them by hand is `three_fs` and `ord3`.  See
+`crates/king-cli/src/analysis/build.rs`.
+
+**`cut`** re-reads every `AV.FS`/`AV.HS` line under `work/` and brackets the
+`uncle|aunt` / `grandfather|…` cut: 259 values, `(0.8495, 0.9005)` once the `%.3lf`
+rounding is accounted for.
+
+**`order`** reads the sibship order off the reference's `RULE FS1: X joins in sibship (…)`
+line, which prints the whole list.  Four seeds at each of three sibship sizes give the same
+order while the sibship's own kinships move by 0.06, which is what rules genotypes out.
+`siborder.py` takes it from there.
 
 **`pairs`** tabulates, for every `AV.FS` line, the named pair's rank inside its sibship
-under each column `--related` prints, over the sibships of three or more children (a
-two-child sibship has one candidate pair and carries no information).  No column's
-`argmin` or `argmax` picks the named pair more than **11 of 27** times, against a
-1-in-3-or-worse chance baseline.  Between them, `order` and `pairs` are why `crates/king-cli/src/analysis/
-build.rs` writes the rule half of the log and stops: the ordering is not genotype-derived,
-not `.fam` order, not the sample index, not the sibship's size or position, and not any
-pairwise statistic — and inventing one would be a fitted fiction.
+under each column `--related` prints.  No column's `argmin` or `argmax` picks the named
+pair more than **11 of 27** times, against a 1-in-3-or-worse chance baseline.
 """
 
 from __future__ import annotations
@@ -110,14 +117,37 @@ def _sibships(fam_path):
 # rules: our header/RULE lines against the reference's
 # ---------------------------------------------------------------------------
 
+#: Lines that belong to the log's **inference** half and so are dropped from both sides.
+#:
+#: The blank lines go because their count is a function of the inference half.  So does
+#: everything about a parent-offspring pair: `Reconstruct parent-offspring pair (X, Y)...`
+#: was long assumed to be a rule line, and it is not — 42 of 42 clusters that print it also
+#: print an `INFERENCE` line, and a `PO` merge whose cluster has no sibship anywhere (two
+#: shapes, three seeds each) prints nothing at all.  Its `PO.S` follow-ups go with it.  The
+#: `Duplicate … is removed.` line is the opposite case and is **kept**: 23 of 27 runs print
+#: it with no inference line in the file (`dupkeep.py`).
+_INFERENCE_HALF = ("INFERENCE", "HS ", "Reconstruct parent-offspring pair",
+                   "is used to determine the parent/offspring", "RULE PO.",
+                   "is created as")
+
+
 def _rule_lines(text):
-    """The log lines this binary builds: headers and `RULE FS*`, nothing else."""
+    """The reference log reduced to the lines this binary is expected to build.
+
+    Headers left with nothing under them are dropped too: a cluster whose only line is an
+    inference-half one does not appear in our log at all.
+    """
     keep = []
     for ln in text.splitlines():
         s = ln.strip()
-        if not s or "INFERENCE" in ln or s.startswith(("HS ", "Reconstruct", "Duplicate")):
+        if not s or any(t in ln for t in _INFERENCE_HALF):
             continue
+        if s.startswith("Family KING") and s.endswith(":") and keep and \
+                keep[-1].strip().startswith("Family KING") and keep[-1].strip().endswith(":"):
+            keep.pop()
         keep.append(ln)
+    if keep and keep[-1].strip().startswith("Family KING") and keep[-1].strip().endswith(":"):
+        keep.pop()
     return keep
 
 
@@ -241,6 +271,15 @@ def _shape_dirs():
     bs = os.path.join(_HERE, "work", "buildshapes")
     if os.path.isdir(bs):
         out += [os.path.join(bs, d) for d in sorted(os.listdir(bs))]
+    # `clusternum.py`'s nineteen shapes, which is where the merge queue, the duplicate
+    # removal and the `Reconstruct parent-offspring pair` line were pinned.
+    cn = _load("cn", os.path.join(_HERE, "clusternum.py"))
+    for name in cn.SHAPES:
+        out.append(cn.make(name, 4242)[0])
+    # `dupkeep.py`'s ten shapes, which pin which copy of a duplicate survives.
+    dk = _load("dk", os.path.join(_HERE, "dupkeep.py"))
+    for name in dk.SHAPES:
+        out.append(dk.run(name, 4242)[0])
     avfs = _load("avfs", os.path.join(_HERE, "avfs.py"))
     for kind, a, b in AVFS_SHAPES:
         name = "%s%d%d" % (kind[0], a, b)
@@ -257,6 +296,153 @@ def _shape_dirs():
     return out
 
 
+def cut(root=None):
+    """The `uncle|aunt` vs `grandfather|…` cut on `Join3/Join2`, bracketed.
+
+    Scans *every* reference `kingbuild.log` under `work/` — whatever any rig has left
+    behind — and reports the largest `uncle|aunt` value and the smallest ambiguous one.
+    The gap between them is the bracket; nothing inside it can be ruled out.
+    """
+    root = root or os.path.join(_HERE, "work")
+    lo, hi, n = [], [], 0
+    verdicts = {}
+    for base, _dirs, files in os.walk(root):
+        if "impl" in base or "kingbuild.log" not in files:
+            continue
+        for ln in open(os.path.join(base, "kingbuild.log")):
+            m = re.search(r"INFERENCE AV\.(?:FS|HS): \S+ is ([\w, ]+?) of ", ln)
+            v = re.search(r"Join3/Join2=([\d.]+)", ln)
+            if not m or not v:
+                continue
+            n += 1
+            val, word = float(v.group(1)), m.group(1)
+            verdicts[word] = verdicts.get(word, 0) + 1
+            (lo if word in ("uncle", "aunt") else hi).append(val)
+    lo.sort()
+    hi.sort()
+    print("%d AV lines over %s" % (n, root))
+    for w, c in sorted(verdicts.items(), key=lambda kv: -kv[1]):
+        print("   %-42s %4d" % (w, c))
+    if lo and hi:
+        # The log prints `%.3lf`, so a printed p stands for a true value in
+        # [p - 0.0005, p + 0.0005).  A cut c is compatible with a printed `uncle` p iff
+        # c > p - 0.0005, and with a printed ambiguous q iff c < q + 0.0005.
+        half = 0.0005
+        print("\nlargest  uncle|aunt          %.3f  (%d values, %.3f … %.3f)"
+              % (lo[-1], len(lo), lo[0], lo[-1]))
+        print("smallest grandfather|HS|…    %.3f  (%d values, %.3f … %.3f)"
+              % (hi[0], len(hi), hi[0], hi[-1]))
+        print("bracket on the true cut  (%.4f, %.4f)   width %.4f"
+              % (lo[-1] - half, hi[0] + half, hi[0] - lo[-1] + 2 * half))
+        for c in (0.85, 0.875, 0.9):
+            ok = all(x - half < c for x in lo) and all(c < x + half for x in hi)
+            print("   cut %.3f: %s" % (c, "survives" if ok else "REFUTED"))
+
+
+def blanks(root=None):
+    """How many blank lines a family block carries, and what predicts the count.
+
+    Two rules are scored, on the clusters where the count is fully computable — every
+    sibship exactly two members, so the pair an `AV.FS` line would name is forced and the
+    candidate `R` set can be read straight off `.kin0`:
+
+    * **block** (the rule this file used to carry): one blank before each sibship block
+      until the family prints its first inference; if it never prints one, one per block.
+    * **reject**: one blank opens the section, and one more for every candidate `R` that is
+      *examined and turned down* before the first line prints.
+
+    They differ wherever a block faces no candidate at all, or faces several — `three_fs`,
+    whose first sibship faces two candidate uncles and prints three blanks where `block`
+    says two, and `ord3`, whose two sibships face none and prints one where `block` says
+    two.
+    """
+    root = root or os.path.join(_HERE, "work")
+    score = {"block": [0, 0], "reject": [0, 0]}
+    for base, _dirs, files in sorted(os.walk(root)):
+        if "impl" in base or "kingbuild.log" not in files:
+            continue
+        name = os.path.basename(base)
+        bed = os.path.join(base, name + ".bed")
+        log = open(os.path.join(base, "kingbuild.log")).read()
+        ids = os.path.join(base, "kingupdateids.txt")
+        if not log.strip() or not os.path.exists(bed) or not os.path.exists(ids):
+            continue
+        cluster_of = {}
+        for line in open(ids):
+            fid, _iid, key, _n = line.rstrip("\n").split("\t")
+            cluster_of[fid] = key
+        rows = [l.split() for l in open(bed[:-4] + ".fam")]
+        sibs = {}
+        for r in rows:
+            if r[2] != "0":
+                sibs.setdefault((r[0], r[2], r[3]), []).append(r[1])
+        sibs = {k: v for k, v in sibs.items() if len(v) > 1}
+        # A dedicated degree-2 run: several rigs leave a degree-1 `king.kin0` in the
+        # fileset directory, and that one carries no 2nd-degree row at all.
+        second = set()
+        p = os.path.join(base, "kin2", "king.kin0")
+        if not os.path.exists(p):
+            _run(KING, bed, os.path.join(base, "kin2"), "--related", "--degree", "2")
+        if not os.path.exists(p):
+            continue
+        with open(p) as fh:
+            hdr = next(fh).rstrip("\n").split("\t")
+            for line in fh:
+                f = dict(zip(hdr, line.rstrip("\n").split("\t")))
+                if f.get("InfType") == "2nd":
+                    second.add(frozenset((f["ID1"], f["ID2"])))
+        everyone = {r[1] for r in rows}
+        blocks, key, cur = [], None, None
+        for ln in log.splitlines():
+            if ln.startswith("Family KING"):
+                if cur is not None:
+                    blocks.append((key, cur))
+                key, cur = ln[len("Family "):].rstrip(":"), []
+            elif cur is not None:
+                cur.append(ln)
+        if cur is not None:
+            blocks.append((key, cur))
+        for key, body in blocks:
+            # the cluster's declared sibships in .fam order, then the founder sibship an
+            # FS0 line names
+            mine = [v for k, v in sibs.items() if cluster_of.get(k[0]) == key]
+            mine += [rex.split() for l in body if "RULE FS0" in l
+                     for rex in re.findall(r"Sibship \((.*?)\)", l)]
+            if not mine or any(len(s) != 2 for s in mine):
+                continue
+            printed = [l for l in body if "INFERENCE AV" in l]
+            first_at, rejects, seen, nblocks = None, 0, False, 0
+            for s in mine:
+                nblocks += 1
+                cands = sorted(x for x in everyone if x not in s
+                               and frozenset((x, s[0])) in second
+                               and frozenset((x, s[1])) in second)
+                for r in cands:
+                    words = set()
+                    hit = False
+                    for l in printed:
+                        toks = l.replace(",", " ").split()
+                        if r in toks and set(s) <= set(toks):
+                            hit = True
+                    if hit:
+                        seen = True
+                        first_at = first_at or nblocks
+                        break
+                    rejects += 1
+                if seen:
+                    break
+            got = sum(1 for l in body if not l.strip())
+            pred = {"block": first_at or nblocks, "reject": 1 + rejects}
+            for h, v in pred.items():
+                score[h][got != v] += 1
+            if got != pred["reject"]:
+                print("%-22s %-7s blanks=%d  block=%d  reject=%d"
+                      % (name, key, got, pred["block"], pred["reject"]))
+    print("\nrule     right / wrong")
+    for h, (a, b) in score.items():
+        print("  %-7s %3d / %3d" % (h, a, b))
+
+
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else ""
     dirs = sys.argv[2:] or (_shape_dirs() if mode in ("rules", "pairs") else [])
@@ -264,6 +450,10 @@ def main():
         rules(dirs)
     elif mode == "order":
         order()
+    elif mode == "blanks":
+        blanks()
+    elif mode == "cut":
+        cut()
     elif mode == "pairs":
         pairs(dirs)
     else:

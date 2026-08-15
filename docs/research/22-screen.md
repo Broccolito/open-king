@@ -324,3 +324,291 @@ reporting threshold, so no reported row depends on it.
 Landing the affine law with a fitted `R` would reproduce `bigish` and nothing else: §4.2
 and §4.3 show `R` swinging from 0.998 to 1.085 with the MAF spectrum, and not being a
 function of `(m, n)`. That is the definition of the fitted fiction this project refuses.
+
+---
+---
+
+# Round 2 — merging is dead, and the screen reads markers it does not keep
+
+The task set for this round was the hypothesis at the top of §5.1: that the budget is met
+by **merging** markers into 32768 slots rather than by selecting them, which would dissolve
+§3.1's impossibility proof because a merged slot is not a subset.
+
+It is refuted, three independent ways, one of them quantitative. In its place this round
+puts two facts that are harder than anything in Round 1, and that between them rule out
+every mechanism so far proposed, including both of §5's survivors:
+
+* the screen carries a **second necessary condition** that has nothing to do with the
+  budget — at `m = 32768`, where §1 proves the screen is the exact whole-map kinship to
+  4e-6, it refuses pairs whose sharing avoids the informative markers, at kinships up to
+  0.31 that KING's own `--kinship` confirms;
+* above the budget the screen's statistic **depends on markers it did not keep** — with the
+  kept 32768 markers held *bit-identical* and every pair's kinship over them identical to
+  the last bit, changing only the discarded markers moves the printed count from 46 to 37.
+
+Still nothing landed. `related.rs` is unchanged apart from its documentation.
+
+Instrument: `docs/research/fixtures/screenfold.py` (`facts` re-measures everything below).
+
+## 7. The instrument: a ladder, not a bisection
+
+A dilution bisection costs ~17 reference runs per number, which is what kept Round 1 to a
+handful of configurations. A **ladder fileset** costs one run: build 48 pairs whose
+kinships climb through the cutoff in even steps, add unrelated fillers, and read the
+printed count. The count *is* the effective threshold, to the ladder's step — ~0.0015 in
+kinship, ~0.004 in `R`. Twenty configurations take five seconds. Every scan below uses it;
+the bisection is kept only where a single pair has to be tracked.
+
+## 8. Merging is dead
+
+### 8.1 One marker over budget is not a step
+
+`bigish`'s first 32768 markers, then its real tail one marker at a time
+(`screenfold.py step`), printed against the whole-map truth:
+
+```
+m = 32768  +0     50 / 50      m = 33792  +1024    51 / 51
+m = 32769  +1     50 / 50      m = 34816  +2048    47 / 49
+m = 32770  +2     50 / 50      m = 36864  +4096    43 / 50
+m = 32772  +4     50 / 50      m = 40960  +8192    42 / 47
+m = 32832  +64    50 / 50      m = 49152 +16384    38 / 47
+m = 33024  +256   50 / 50      m = 50000 +17232    36 / 47
+```
+
+Exact through +256 and then a ramp. A block merge — `blockSize = ceil(m/32768)`, the
+shape any fixed-slot compression takes — flips every slot to a pair at the first
+overflowing marker and so predicts a step at `m = 32769`. There is none.
+
+### 8.2 The same multiset, three arrangements, the same count
+
+`bigish`'s first 32768 markers plus 8192 duplicate markers, arranged three ways
+(`screenfold.py arrange`). All three hold the *same marker multiset*, so all three have
+bit-identical kinships; only the file order differs.
+
+```
+self-aligned  (copies appended in order)        printed 41   true 47
+shuffled      (copies appended in random order) printed 41   true 47
+adjacent      (each copy after its original)    printed 41   true 47
+```
+
+A merge needs a grouping, and every grouping is *lossless* for at least one of these
+arrangements under any idempotent operation — or, and, max, "take the more informative":
+
+* `slot j = j mod 32768` merges each of the first 8192 markers with **its own copy** in the
+  self-aligned arrangement;
+* consecutive-pair grouping does the same in the adjacent arrangement;
+* a stable rank sort puts a marker and its copy adjacent (they are tied), so rank-block
+  grouping does too.
+
+All three lose the same six pairs. The only grouping left standing after this is a
+rank-*stride* (slot `i` takes ranks `i`, `i+32768`, …), which separates the copies.
+
+### 8.3 The surviving grouping, scored
+
+Fold `m` markers into 32768 slots and score the KING estimator on the folded data against
+the reference, on the separation scan of §10 (`screenfold.py merge`). The encoding is the
+sparse one — hom-major = `00`, het = `10`, hom-minor = `11` — which is the only encoding in
+which merging junk is free, as §4.1 requires.
+
+```
+   x   printed  true | stride/or  stride/and  stride/xor  stride/sum  block/or
+0.05      46      46 |    48          45          40          37         48
+0.15      45      46 |    48          48          33          23         48
+0.25      39      46 |    48          48          28          15         48
+0.35      37      46 |    48          48          20          13         48
+0.45      35      46 |    48          48          15          14         48
+```
+
+`or` and `and` accept every pair — merging makes pairs look *more* related, the wrong sign
+— while `xor` and a saturating dosage sum destroy far too much, and both are already wrong
+at `x = 0.05` where the reference is exact. No operation is anywhere near the reference's
+46 → 35.
+
+**Merging is closed.** With it goes the whole "the budget is met by something lossy applied
+uniformly across markers" reading of §5.
+
+## 9. A second necessary condition, and no budget in sight
+
+At `m = 32768` the screen is the exact whole-map kinship — §1 measures the boundary at
+0.0625 to 4e-6, and §7's ladder confirms it on four spectra. It is nevertheless possible to
+build a pair the screen simply refuses (`screenfold.py gate`), at `m = 32768` exactly:
+
+```
+16384 markers @ MAF 0.20 cloned + 16384 @ MAF 0.45 untouched   kinship 0.20006   refused
+16384 @ MAF 0.10 cloned          + 16384 @ MAF 0.45 untouched   kinship 0.13890   refused
+16384 @ MAF 0.25 cloned          + 16384 @ MAF 0.45 untouched   kinship 0.21731   refused
+24576 @ MAF 0.15 cloned          +  8192 @ MAF 0.45 untouched   kinship 0.30669   refused
+```
+
+"Refused" is `No close relatives are inferred.` — not a low count, no `Stages 1&2` line at
+all. KING's own `--kinship` on the very same fileset prints the same kinship to four places
+(`0.1519`, `0.1530` on the three-stratum variants), so the reference agrees the pairs are
+relatives and its screen throws them away regardless.
+
+The whole accept region in the `(fA, fB)` plane — clone fraction inside the MAF-0.20
+stratum against the MAF-0.45 one (`screenfold.py region`) — shows the shape:
+
+```
+fA\fB  0.00  0.10  0.20  0.30 ... 1.00        whole-map kinship along the fB=0 column
+ 0.00   .     .     Y     Y        Y                     0.001
+ 0.20   .     Y     Y     Y        Y                     0.042
+ 0.50   .     Y     Y     Y        Y                     0.101
+ 1.00   .     Y     Y     Y        Y                     0.200
+```
+
+The boundary is **flat in `fA`** at `fB ≈ 0.045`: past the cutoff, extra sharing among the
+MAF-0.20 markers buys exactly nothing, and a pair at kinship 0.20 is refused for want of
+~700 shared markers among the informative ones.
+
+What it is not:
+
+* a kinship threshold on a top-K subset — the required `k_T` at the boundary runs from
+  0.006 to 0.026 across designs, and no `K` from 512 to 32 768 makes it constant;
+* an IBS0 threshold, in any normalisation — the refused pair above carries IBS0 at 0.0602
+  per marker (0.1463 per het), while on a homogeneous MAF-0.45 map of the same size a pair
+  at 0.1047 per marker (0.2112 per het) and a third of the kinship, 0.06554, is **accepted**;
+* a HetHet threshold, or any monotone function of the whole-map kinship — the refused pairs
+  score higher than accepted ones on every one of them;
+* contiguity or segments — §5's block test already shows a scattered clone set and a
+  contiguous one hit the boundary at the same kinship;
+* a duplicate/MZ path — the refused pair's genotype concordance is 0.6872, and a real
+  duplicate on the very same map is detected (and reported as MZ).
+
+It does not bind for uniformly-related pairs, which is why `bigish` never shows it and why
+Round 1's instrument, which only ever diluted uniformly, could not see it. On `bigish` it
+is invisible directly: diluting a real pair over the top three quarters by MAF still brackets
+at 0.06250 exactly (`screenfold.py strata`).
+
+## 10. Above the budget, the screen reads markers it did not keep
+
+Take `m = 50000` as 32768 markers at MAF 0.45 plus 17232 at MAF `x`, and walk `x`
+(`screenfold.py separation`). Through `x = 0.30` this holds the kept set *fixed in every
+sense*: the top-32768 by allele count is exactly the MAF-0.45 group with **zero** markers
+swapped in, it is the same index set at every `x`, those markers' genotypes are
+**bit-identical** across the scan, and therefore every ladder pair's kinship over them is
+identical to the last bit. Only the discarded 17232 markers change.
+
+```
+   x   printed  true      R   swaps  kept bits identical
+0.05      46      46  1.0007      0        -
+0.10      46      46  1.0053      0      True
+0.15      45      46  1.0074      0      True
+0.20      43      46  1.0153      0      True
+0.25      39      46  1.0371      0      True
+0.30      37      46  1.0535     33      True
+0.41      35      46  1.0643   5145      True
+0.45      35      46  1.0654      -      True (one tied group)
+```
+
+The printed count falls from 46 to 37 with the kept data held bit-identical. **The screen's
+statistic is not a function of the markers it keeps.** That is a stronger statement than
+§3.1's: not only is it not the kinship over a subset, it is not *any* function of any fixed
+subset, because the deflation grows while the candidate subset's bits do not move.
+
+And the loss is **deterministic, not the intersection of two noisy tests**. Labelling all
+48 ladder pairs one at a time on the `x = 0.25` map (`screenfold.py sharp`) gives a perfectly
+sharp threshold:
+
+```
+Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y . . . . . . . . . . .
+lowest accepted  kinship 0.08319 (over the kept 32768: 0.08791)
+highest rejected kinship 0.07848 (over the kept 32768: 0.07902)
+inversions: 0 in the whole-map kinship, 0 in the kept-subset kinship
+```
+
+Zero inversions over 48 pairs, in a design where a fixed-subset estimate deviates from the
+whole map by sd 0.0015 and the observed displacement is 0.018 — twelve times that. §5's
+second survivor, "two stages intersected", is closed with it: an intersection of noisy
+estimates buys a bias of the order of its own scatter, and here the scatter is zero.
+
+## 11. In-sample ascertainment: real, right sign, and not enough
+
+§3.1's proof has exactly one loophole, and §3.4 probed it with two keys and moved on. It is
+worth reopening, because on a **flat-MAF map every marker is exchangeable**, so a subset can
+differ from the whole map *only* through a selection that leans on the pair's own genotypes
+— and flat maps deflate hardest of all (`R` = 1.08).
+
+Which key matters, and only keys that lean *against* the pair's heterozygosity deflate at
+all. Predicted counts on `bigish` for `kinship over top-32768 by <key>`
+(`screenfold.py keys`; the reference prints 36 / 18):
+
+```
+whole map          47 / 21        hom-minor count    41 / 18
+allele count       45 / 23        carriers           47 / 23
+het count          53 / 23
+```
+
+Ranking by the count of minor homozygotes — which at a fixed allele count is a ranking
+*against* heterozygosity — is the only candidate that moves in the right direction, and
+offline it reproduces the flat-MAF numbers well (model 1.0615 against a measured 1.0654 at
+MAF 0.45, m = 50000; 1.0852 against 1.0798 at MAF 0.25). It also explains §4.2's tie-group
+result exactly: `R` is at its minimum where the budget need not choose among equals, and
+climbs once it must.
+
+Two measurements stop it being the answer:
+
+* **It is 4× short in the middle of §10's scan.** At `x = 0.25` the ranking resolves with
+  zero swaps, so no ascertainment of any kind is available, and the model gives 46 against
+  the reference's 39.
+* **The `n` scaling is wrong.** A 2-in-`n` ascertainment must fall as `1/n`. On flat MAF
+  0.25 at m = 50000, `R - 1` = 0.085, 0.064, 0.051, 0.040 at n = 110, 200, 400, 700 — a
+  fall of 2.1× where `1/n` demands 6.4×.
+
+So ascertainment is a real component of the effect and cannot be the whole of it.
+
+## 12. Where round 2 leaves the mechanism
+
+Everything measured is consistent with one shape, and it is not a shape any of the
+mechanisms proposed so far can take. The screen's statistic is a **deterministic** function
+of the pair which
+
+1. equals the whole-map robust kinship exactly when `m <= 32768` (§1, and the ladder on four
+   spectra),
+2. equals it still when the overflow is junk (§4.1; §10 at `x = 0.05`, printed = true = 46),
+3. is deflated smoothly as the discarded markers approach the kept ones in informativeness,
+   with the kept markers' bits held fixed (§10) — so it is computed from more than 32768
+   markers, or from something other than genotypes at 32768 markers,
+4. is deflated further when the ranking at rank 32768 is unresolvable, in the manner and
+   very nearly the size of an in-sample ascertainment (§11, §4.2), and
+5. carries a second necessary condition, active at every `m`, that asks where in the MAF
+   spectrum the pair's sharing sits (§9).
+
+Closed this round, on top of §5's list:
+
+* **merging or compressing markers into 32768 slots**, under any idempotent operation with
+  an index-, rank-block- or rank-stride grouping, and under `or`/`and`/`xor`/saturating-sum
+  with either grouping — §8.1, §8.2, §8.3;
+* **any function of any fixed marker subset**, ascertained or not — §10 holds the candidate
+  subset bit-identical and still moves the count;
+* **two stages intersected**, in the noisy-estimates form — §10's labels have zero
+  inversions where the model needs scatter twelve times the observed displacement;
+* **"the screen is a threshold on the whole-map kinship"** as a complete description — §9.
+
+Worth the next round's time, in order:
+
+1. **Chase §9's second condition to a rule.** It is the only phenomenon here that is
+   binary, enormous (a factor of three in kinship) and reproducible in one run, which makes
+   it far cheaper to pin than the 2 % deflation — and it is plausibly the same machinery.
+   The `(fA, fB)` region is the right canvas; vary the informative stratum's size and MAF
+   and find what is conserved along the boundary. Beware two false leads already burned:
+   `N = 8*IBS0` and `φ + 2*IBS0/min_het = 0.5` are *identities* for clone-block pairs whose
+   untouched markers sit at MAF 0.45, not rules.
+2. **Ask what statistic can degrade with the discarded markers' informativeness while the
+   kept bits are fixed.** A running estimate over the sorted map with an early exit has that
+   shape — the exit test sees partial sums whose *bound* depends on what remains — and it
+   would also give §9 for free, since a pair sharing only at the bottom of the ranking looks
+   unrelated in every prefix. Round 1's §5.2 dismissed staging on noise grounds; §10's
+   sharpness says the staging must be *deterministic*, which a bound-based early exit is.
+3. **Do not fit `R`.** §11 shows how easy it is to reproduce a spectrum or two with a key
+   chosen after the fact, and §10 shows any such fit is wrong by 4× one column over.
+
+## 13. Consequence for the implementation, unchanged
+
+`related.rs` still estimates on the map's first `min(m, 32768)` markers. That remains right
+whenever `m <= 32768` and right at degree 1 on `bigish` (18), and wrong at degree 2 (50
+against 36). Nothing about that changed this round, and nothing should until a rule survives
+§10. The blast radius is still one stdout line: `.kin0`'s rows come from the exhaustive
+re-estimate that follows the screen and are byte-correct at every degree, and the 14 pairs
+the reference's screen drops all sit below the 0.08839 reporting threshold.
+
+Harness: **477 / 480 byte-identical, self-check 480 / 480** — unchanged.

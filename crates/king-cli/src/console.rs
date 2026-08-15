@@ -863,6 +863,23 @@ pub fn build_rule_fs1(key: &str, joiner: &str, members: &[&str]) -> String {
     )
 }
 
+/// `  Duplicate QBC_D (of QBB_C1) is removed.`
+///
+/// Raised when a cluster holds an inferred `Dup/MZ` pair. One copy is dropped from the
+/// reconstruction and the other named as the one that stays —
+/// `analysis::build::duplicate_verdict` decides which, and it is *not* simply the later
+/// id. The dropped copy keeps its `.fam` parents in `<prefix>updateparents.txt` and takes
+/// no part in any sibship, which is why a cluster whose *only* join is a duplicate raises
+/// no line at all: the removal leaves nothing behind to reconstruct, and this line goes
+/// with it.
+///
+/// Rule half, unlike the parent-offspring narration it sits next to: 23 of 27 runs over
+/// `docs/research/fixtures/dupkeep.py`'s ten shapes print it in a log with no `INFERENCE`
+/// line anywhere.
+pub fn build_duplicate_removed(removed: &str, kept: &str) -> String {
+    format!("  Duplicate {removed} (of {kept}) is removed.\n")
+}
+
 // ---------------------------------------------------------------------------
 // Time
 // ---------------------------------------------------------------------------

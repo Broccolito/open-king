@@ -99,10 +99,6 @@ const CLUSTERING_MIN_SAMPLES: usize = 100;
 /// Kinship above which a pair is an edge: the 4th-degree band edge, `2^-5.5`.
 const EDGE: f64 = band::FOURTH;
 
-/// Kinship above which two families are merged into one cluster: the 1st-degree band
-/// edge, `2^-2.5`, matching the console's `Clustering up to 1st-degree relatives`.
-const CLUSTER_EDGE: f64 = band::FIRST;
-
 // ---------------------------------------------------------------------------
 // The visit order
 // ---------------------------------------------------------------------------
@@ -377,11 +373,139 @@ struct Cluster {
     members: Vec<usize>,
 }
 
+/// Which cross-family pairs join two families, and what the reference calls each of them.
+///
+/// One object answers both halves of the merge question, so the queue that numbers the
+/// clusters, the screening summary and pedigree reconstruction cannot disagree about what
+/// joined a cluster. Within-family pairs are `None`: their relationship is declared, not
+/// inferred.
+///
+/// # The gate is `.kin0`'s own row test, not a kinship cut
+///
+/// This used to be `kinship > 2^-2.5`, which is right on every corpus fileset and wrong in
+/// general. The reference admits a pair on the **disjunction** `--related` uses to decide
+/// whether to print a `.kin0` row at `--degree d` —
+///
+/// ```text
+/// kinship >= 2^-(d+1.5)   ||   PropIBD > 2^-(d+0.5)
+/// ```
+///
+/// — and both halves matter. A 3/4-sib pair at `kinship 0.1749`, just *under* `2^-2.5`,
+/// merges its two families on `PropIBD 0.3646` alone (`clusternum.py gate`, where the
+/// kinship-only rule is 18 of 19 held-out shapes and this one is 19 of 19). And the cut
+/// follows `--degree`: a fileset whose only cross-family link is a half-sib pair reports
+/// `No families were found to be connected.` at `--degree 1` and merges the two families
+/// at `--degree 2`, which the corpus cannot show because no capture has a cross-family
+/// 2nd-degree pair outside a cluster that is merged anyway.
+pub struct InfTypes {
+    engine: super::related::Engine,
+    kin_cut: f64,
+    prop_cut: f64,
+}
+
+impl InfTypes {
+    pub fn new(opts: &Options, loaded: &Loaded) -> Self {
+        // `--degree 0`, a negative degree and an absent one all cluster at 1st degree,
+        // exactly as the console line's `degree_label` renders them.
+        let degree = f64::from(opts.int(Opt::Degree).max(1));
+        InfTypes {
+            engine: super::related::Engine::autosomes(
+                &loaded.fileset.variants,
+                &loaded.fileset.kept,
+                i64::from(opts.int(Opt::Sexchr)),
+                super::ibdseg::seglength_bp(opts),
+            ),
+            kin_cut: 2f64.powf(-(degree + 1.5)),
+            prop_cut: 2f64.powf(-(degree + 0.5)),
+        }
+    }
+
+    /// `Some(InfType)` when this pair joins its two families, `None` when it does not.
+    pub fn merging(&self, loaded: &Loaded, i: usize, j: usize) -> Option<&'static str> {
+        self.labelled(loaded, i, j, |kin, prop| {
+            kin >= self.kin_cut || prop > self.prop_cut
+        })
+    }
+
+    /// `Some(InfType)` when **reconstruction** will treat this pair as 1st-degree.
+    ///
+    /// Deliberately *not* [`InfTypes::merging`]: the two gates come apart, and the shape
+    /// that separates them is a 3/4-sib pair at `kinship 0.1749` / `PropIBD 0.3646`. The
+    /// reference merges its two families — `PropIBD` carries it — and then reconstructs
+    /// **nothing** inside the cluster, raising no header and no `RULE FS0`. So the sibship
+    /// builder keeps the plain 1st-degree band edge it was pinned on
+    /// (`docs/research/fixtures/clusternum.py dump threequarter`).
+    pub fn first_degree(&self, loaded: &Loaded, i: usize, j: usize) -> Option<&'static str> {
+        self.labelled(loaded, i, j, |kin, _| kin > band::FIRST)
+    }
+
+    fn labelled(
+        &self,
+        loaded: &Loaded,
+        i: usize,
+        j: usize,
+        keep: impl Fn(f64, f64) -> bool,
+    ) -> Option<&'static str> {
+        let samples = &loaded.fileset.samples;
+        if samples[i].fid == samples[j].fid {
+            return None;
+        }
+        let genotypes = &loaded.fileset.genotypes;
+        let counts = counts::pair_counts(genotypes, i, j);
+        if counts.n_snp == 0 {
+            return None;
+        }
+        let kin = kinship::kinship(&counts, Scope::BetweenFamily);
+        let ibd = self.engine.pair(genotypes, i, j);
+        if !keep(kin, ibd.prop_ibd) {
+            return None;
+        }
+        Some(ibd.inf_type(kinship::het_concordance(&counts)))
+    }
+}
+
+/// Where a joining pair's `InfType` puts its cluster in the merge queue.
+///
+/// The reference does not merge families in one pass: it works through the 1st-degree
+/// pairs **by relationship type**, duplicates first, then parent–offspring, then full
+/// sibs, and a cluster is numbered when that queue first creates it. Anything weaker that
+/// still clears [`CLUSTER_EDGE`] follows in `.kin0`'s own `InfType` order.
+///
+/// Evidence: `docs/research/fixtures/clusternum.py`, 19 held-out shapes.
+fn merge_rank(inf_type: &str) -> u8 {
+    match inf_type {
+        "Dup/MZ" => 0,
+        "PO" => 1,
+        "FS" => 2,
+        "2nd" => 3,
+        "3rd" => 4,
+        "4th" => 5,
+        _ => 6,
+    }
+}
+
 /// Group samples into clusters, merging families joined by an inferred 1st-degree pair.
 ///
 /// Merging is gated on the sample count; below [`CLUSTERING_MIN_SAMPLES`] the reference
 /// never looks at a cross-family pair, so every family stands alone.
-fn clusters(loaded: &Loaded) -> Vec<Cluster> {
+///
+/// # The merge queue, and what it decides
+///
+/// The pairs are worked through in [`merge_rank`] order — a **stable** re-ordering of the
+/// `i < j` scan, so inside one relationship type the scan order survives — and a merged
+/// cluster is created the first time the queue joins two families that are not already
+/// together. Three things follow from that and from nothing else, all of them measured on
+/// held-out shapes (`docs/research/fixtures/clusternum.py`):
+///
+/// * `KING<k>` numbers clusters in **creation** order, so a `Dup/MZ`-joined cluster
+///   outranks a `PO`-joined one and both outrank an `FS`-joined one however late they
+///   appear in the `.fam`;
+/// * a cluster's `OriginalFamID` list is in **absorption** order, which is why a cluster
+///   whose `Dup/MZ` edge is `QBB–QBC` and whose `FS` edge is `QBA–QBB` prints
+///   `QBB,QBC,QBA` and not the file order `QBA,QBB,QBC`;
+/// * when the queue joins two clusters that already exist, the earlier-created one
+///   absorbs the later, taking its families onto the end of its list.
+fn clusters(opts: &Options, loaded: &Loaded) -> Vec<Cluster> {
     let samples = &loaded.fileset.samples;
     let n = samples.len();
     let mut fids: Vec<String> = Vec::new();
@@ -390,54 +514,81 @@ fn clusters(loaded: &Loaded) -> Vec<Cluster> {
             fids.push(s.fid.clone());
         }
     }
-    let mut parent: Vec<usize> = (0..fids.len()).collect();
-    fn find(parent: &mut [usize], mut x: usize) -> usize {
-        while parent[x] != x {
-            parent[x] = parent[parent[x]];
-            x = parent[x];
-        }
-        x
-    }
+
+    // The joining pairs, in scan order, each tagged with the type that queues it.
+    let mut queue: Vec<(u8, usize, usize)> = Vec::new();
     if n >= CLUSTERING_MIN_SAMPLES {
         let of = |fid: &str| fids.iter().position(|f| f == fid).unwrap_or(0);
+        let types = InfTypes::new(opts, loaded);
         for i in 0..n {
             for j in i + 1..n {
-                if samples[i].fid == samples[j].fid {
-                    continue;
-                }
-                if Graph::estimate(loaded, i, j) > CLUSTER_EDGE {
-                    let (a, b) = (
-                        find(&mut parent, of(&samples[i].fid)),
-                        find(&mut parent, of(&samples[j].fid)),
-                    );
-                    if a != b {
-                        parent[a] = b;
-                    }
+                if let Some(t) = types.merging(loaded, i, j) {
+                    queue.push((merge_rank(t), of(&samples[i].fid), of(&samples[j].fid)));
                 }
             }
         }
+        // Stable, so the `i < j` scan order survives inside one relationship type.
+        queue.sort_by_key(|&(rank, _, _)| rank);
     }
 
-    // Group in first-appearance order, so a merged cluster is numbered by the position of
-    // its earliest family — `bigish` names BF01+BF02 `KING1` and BF25+BF26 `KING3`.
-    let mut groups: Vec<(usize, Vec<String>)> = Vec::new();
-    for (k, fid) in fids.iter().enumerate() {
-        let root = find(&mut parent, k);
-        match groups.iter_mut().find(|(r, _)| *r == root) {
-            Some((_, list)) => list.push(fid.clone()),
-            None => groups.push((root, vec![fid.clone()])),
+    // Staged union-find over family indices: `owner[f]` is the cluster holding family `f`,
+    // and `built` keeps the clusters in creation order with their families in absorption
+    // order.
+    let mut owner: Vec<Option<usize>> = vec![None; fids.len()];
+    let mut built: Vec<Option<Vec<usize>>> = Vec::new();
+    for (_, a, b) in queue {
+        match (owner[a], owner[b]) {
+            (None, None) => {
+                owner[a] = Some(built.len());
+                owner[b] = Some(built.len());
+                built.push(Some(vec![a, b]));
+            }
+            (Some(c), None) => {
+                owner[b] = Some(c);
+                built[c].as_mut().expect("live cluster").push(b);
+            }
+            (None, Some(c)) => {
+                owner[a] = Some(c);
+                built[c].as_mut().expect("live cluster").push(a);
+            }
+            (Some(c1), Some(c2)) if c1 != c2 => {
+                let (keep, drop) = (c1.min(c2), c1.max(c2));
+                let moved = built[drop].take().expect("live cluster");
+                for &f in &moved {
+                    owner[f] = Some(keep);
+                }
+                built[keep].as_mut().expect("live cluster").extend(moved);
+            }
+            _ => {}
         }
     }
+
+    // The merged clusters in creation order, then every family the queue never touched,
+    // in file order.
+    let mut groups: Vec<Vec<String>> = built
+        .into_iter()
+        .flatten()
+        .map(|g| g.into_iter().map(|f| fids[f].clone()).collect())
+        .collect();
     let mut merged = 0usize;
+    let mut keys: Vec<String> = groups
+        .iter()
+        .map(|_| {
+            merged += 1;
+            format!("KING{merged}")
+        })
+        .collect();
+    for (k, fid) in fids.iter().enumerate() {
+        if owner[k].is_none() {
+            groups.push(vec![fid.clone()]);
+            keys.push(fid.clone());
+        }
+    }
+
     let mut out: Vec<Cluster> = groups
         .into_iter()
-        .map(|(_, original)| {
-            let key = if original.len() > 1 {
-                merged += 1;
-                format!("KING{merged}")
-            } else {
-                original[0].clone()
-            };
+        .zip(keys)
+        .map(|(original, key)| {
             let mut members: Vec<usize> = (0..n)
                 .filter(|&i| original.iter().any(|f| *f == samples[i].fid))
                 .collect();
@@ -525,7 +676,7 @@ pub fn clustering_prologue(opts: &Options, loaded: &Loaded, out: &mut dyn Write)
     }
 
     let graph = Graph::build(loaded, !tiny);
-    let groups = clusters(loaded);
+    let groups = clusters(opts, loaded);
     let mut any_merged = false;
 
     if !tiny {
@@ -573,16 +724,29 @@ impl Clustering {
     /// `<prefix>updateids.txt` — `OLDFID OLDIID NEWFID NEWIID`, tab separated, no header.
     ///
     /// Only the merged clusters get a row; the IID never changes, so the fourth column
-    /// repeats the second and the file is really the FID rename map. Rows follow the
-    /// cluster order and, inside a cluster, the ID comparator — which for `bigish` is
-    /// also original-family order, the two being indistinguishable there.
+    /// repeats the second and the file is really the FID rename map.
+    ///
+    /// Rows are ordered by the **original** `(FID, IID)` under the ID comparator, not by
+    /// the cluster they land in: a fileset whose merged clusters are `KING1 = Z1+Z2`,
+    /// `KING2 = M1+M2`, `KING3 = A1+A2` writes the `A` rows first. On `bigish` — and on
+    /// every shape whose FIDs happen to sort in file order and whose clusters happen to be
+    /// numbered in it — the two orders are indistinguishable, which is why this file
+    /// looked right while `<prefix>updateparents.txt`, which really is in cluster order,
+    /// also did.
     pub fn updateids_text(&self, samples: &[Sample]) -> String {
-        let mut s = String::new();
+        let mut rows: Vec<(&str, &str, &str)> = Vec::new();
         for (key, members) in self.merged() {
             for &i in members {
-                let (fid, iid) = (&samples[i].fid, &samples[i].iid);
-                s.push_str(&format!("{fid}\t{iid}\t{key}\t{iid}\n"));
+                rows.push((&samples[i].fid, &samples[i].iid, key));
             }
+        }
+        rows.sort_by(|a, b| {
+            king_id_cmp(a.0.as_bytes(), b.0.as_bytes())
+                .then_with(|| king_id_cmp(a.1.as_bytes(), b.1.as_bytes()))
+        });
+        let mut s = String::new();
+        for (fid, iid, key) in rows {
+            s.push_str(&format!("{fid}\t{iid}\t{key}\t{iid}\n"));
         }
         s
     }
@@ -922,6 +1086,16 @@ mod tests {
         assert_eq!(phi[0][2], 0.0);
     }
 
+    /// The merge queue orders clusters by relationship type, not by family order: a
+    /// `Dup/MZ` join outranks a `PO` join and both outrank an `FS` join.
+    #[test]
+    fn the_merge_queue_ranks_duplicates_before_po_before_fs() {
+        assert!(merge_rank("Dup/MZ") < merge_rank("PO"));
+        assert!(merge_rank("PO") < merge_rank("FS"));
+        assert!(merge_rank("FS") < merge_rank("2nd"));
+        assert!(merge_rank("2nd") < merge_rank("UN"));
+    }
+
     /// `bigish`'s `KING1`: two families renamed, the IID carried through unchanged.
     #[test]
     fn updateids_names_only_the_merged_clusters() {
@@ -955,6 +1129,38 @@ mod tests {
             "BF01\tB01_F\tKING1\tB01_F\nBF02\tB02_F\tKING1\tB02_F\n"
         );
         assert_eq!(clustering.merged().count(), 1);
+    }
+
+    /// `<prefix>updateids.txt` is in original-`(FID, IID)` order even when the cluster
+    /// numbering is not. A fileset whose clusters are `KING1 = Z1`, `KING2 = M1`,
+    /// `KING3 = A1` writes the `A` rows first — measured on `clusternum.py`'s
+    /// `sorted_fids`, where the reference's own file starts `A1 … KING3`.
+    #[test]
+    fn updateids_rows_follow_the_original_ids_not_the_cluster_number() {
+        let samples = [
+            sample("Z1", "Z1_F", "0", "0"),
+            sample("M1", "M1_F", "0", "0"),
+            sample("A1", "A1_F", "0", "0"),
+        ];
+        let clustering = Clustering {
+            tiny: false,
+            any_merged: true,
+            graph: Graph {
+                n: 3,
+                edge: vec![false; 9],
+            },
+            groups: (0..3)
+                .map(|k| Cluster {
+                    key: format!("KING{}", k + 1),
+                    original: vec![samples[k].fid.clone(), "X".to_string()],
+                    members: vec![k],
+                })
+                .collect(),
+        };
+        assert_eq!(
+            clustering.updateids_text(&samples),
+            "A1\tA1_F\tKING3\tA1_F\nM1\tM1_F\tKING2\tM1_F\nZ1\tZ1_F\tKING1\tZ1_F\n"
+        );
     }
 
     #[test]

@@ -46,54 +46,104 @@
 //! `Details of pedigree reconstruction …` is the file's contents verbatim, plus one blank
 //! line after it that the file does not carry (`bigish`'s capture ends `0.803\n`, 806
 //! bytes, and its stdout repeats those 18 lines exactly). A cluster contributes nothing at
-//! all unless it raises a line — a duplicate-joined or `PO`-joined merge leaves a
-//! zero-byte log — and when it does, its first line is the header `Family KING<k>:`.
+//! all unless it raises a line, and when it does, its first line is the header
+//! `Family KING<k>:`.
 //!
 //! Inside a cluster the order is fixed: the `RULE` lines that build sibships, then one or
-//! more blank lines, then the `INFERENCE` lines, grouped by the sibship they are about.
-//! The templates, all of them mined from the reference binary's `__cstring` section and
-//! then confirmed against runs, are
+//! more blank lines, then the `INFERENCE` block. The templates, all of them mined from the
+//! reference binary's `__cstring` section and then confirmed against runs, are
 //!
 //! ```text
 //! Family KING1:
+//!   Duplicate QBC_D (of QBB_C1) is removed.
 //!   Family KING1 RULE FS0: Sibship (B01_F B02_F)'s parents are (1 2)
 //!   Family KING1 RULE FS1: C_F joins in sibship (A_F B_F)
 //!   Family KING1 RULE FS2: Sibship (…) and sibship (…) are combined
 //!   Reconstruct parent-offspring pair (C_F, D_F)...
+//!   RBA_F's sibship is used to determine the parent/offspring
+//!   Family KING1 RULE PO.S: RBA_F is now father of RBC_F
+//!     3 is created as RBC_F's mother.
 //!
 //!   Family KING1 INFERENCE AV.FS: B02_F is uncle of B01_C2 and B01_C3, Join3/Join2=0.778
 //!   Family KING1 INFERENCE AV.FS: A_F is grandfather, HS, or nephew of B_C2 and B_C3, …
+//!   Family KING1 INFERENCE AV.HS: A_F is uncle of (B_C1 D_C3), Join3/Join2=0.699
 //!     HS B02_C4 unrelated to B01_M
 //!   Family KING1 INFERENCE HS.UN2: B01_C3 and B02_C4 are HS
 //! ```
 //!
-//! `FS0` **creates** a sibship out of a full-sib pair and names the parents it takes;
-//! `FS1` adds one more member to a sibship that already exists; `FS2` merges two declared
-//! sibships and has never been observed to fire. [`sibship_parents`] documents which of
-//! the three a component raises and why. All three word pairs in the `INFERENCE` lines —
-//! `uncle`/`aunt`, `grandfather`/`grandmother`, `nephew`/`niece` — follow `R`'s `.fam` sex
-//! code, and the choice between the two templates is a cut on the ratio: over 53 measured
-//! values the largest `uncle` is 0.846 and the smallest ambiguous one 0.902, which still
-//! does not separate 0.85, 0.875 and 0.9.
+//! ## Which template is in which half, and what triggers it
 //!
-//! **This module writes the header and the `RULE FS0`/`FS1` lines and stops there.**
-//! Scored against the reference on the 30 held-out shapes of
-//! `docs/research/fixtures/buildlog.py` (`rules`, over `build_shapes.py`'s twenty merge
-//! shapes and ten `avfs.py` ones), the rule lines are
-//! byte-identical on **23**; of the other seven, three differ only in which cluster is
-//! called `KING1` (the numbering bug at the bottom of this doc), two are the `<FID>-><IID>`
-//! renaming shapes that are out of scope for this binary, and two differ only in the
-//! *order* the `FS1` line lists an existing sibship's members — the same unidentified
-//! ordering that picks the `AV.FS` pair, below. On `bigish` all six lines this module
-//! writes are byte-identical to the capture, 243 of its 806 bytes, and every byte written
-//! is a byte the reference wrote.
+//! The split matters, because this module writes the **rule** half only. It is not the
+//! split the indentation suggests, and two of the lines are on the other side from where
+//! an earlier revision of this doc put them.
 //!
-//! The blank lines are **not** written, because their count is a function of the
-//! `INFERENCE` half: one is printed before each sibship's block *until the family prints
-//! its first inference*, and if it never prints one, every block still prints its blank.
-//! That reproduces 1, 1, 2 for `bigish`'s three clusters and 3, 2, 1 for `three_clusters`'s
-//! (whose first cluster infers nothing at all), and 12 of the 13 other measured clusters;
-//! the one it misses is `three_fs`, which prints three where the rule says two.
+//! | template | half | trigger |
+//! |---|---|---|
+//! | `Family KING<k>:` | — | printed once, before the cluster's first line, whatever raises it |
+//! | `Duplicate <a> (of <b>) is removed.` | **rule** | an inferred `Dup/MZ` pair inside the cluster, *provided the cluster raises something else* |
+//! | `RULE FS0` | **rule** | a component of *inferred FS* ∪ *declares the same couple* that the inference **created** |
+//! | `RULE FS1` | **rule** | one more member joining a component that already contained a declared sibship, or one `FS0` just made |
+//! | `RULE FS2` | rule | two declared sibships in one component — never observed to fire |
+//! | `Reconstruct parent-offspring pair (X, Y)...` | **inference** | an inferred `PO` pair, but only inside a cluster whose inference block also speaks |
+//! | `<X>'s sibship is used to determine the parent/offspring`, `RULE PO.S`, `<n> is created as <Y>'s mother.` | inference | the `PO` pair above, when one member's sibship orients it |
+//! | `INFERENCE AV.FS` | inference | an `R` inferred 2nd-degree to **both** named members of a sibship |
+//! | `INFERENCE AV.HS`, `HS <a> unrelated to <b>`, `INFERENCE HS.UN2` | inference | a half-sib pair the avuncular pass turned up |
+//!
+//! **`Reconstruct parent-offspring pair` is not a rule line**, which is the correction
+//! that matters most here. It looks like one — no `Family KING<k>` prefix, sitting above
+//! the blank lines, raised by a `PO` merge — and this module briefly wrote it on that
+//! reading. Two measurements say otherwise: across every reference log these rigs have
+//! produced, **42 of 42** clusters that print it also print an `INFERENCE` line; and a `PO`
+//! merge between two families with **no sibship anywhere** — two one-person families, and
+//! two childless couples, three seeds each — prints nothing at all, not even a header
+//! (`work/poprobe`). A `PO`-joined cluster still contributes its identity rows to
+//! `<p>updateparents.txt`; it just does not narrate them here.
+//!
+//! `Duplicate … is removed.` is the opposite case and **is** written. `dupkeep.py` scores
+//! it over ten shapes × three seeds: **23 of 27** runs print it in a file with no
+//! `INFERENCE` line anywhere, so it is rule-half beyond doubt. See [`duplicate_verdict`]
+//! for which of the two copies goes.
+//!
+//! ## What this module writes, and how it scores
+//!
+//! **The header, `Duplicate … is removed.`, `RULE FS0` and `RULE FS1`.** Scored against
+//! the reference on **59 held-out shapes** (`docs/research/fixtures/buildlog.py rules`,
+//! over `build_shapes.py`'s twenty merge shapes, `avfs.py`'s ten, `clusternum.py`'s
+//! nineteen and `dupkeep.py`'s ten), the rule half is byte-identical on **53**. The six
+//! that differ are:
+//!
+//! * **two** that are out of scope — when a `.fam` names a parent living in another family
+//!   the reference renames every individual to `<FID>-><IID>`, which this binary does not
+//!   implement at all;
+//! * **three** that differ only in the *order* a sibship's members are listed, the open
+//!   question below;
+//! * **one**, `mixed_po_fs`, where the unimplemented `PO.S` branch consumes a synthetic id
+//!   for a created mother, so the next sibship takes `(4 5)` where we write `(3 4)`.
+//!
+//! On `bigish` all six lines this module writes are byte-identical to the capture, 243 of
+//! its 806 bytes, and every byte written is a byte the reference wrote.
+//!
+//! ## The blank lines, and why they are still not written
+//!
+//! Their count is a function of the inference half, so a binary that writes no inference
+//! cannot write them. Two rules fit the measurements, and the difference between them is
+//! worth recording because the one this doc used to carry is the weaker:
+//!
+//! * **block** — one blank before each sibship's block until the family prints its first
+//!   inference; if it never prints one, every block still prints its blank;
+//! * **reject** — one blank opens the section, and one more for every candidate `R` that
+//!   is *examined and turned down* before the first line prints.
+//!
+//! `buildlog.py blanks` scores both over every cluster whose sibships are all pairs (so
+//! the named pair is forced and the candidate set is readable off `.kin0`): **107 of 113**
+//! each, on different failure sets, and the scorer has to guess the block order and the
+//! candidate order, neither of which is established. What separates them by hand is the
+//! two clusters `block` provably misses: `three_fs`, whose first sibship faces **two**
+//! candidate uncles and prints **three** blanks where `block` says two, and `ord3`, whose
+//! two sibships face **no** candidate at all and prints **one** where `block` says two.
+//! `reject` gets both, and reproduces 1, 1, 2 for `bigish`'s three clusters, 3, 2, 1 for
+//! `three_clusters`'s and 1, 2 for `mixed_po_fs`'s. It is the better rule; it is not a
+//! settled one.
 //!
 //! # `INFERENCE AV.FS` and its `Join3/Join2` — measured, not implemented
 //!
@@ -224,9 +274,13 @@
 //!   fixture refutes it directly.
 //! * **The verdict is a cut on the ratio.** Below it the line reads `<R> is uncle|aunt of
 //!   N1 and N2`; above it, `<R> is grandfather|grandmother, HS, or nephew|niece of N1 and
-//!   N2`, the word pairs following `R`'s sex. Over 53 values the cut is bracketed to
-//!   **(0.846, 0.902)** — largest `uncle` 0.846, smallest ambiguous 0.902 — which still
-//!   does not separate 0.85, 0.875 and 0.9.
+//!   N2`, the word pairs following `R`'s sex. Over **259** values now — every `AV.FS` and
+//!   `AV.HS` line any of these rigs has produced, 133 `uncle|aunt` against 126 ambiguous,
+//!   `buildlog.py cut` — the largest `uncle` prints `0.850` and the smallest ambiguous
+//!   `0.900`. The log prints `%.3lf`, so those stand for true values in
+//!   `[0.8495, 0.8505)` and `[0.8995, 0.9005)`, and the cut lies in
+//!   **(0.8495, 0.9005)**: narrower than the (0.846, 0.902) of 53 values, and still not
+//!   narrow enough to separate 0.85, 0.875 and 0.9, all three of which survive.
 //!
 //! # `<p>updateparents.txt` — implemented, and what pinned each clause
 //!
@@ -236,9 +290,9 @@
 //! Every clause below was measured against the reference on **twenty held-out merge
 //! shapes** built for it, not on `bigish`; the rig is
 //! `docs/research/fixtures/build_shapes.py`, which re-runs the scorecard end to end.
-//! Eighteen of the twenty are in scope, **fifteen of them byte-identical on the file and
-//! on the console tail**, and the other three differ only in which cluster is called
-//! `KING1` — the separate numbering bug at the bottom of this doc.
+//! Eighteen of the twenty are in scope and **all eighteen are byte-identical on the file
+//! and on the console tail** — the three that used to differ were the cluster-numbering
+//! shapes, and that bug is fixed in [`unrelated::clusters`].
 //!
 //! * **Rows.** Every member of every merged cluster, `FID IID FATHER MOTHER`, tab
 //!   separated, in `updateids.txt` order (cluster, then the ID comparator).
@@ -254,9 +308,17 @@
 //!     first member under the ID comparator and **not** by `.fam` row order (the shape
 //!     that separates the two writes each family's mother first and names her so she
 //!     sorts last; the fathers still take `1 2`).
-//! * **A cluster holding an inferred duplicate contributes no rows at all** — not even
-//!   identity ones. A cluster merged by `PO` alone does contribute them, with nobody's
-//!   parents changed, because without ages the reference will not orient the pair.
+//! * **A duplicate is removed, not fatal to the cluster.** One copy drops out of every
+//!   sibship — [`duplicate_verdict`] decides which — and the rest of the cluster
+//!   reconstructs around it, the dropped copy keeping its `.fam` parents in its own row.
+//!   The rule this doc used to carry, "a cluster holding an inferred duplicate contributes
+//!   no rows at all", is the *special case* where removing the duplicate leaves nothing
+//!   behind: a pure `Dup/MZ` merge has no `FS` or `PO` pair left afterwards, so it raises
+//!   no line and contributes no row, the removal line included. A cluster that carries a
+//!   duplicate *and* an `FS` pair contributes rows for all of its members, the removed
+//!   copy included (`clusternum.py`'s `mixed_cluster`, 13 rows). A cluster merged by `PO`
+//!   alone also contributes them, with nobody's parents changed, because without ages the
+//!   reference will not orient the pair.
 //! * **Nothing is written unless some sibship got parents.** A run whose only merges are
 //!   `PO` or duplicate leaves a zero-byte file, no `Update-parent information is saved…`
 //!   line, and the closing `No pedigrees can be reconstructed.` — even though those
@@ -269,24 +331,22 @@
 //! to `<FID>-><IID>`. Nothing in this binary implements that renaming, so those two
 //! captures would fail on `updateids.txt` first.
 //!
-//! # A held-out clustering bug this rig also found — *not* fixed here
+//! # The clustering bug this rig found — now fixed in `unrelated.rs`
 //!
-//! Merged clusters are **not** numbered in family order. They are numbered by the
-//! *relationship type* of the pair that joins them: every `Dup/MZ`-joined cluster first,
-//! then the `PO`-joined ones, then the `FS`-joined ones, ties broken by family order. A
-//! fixture whose three clusters are joined, in family order, by `FS`, `PO` and a
-//! duplicate is numbered `KING3`, `KING2`, `KING1`. `unrelated::clusters` uses family
-//! order alone, which agrees on all thirteen corpus filesets — every merge in `bigish`
-//! is `FS` — so no capture moves either way. The fix belongs in `unrelated.rs`.
+//! Merged clusters are **not** numbered in family order but in the order a **staged merge
+//! queue** creates them, duplicates first, then parent–offspring, then full sibs. The rule
+//! and the nineteen held-out shapes that pinned it are documented on
+//! [`unrelated::clusters`]; the corpus is indifferent to it — every merge in `bigish` is
+//! `FS` and no other corpus fileset merges at all — so no capture moved either way, but
+//! six of the shapes here did.
 
 use std::io::Write;
 use std::path::Path;
 
 use king_core::infer::{pedigree_kinship, KinshipCache, Pedigree};
-use king_core::{counts, kinship, Scope};
 use king_io::Sample;
 
-use crate::analysis::{band, ibdseg, out_path, related, unrelated, with_phantom_parents};
+use crate::analysis::{band, ibdseg, out_path, unrelated, with_phantom_parents};
 use crate::cli::Options;
 use crate::console;
 use crate::load::Loaded;
@@ -407,7 +467,7 @@ fn reconstruct(
     clustering: &unrelated::Clustering,
 ) -> Reconstruction {
     let samples = &loaded.fileset.samples;
-    let types = InfTypes::new(opts, loaded);
+    let types = unrelated::InfTypes::new(opts, loaded);
 
     let mut text = String::new();
     let mut log = String::new();
@@ -415,26 +475,61 @@ fn reconstruct(
     let mut reconstructed = false;
 
     for (key, members) in clustering.merged() {
-        // An unresolved duplicate inside the cluster suppresses it whole: the reference
-        // emits neither a rule nor a single identity row for such a family.
-        if pairs(members).any(|(a, b)| types.of(loaded, a, b) == Some("Dup/MZ")) {
+        // The cluster's own 1st-degree pairs, as positions in `members`, split by what
+        // reconstruction does with each kind.
+        let (mut dups, mut po, mut fs) = (Vec::new(), Vec::new(), Vec::new());
+        for a in 0..members.len() {
+            for b in a + 1..members.len() {
+                match types.first_degree(loaded, members[a], members[b]) {
+                    Some("Dup/MZ") => dups.push((a, b)),
+                    Some("PO") => po.push((a, b)),
+                    Some("FS") => fs.push((a, b)),
+                    _ => {}
+                }
+            }
+        }
+        // A duplicate is *removed*, not a reason to abandon the cluster: one copy drops
+        // out of every sibship and the rest reconstructs around it. What a pure duplicate
+        // merge leaves behind is nothing to reconstruct, which is why such a cluster
+        // raises no line and contributes no row — the removal line goes with it.
+        let dups: Vec<(usize, usize)> = dups
+            .into_iter()
+            .map(|(a, b)| duplicate_verdict(samples, members[a], members[b]))
+            .collect();
+        let gone: Vec<usize> = dups.iter().map(|&(_, r)| r).collect();
+        let live =
+            |&(a, b): &(usize, usize)| !gone.contains(&members[a]) && !gone.contains(&members[b]);
+        fs.retain(live);
+        po.retain(live);
+        // `PO` alone raises no rule line — the narration of a parent-offspring pair is
+        // part of the inference half, see the module doc — but it does still make the
+        // cluster contribute its identity rows.
+        if fs.is_empty() && po.is_empty() {
             continue;
         }
-        let is_fs = |i: usize, j: usize| types.of(loaded, i, j) == Some("FS");
+        let is_fs = |i: usize, j: usize| {
+            !gone.contains(&i)
+                && !gone.contains(&j)
+                && types.first_degree(loaded, i, j) == Some("FS")
+        };
         let assigned = sibship_parents(samples, members, &is_fs, &mut next_synthetic);
         reconstructed |= !assigned.parents.is_empty();
-        // The header is printed once, immediately before the cluster's first line — a
-        // cluster that raises no rule at all does not appear in the log.
-        if !assigned.rules.is_empty() {
+        let name = |n: &usize| samples[members[*n]].iid.as_str();
+        let iid = |i: usize| samples[i].iid.as_str();
+        let mut lines = String::new();
+        for &(kept, removed) in &dups {
+            lines.push_str(&console::build_duplicate_removed(iid(removed), iid(kept)));
+        }
+        for rule in &assigned.rules {
+            let names: Vec<&str> = rule.members.iter().map(name).collect();
+            lines.push_str(&match rule.joiner {
+                None => console::build_rule_fs0(key, &names, &rule.pat, &rule.mat),
+                Some(j) => console::build_rule_fs1(key, name(&j), &names),
+            });
+        }
+        if !lines.is_empty() {
             log.push_str(&console::build_family_header(key));
-            let name = |n: &usize| samples[members[*n]].iid.as_str();
-            for rule in &assigned.rules {
-                let names: Vec<&str> = rule.members.iter().map(name).collect();
-                log.push_str(&match rule.joiner {
-                    None => console::build_rule_fs0(key, &names, &rule.pat, &rule.mat),
-                    Some(j) => console::build_rule_fs1(key, name(&j), &names),
-                });
-            }
+            log.push_str(&lines);
         }
         for (n, &i) in members.iter().enumerate() {
             let (pat, mat) = assigned
@@ -450,6 +545,55 @@ fn reconstruct(
         parents: reconstructed.then_some(text),
         log,
     }
+}
+
+/// Of an inferred duplicate pair, `(the copy that stays, the copy that is removed)`.
+///
+/// The reference keeps the copy the `.fam` connects to more people — its **declared
+/// 1st-degree relatives that the fileset actually carries**, counting named parents, full
+/// sibs naming the same couple, and children naming it — and breaks a tie on the ID
+/// comparator, keeping the later id.
+///
+/// Both halves are measured, out of sample, on ten shapes × three seeds
+/// (`docs/research/fixtures/dupkeep.py`): 27 of 27 for this rule, against 21 of 27 for
+/// "keep the later id" and 6 of 27 for "keep the earlier". The shapes that separate them
+/// are the ones where the better-connected copy sorts *first* — an unparented singleton
+/// against a child of a declared couple, two declared children one of which also has a
+/// declared sib, and a lone copy against one that is itself a declared father.
+fn duplicate_verdict(samples: &[Sample], i: usize, j: usize) -> (usize, usize) {
+    let rank = |x: usize| declared_first_degree(samples, x);
+    let (a, b) = match rank(i).cmp(&rank(j)) {
+        std::cmp::Ordering::Greater => (i, j),
+        std::cmp::Ordering::Less => (j, i),
+        // Tie: the later id stays.
+        std::cmp::Ordering::Equal => {
+            if crate::analysis::king_id_cmp(samples[i].iid.as_bytes(), samples[j].iid.as_bytes())
+                == std::cmp::Ordering::Greater
+            {
+                (i, j)
+            } else {
+                (j, i)
+            }
+        }
+    };
+    (a, b)
+}
+
+/// How many declared 1st-degree relatives of `i` the fileset actually carries.
+fn declared_first_degree(samples: &[Sample], i: usize) -> usize {
+    let me = &samples[i];
+    let present = |id: &str| id != "0" && samples.iter().any(|s| s.iid == id);
+    let mut n = usize::from(present(&me.pat)) + usize::from(present(&me.mat));
+    if me.pat != "0" {
+        n += samples
+            .iter()
+            .filter(|s| s.iid != me.iid && s.pat == me.pat && s.mat == me.mat)
+            .count();
+    }
+    n + samples
+        .iter()
+        .filter(|s| s.pat == me.iid || s.mat == me.iid)
+        .count()
 }
 
 /// One `RULE FS0` or `RULE FS1` line, with its people held as positions in the cluster.
@@ -469,12 +613,6 @@ struct Assignment {
     /// `(position in the cluster, (father, mother))`.
     parents: Vec<(usize, (String, String))>,
     rules: Vec<Rule>,
-}
-
-/// Every unordered pair of positions in `members`, as index pairs into it.
-fn pairs(members: &[usize]) -> impl Iterator<Item = (usize, usize)> + '_ {
-    (0..members.len())
-        .flat_map(move |a| (a + 1..members.len()).map(move |b| (members[a], members[b])))
 }
 
 /// The parent pair each sibship in one cluster takes, and the rules that gave it one.
@@ -643,48 +781,6 @@ fn component_rules(
     rules
 }
 
-/// The `InfType` of a cross-family pair that clustering treated as 1st-degree.
-///
-/// Same two steps the screening summary uses — the kinship gate that merged the families,
-/// then the segment `InfType` that labels the pair — kept in one place so reconstruction
-/// and the summary cannot disagree about what joined a cluster. Within-family pairs are
-/// `None`: their relationship is declared, not inferred.
-struct InfTypes {
-    engine: related::Engine,
-    edge: f64,
-}
-
-impl InfTypes {
-    fn new(opts: &Options, loaded: &Loaded) -> Self {
-        InfTypes {
-            engine: related::Engine::autosomes(
-                &loaded.fileset.variants,
-                &loaded.fileset.kept,
-                i64::from(opts.int(crate::cli::Opt::Sexchr)),
-                ibdseg::seglength_bp(opts),
-            ),
-            edge: band::FIRST,
-        }
-    }
-
-    fn of(&self, loaded: &Loaded, i: usize, j: usize) -> Option<&'static str> {
-        let samples = &loaded.fileset.samples;
-        if samples[i].fid == samples[j].fid {
-            return None;
-        }
-        let genotypes = &loaded.fileset.genotypes;
-        let counts = counts::pair_counts(genotypes, i, j);
-        if counts.n_snp == 0 || kinship::kinship(&counts, Scope::BetweenFamily) <= self.edge {
-            return None;
-        }
-        Some(
-            self.engine
-                .pair(genotypes, i, j)
-                .inf_type(kinship::het_concordance(&counts)),
-        )
-    }
-}
-
 /// The `does not look like 1st-degree relatives` block, one per offending pair.
 ///
 /// Reconstruction refuses to trust a family whose declared 1st-degree pairs the genotypes
@@ -811,6 +907,47 @@ mod tests {
                 (samples[i].iid.clone(), pat, mat)
             })
             .collect()
+    }
+
+    /// Of a duplicate pair, the copy the `.fam` connects to more people stays — and that
+    /// beats "the later id", which is the rule the first shape to show a duplicate
+    /// suggested. `dupkeep.py`'s `lone_first` in miniature: `A1` sorts first and declares
+    /// nothing, `Z_C1` sorts last and has two parents and a sib.
+    #[test]
+    fn the_better_connected_copy_of_a_duplicate_stays() {
+        let samples = vec![
+            person("FA1", "A1", "0", "0"),
+            person("FZ", "Z_C1", "Z_F", "Z_M"),
+            person("FZ", "Z_C2", "Z_F", "Z_M"),
+            person("FZ", "Z_F", "0", "0"),
+            person("FZ", "Z_M", "0", "0"),
+        ];
+        assert_eq!(declared_first_degree(&samples, 0), 0);
+        assert_eq!(declared_first_degree(&samples, 1), 3);
+        assert_eq!(duplicate_verdict(&samples, 0, 1), (1, 0));
+        assert_eq!(duplicate_verdict(&samples, 1, 0), (1, 0));
+    }
+
+    /// With nothing to separate them the later id stays: three singleton full sibs and a
+    /// duplicate of the first removes `Q1` and keeps `Q4`.
+    #[test]
+    fn a_tied_duplicate_keeps_the_later_id() {
+        let samples = vec![person("FQ1", "Q1", "0", "0"), person("FQ4", "Q4", "0", "0")];
+        assert_eq!(duplicate_verdict(&samples, 0, 1), (1, 0));
+    }
+
+    /// Children count towards the connectivity, not just parents and sibs.
+    #[test]
+    fn a_declared_parent_outranks_a_lone_copy() {
+        let samples = vec![
+            person("FD", "D_C1", "D_F", "D_M"),
+            person("FD", "D_F", "0", "0"),
+            person("FD", "D_M", "0", "0"),
+            person("FZL", "ZL1", "0", "0"),
+        ];
+        assert_eq!(declared_first_degree(&samples, 1), 1);
+        assert_eq!(declared_first_degree(&samples, 3), 0);
+        assert_eq!(duplicate_verdict(&samples, 1, 3), (1, 3));
     }
 
     /// A sibship the inference joined and nobody declared parents for takes the next

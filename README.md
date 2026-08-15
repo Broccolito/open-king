@@ -51,7 +51,8 @@ auto-QC, unrelated-set selection, clustering, `--ibs`, the whole X-chromosome su
 (`X.kin`, `X.kin0`, `X.seg`), the whole command-line surface **and the IBD-segment engine at
 every captured reporting floor** are byte-identical everywhere. **Thirty of the thirty-one
 output files this project writes are byte-identical in every case that produces them**; only
-`<prefix>build.log` (7 of 8) differs anywhere. On the primary `--ibdseg` capture all **982**
+`<prefix>build.log` differs anywhere, and only in 1 of the 8 cases that write it. On the
+primary `--ibdseg` capture all **982**
 rows are byte-exact on all four printed fields — `IBD1Seg`, `IBD2Seg`, `PropIBD` and
 `InfType` — with **0 spurious and 0 missing rows on every output file in the corpus**.
 
@@ -119,21 +120,29 @@ move it by 28:
 | the `--seglength` run merge (`20-seglength-floor.md`) | at the 10 Mb floor `IBD1Seg` 844 → **960 of 982** and byte-exact rows 832 → **943**; mean `PropIBD` error ÷3.2, worst row 0.0916 → 0.0111. Nothing at 3 Mb, where the rule cannot fire | 466 → **472** |
 | the push and the IBD2 merge, re-measured (`21-push-merge.md`) | `--seglength 5` becomes as exact as the default floor: both estimate columns 982 of 982 and byte-exact rows 947 → **982**. At 10 Mb `IBD2Seg` 945 → **972**, byte-exact rows 943 → **970** | 472 → **475** |
 | the gate window's own length bound and the IBD1 merge's budget word set (`23-gap-bound.md`) | `--seglength 10` becomes exact too: `IBD1Seg` 970 → **982**, `IBD2Seg` 972 → **982**, byte-exact rows 970 → **982**, printed-column MAE 0.000046 → **0** | 475 → **477** |
-| `<prefix>build.log`'s header and `RULE` lines (`crate::analysis::build`) | 0 → **243 of 806 bytes**, 6 of 18 lines, every one byte-identical; byte-identical on 23 of 30 held-out pedigree shapes | **+0** — a case is all-or-nothing |
+| `<prefix>build.log`'s header, `Duplicate … is removed.` and `RULE` lines (`crate::analysis::build`) | 0 → **243 of 806 bytes**, 6 of 18 lines, every one byte-identical; byte-identical on **53 of 59** held-out pedigree shapes | **+0** — a case is all-or-nothing |
+| the merge queue, the clustering gate and the duplicate rule (`crate::analysis::unrelated`) | no corpus row at all: **19 of 19**, **19 of 19** and **27 of 27** held-out shapes, against 7, 18 and 21 for the rules they replaced | **+0** — invisible to the corpus |
 
 The `20-seg-writer.md` row is the point about graders: `PropIBD` computed from the printed
 columns instead of the totals, and rows listed in 16-sample blocks instead of by index.
 Neither touches a segment, an estimate or a reported pair — and between them they were worth
-28 cases, because the numbers underneath had finally stopped being wrong. The last two rows
-are the opposite case: real changes to the caller. The run merge was worth 6 cases and 158
-exact rows (47 at the 5 Mb floor, 111 at 10); the push and IBD2-merge corrections 3 cases and
-62 more (35 at 5 Mb, 27 at 10), which took `--seglength 5` to exact.
+28 cases, because the numbers underneath had finally stopped being wrong. The three
+`--seglength` rows are the opposite case: real changes to the caller. The run merge was worth
+6 cases and 158 exact rows (47 at the 5 Mb floor, 111 at 10); the push and IBD2-merge
+corrections 3 cases and 62 more (35 at 5 Mb, 27 at 10), which took `--seglength 5` to exact;
+and the window bound with the budget word set took `--seglength 10` there too.
 
-The last two rows are the two ends of that spectrum in one pass: `23-gap-bound.md` moved
-both scoreboards, and `build.log`'s `RULE` lines moved neither while being byte-exact as far
-as they go. A fourth track this pass landed **nothing on purpose** — `docs/research/22-screen.md`
-closed most of the screening count's hypothesis space by measurement and declined to fit the
-one constant that would have reproduced `bigish` and nothing else.
+The last three rows are the two ends of that spectrum: `23-gap-bound.md` moved both
+scoreboards, while `build.log`'s `RULE` lines and the three clustering corrections moved
+neither despite being right — the corpus simply has no fileset that can tell the difference,
+which is why they were graded on 59, 19 and 27 held-out shapes instead.
+
+A further track landed **nothing on purpose, and that is the result** —
+`docs/research/22-screen.md` *proves* the screening count is not the kinship over any subset
+of markers (the algebra is exact and covers every subset and every weighting), then closes
+the two mechanisms that survived the proof, and declines to fit the one constant that would
+have reproduced `bigish` and nothing else. `docs/PARITY.md` §5.7 carries the proof and a list
+of what a future maintainer should *not* attempt.
 
 So read both. `docs/PARITY.md` §4.4 is the row-level scoreboard, §3 the file-level one, §4.6
 the out-of-sample one — the only one that still discriminates — and §5.0 says which grader to
@@ -221,8 +230,8 @@ cargo build --release
 ```
 
 The binary is emitted as `target/release/king`. It builds from a clean checkout in
-**about 8.3 seconds** with no external toolchain: `Cargo.lock` has 15 packages, three of which
-are this workspace. `cargo test --workspace` is 320 tests; CI additionally replays all 480
+**about 9.5 seconds** with no external toolchain: `Cargo.lock` has 15 packages, three of which
+are this workspace. `cargo test --workspace` is 325 tests; CI additionally replays all 480
 captured invocations against `tests/parity/BASELINE.txt` on every push, and fails on any
 difference **in either direction** — an unrecorded improvement is a failure too, so the
 committed baseline can never drift from what the tree actually does. Contributing,

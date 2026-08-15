@@ -862,12 +862,14 @@ fn effective_degree(opts: &Options) -> i32 {
 /// It reproduces `bigish` at degree 1 (18) but not at degree 2 (50 against the
 /// reference's 36) — the one stdout line in the corpus that `--related` still gets wrong.
 ///
-/// Full record: **`docs/research/22-screen.md`**, instrument
-/// `docs/research/fixtures/screendeflate.py` (`facts` re-measures everything below;
-/// `screencanvas.py` and `screenweight.py` are the two earlier rigs it builds on). The
-/// headline is that the reference's screen is **not the kinship over any subset of
-/// markers**, so the placeholder below cannot be repaired by choosing a better subset —
-/// and neither can anything else of that shape.
+/// Full record: **`docs/research/22-screen.md`**, instruments
+/// `docs/research/fixtures/screendeflate.py` and `screenfold.py` (`facts` on each
+/// re-measures everything below; `screencanvas.py` and `screenweight.py` are the two
+/// earlier rigs they build on). The headline is that the reference's screen is **not the
+/// kinship over any subset of markers** — and not a merge of them into 32 768 slots
+/// either, nor any function whatever of the markers the budget keeps. The placeholder
+/// below cannot be repaired by choosing a better subset, and neither can anything else of
+/// that shape.
 ///
 /// ## The law the screen obeys
 ///
@@ -936,13 +938,52 @@ fn effective_degree(opts: &Options) -> i32 {
 /// alone: `bigish` at m = 50 000 reads 1.0216 while its first 25 000 markers replicated
 /// twice — same `m`, same `n` — read 1.0280.
 ///
-/// What that leaves is a shape, recorded as a shape and **not** as a rule: when a map
-/// holds more equally-informative markers than 32 768, the reference reaches its budget by
-/// something lossy applied *uniformly across markers* rather than by keeping some and
-/// dropping others. The uniformity is measured directly — on a flat-MAF map a contiguous
-/// clone block at markers `[0,·)`, `[20000,·)`, `[32768,·)` or at the tail gives boundary
-/// kinships 0.0957/0.0957/0.0930/0.0940, with no preference for the head of the file.
-/// `22-screen.md` §5 lists the two candidate mechanisms that survive.
+/// What that leaves is a shape, recorded as a shape and **not** as a rule. The loss is
+/// spread evenly over the map: on a flat-MAF map a contiguous clone block at markers
+/// `[0,·)`, `[20000,·)`, `[32768,·)` or at the tail gives boundary kinships
+/// 0.0957/0.0957/0.0930/0.0940, with no preference for the head of the file.
+///
+/// ## Not merging either, and not a function of the kept markers
+///
+/// A second round (`22-screen.md` §§7–12, instrument
+/// `docs/research/fixtures/screenfold.py`) closed the two mechanisms §5 had left standing.
+///
+/// **Merging markers into 32 768 slots is out.** Appending `bigish`'s real tail one marker
+/// at a time prints 50/50 through m = 33 024 and only then ramps, where a block merge
+/// (`blockSize = ceil(m/32768)`) must step at m = 32 769. And 32 768 markers plus 8 192
+/// duplicates print 41 against a true 47 in *all three* arrangements — copies appended in
+/// order, appended shuffled, or interleaved after their originals — while every grouping
+/// (`j mod 32768`, consecutive pairs, rank blocks) is lossless for at least one of them
+/// under any idempotent operation. Scored quantitatively, rank-stride and rank-block
+/// groupings under `or`/`and`/`xor`/saturating-sum miss by a mile: the first two accept
+/// every pair, the last two are already wrong where the reference is exact.
+///
+/// **The statistic is not a function of the markers the budget keeps.** Hold m = 50 000 as
+/// 32 768 markers at MAF 0.45 plus 17 232 at MAF `x`. Through `x = 0.30` the top-32 768 by
+/// allele count is exactly the MAF-0.45 group with zero swaps, it is the same index set at
+/// every `x`, and its genotypes are **bit-identical** across the scan, so every pair's
+/// kinship over it is identical to the last bit. The printed count still falls 46 → 46 →
+/// 45 → 43 → 39 → 37. Whatever the screen computes, it reads markers it did not keep.
+///
+/// **And it is deterministic.** Labelling 48 ladder pairs one at a time on the `x = 0.25`
+/// map gives zero inversions in both the whole-map and the kept-subset kinship, with the
+/// threshold displaced by 0.018 — twelve times a fixed subset's realisation spread. That
+/// retires "two stages intersected" in its noisy-estimates form.
+///
+/// **There is also a second necessary condition, with no budget in sight.** At m = 32 768,
+/// where the screen is the exact whole-map kinship to 4e-6, a pair cloned across every
+/// marker of a MAF-0.20 stratum and untouched on an equally sized MAF-0.45 one is refused
+/// outright — `No close relatives are inferred.` at kinship 0.20006, which KING's own
+/// `--kinship` prints. The accept region is flat in the low stratum's clone fraction: past
+/// the cutoff, extra sharing among the uninformative markers buys nothing. It never binds
+/// for uniformly related pairs, which is why `bigish` and every Round 1 instrument miss it.
+///
+/// In-sample ascertainment — the one loophole in the proof above — is a real component and
+/// not the whole: ranking by minor-homozygote count, the only simple key that leans against
+/// the pair's own heterozygosity and so deflates at all, reproduces the flat-MAF numbers
+/// (1.0615 model against 1.0654 measured) and moves `bigish` from 47 to 41 against the
+/// reference's 36, but it is 4× short wherever the ranking resolves, and `R - 1` falls only
+/// 2.1× between n = 110 and n = 700 where a 2-in-`n` selection demands 6.4×.
 ///
 /// Landing the affine law with a fitted `R` would reproduce `bigish` and nothing else, so
 /// it is deliberately not landed. The consequence is contained: the count reaches stdout
@@ -980,7 +1021,10 @@ fn screen_cutoff(degree: i32) -> f64 {
 /// clone window lying entirely past marker 32 768 — where this prefix estimate reads
 /// 0.0020 — at the same true kinship as one at the head of the map, so the reference's
 /// subset is not a prefix, a stride or a word decimation, and its screening statistic
-/// moves with the *other samples'* genotypes, which no fixed marker choice can do. The
+/// moves with the *other samples'* genotypes, which no fixed marker choice can do. It is
+/// not a subset at all: `screenfold.py separation` holds a candidate kept set's genotypes
+/// bit-identical, leaving every pair's kinship over it unchanged to the last bit, and the
+/// reference's count still falls from 46 to 37 as the *discarded* markers gain MAF. The
 /// prefix is kept only because it is the cheapest subset that reproduces the printed
 /// count at degree 1 on every map tried; swapping it for the whole map would trade the
 /// degree-1 case (18, correct today) for no gain at degree 2 (47 against 36).

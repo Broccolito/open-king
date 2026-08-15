@@ -67,12 +67,22 @@ quoted**, so any claim here can be re-run rather than taken on trust.
 > 475 → **477** (two cases, `bigish` and `multifam` at `--seglength 10`). On the same tree and
 > on the same scale as the table above, the row scorecard went 970/970/972 → **982/982/982**
 > at 10 Mb and was already saturated at 3 and 5. Neither figure is a restatement of the
-> other. **A third track that landed this pass moved neither:** `<prefix>build.log`'s header and
-> `RULE` lines are now written and byte-identical — 243 of 806 bytes, 6 of 18 lines, on 23 of
-> 30 held-out shapes — and `apps/bigish__build` still fails, because a case is all-or-nothing
-> (§6.2). A fourth track landed **nothing at all**, on purpose: §5.7 closed off most of the
-> screening count's hypothesis space by measurement and reports a negative rather than a
-> fitted constant.
+> other. **A third track moved neither, while being right:** `<prefix>build.log`'s header,
+> `Duplicate … is removed.` and `RULE` lines are written and byte-identical — 243 of 806
+> bytes, 6 of 18 lines, on **53 of 59** held-out shapes — and `apps/bigish__build` still
+> fails, because a case is all-or-nothing (§6.2). Three further corrections found by the same
+> rigs moved **no case whatever**, because the corpus cannot see them: merged clusters are
+> numbered by a staged merge queue and not by family order (19 of 19 held-out shapes), the
+> clustering gate is `.kin0`'s own disjunction and not a bare kinship cut (19 of 19), and the
+> duplicate-removal rule keeps the better-connected copy (27 of 27). Every merge in `bigish`
+> is `FS` and no other corpus fileset merges at all, so all four tracks together left the
+> harness at 477 — which is precisely why they were graded on held-out shapes instead.
+>
+> **A fourth track landed nothing at all, on purpose, and that is a result.** §5.7 does not
+> merely fail to reproduce the screening count; it **proves** the count is not the kinship
+> over any subset of markers, and then closes the two mechanisms that survived that proof.
+> The honest output is a negative and a bracketed law with one unfitted constant, not a
+> constant tuned until `bigish` matched.
 >
 > **What the set of reported pairs does:** it is exactly right everywhere. **0 extra and 0
 > missing rows on every output file in the corpus**, all 982 `InfType` labels, and every
@@ -202,10 +212,15 @@ Measured on the tree this document describes:
 | `tests/parity/fit/seg23.py` | the window bound and the budget word set, same scale: `21` (previous commit) `806 / 817 / 811` exact, **`23` (committed) `806 / 817 / 820`**, `IBD1Seg` and `IBD2Seg` both `982 / 982 / 982`, MAE at 10 Mb 0.000067 → **0.000022** |
 | `docs/research/fixtures/oosseg.py --ref <reference>` | **out of sample**, 24 fresh filesets × 3 floors on 8 unused seeds: **66 / 72** runs byte-identical, **6 of 6 713 rows** wrong — 0 extra, 2 missing, 4 value-differing (§4.6) |
 | `tests/parity/fit/seg18.py` | `18-…`'s own numbers, unchanged: committed `exact 747  ibd1 982  ibd2 896  MAE 0.000067`; retired overlap rule `709 / 826 / 896` |
-| `cargo test --workspace` | **320 passed, 0 failed, 1 ignored** |
+| `docs/research/fixtures/buildlog.py rules` | **out of sample**, the `--build` log's rule half over 59 held-out pedigree shapes: **53 match, 6 differ** — 2 out-of-scope `<FID>-><IID>` renamings, 3 sibship member order, 1 the unimplemented `PO.S` branch (§6.2) |
+| `docs/research/fixtures/build_shapes.py` | **out of sample**, `updateparents.txt` + the console tail over 20 held-out merge shapes: **18 OK, 0 MISMATCH, 2 skipped** (the renaming shapes) |
+| `docs/research/fixtures/clusternum.py score` | **out of sample**, the merge queue over 19 discriminating shapes: queue **19/19** and our binary **19/19**, against family order 7, size 7, largest-kinship 11 (§6.2) |
+| `docs/research/fixtures/dupkeep.py` | **out of sample**, which duplicate copy is removed, 10 shapes × 3 seeds: **27/27**, against 21 for "keep the later id" and 6 for "keep the earlier"; the line appears with no `INFERENCE` line in 23 of 27 runs, which is what makes it rule-half |
+| `docs/research/fixtures/screenfold.py separation` | **the screen impossibility result**: the kept 32 768 markers' genotypes held bit-identical while the printed count falls **46 → 37** (§5.7) |
+| `cargo test --workspace` | **325 passed, 0 failed, 1 ignored** |
 | `cargo clippy --workspace --all-targets -- -D warnings` | clean |
 | `cargo fmt --all --check` | clean |
-| a pristine copy of the tree, `cargo build --release` | succeeds in **7.8 s** from cold; `Cargo.lock` has 15 packages — the 3 workspace crates and 12 external |
+| a pristine copy of the tree, `cargo build --release` | succeeds in **9.5 s** from cold; `Cargo.lock` has 15 packages — the 3 workspace crates and 12 external |
 | that clean-tree binary, re-run through `run_parity.py --baseline` | **477 PASS, 3 FAIL**, `baseline: MATCH` — the published counts do not depend on a warm `target/` or a pre-generated corpus, and the corpus regenerates itself from Python 3 stdlib in the same run |
 
 By capture group: `apps` **90/91**, `core` **103/104**, `ibdseg` **64/65**, `params`
@@ -764,8 +779,9 @@ are byte-exact on all four printed fields at 3, 5 and 10 Mb, printed-column MAE 
    and the right totals at every floor on every dataset.
 
 2. **`<prefix>build.log` is written only down to its `RULE` lines** (§6.2). 1 case. Its
-   header and `RULE FS0`/`FS1` lines now land — 6 of `bigish`'s 18 lines, 243 of its 806
-   bytes, every one byte-identical, and byte-identical on 23 of 30 held-out shapes. Its
+   header, `Duplicate … is removed.` and `RULE FS0`/`FS1` lines now land — 6 of `bigish`'s 18
+   lines, 243 of its 806 bytes, every one byte-identical, and byte-identical on **53 of 59**
+   held-out shapes. Its
    `INFERENCE` half is blocked twice over: by exact segment **placement** and by the
    still-unidentified rule that names two members of a sibship, whose candidate space is now
    closed by measurement rather than open — see §6.2.
@@ -782,11 +798,30 @@ are byte-exact on all four printed fields at 3, 5 and 10 Mb, printed-column MAE 
    residual has not moved. `fixtures/avfs_score.py`.
 
 3. **`--related`'s two-stage screening count**, 2 cases (§5.7). Not a segment problem: one
-   stdout line, `36 pairs` against our `50`. §5.7 now closes off the whole "find the right
-   marker subset" search space by measurement.
+   stdout line, `36 pairs` against our `50`; every output file in both cases, `.kin0` and
+   `.seg` alike, is byte-identical. This is the one gap the project has closed *negatively*
+   rather than positively, and the negative is the deliverable:
 
-**The next experiments worth running, in order.** The first two are the only ones with a
-live target; 3–5 are standing warnings for whoever runs them.
+   * the count is **not the kinship over any subset of markers** — proved by exact algebra
+     (`E[N_l] = 4pq(1−2φ)`, `E[het_l] = 2pq`, so numerator and denominator are both
+     proportional to `Σ pq` over *whatever* index set they are summed on, making every subset
+     and every non-negative weighting unbiased for the same φ), and confirmed three ways by
+     measurement;
+   * it is **not a merge** of markers into 32 768 slots — refuted by a no-step-at-budget
+     scan, by three arrangements of one duplicate multiset giving one count, and by scoring
+     every rank grouping under every idempotent operation;
+   * it is **not a function of the kept markers at all** — the kept set's genotypes are held
+     bit-identical while the printed count falls 46 → 37;
+   * it is **sharp**, not two noisy estimates intersected — 0 inversions over 48 ladder pairs.
+
+   What is left is a measured law (`k_screen = 0.5 + R(k − 0.5)`, `R ≡ 1` for `m ≤ 32 768`,
+   pinned to 0.2 %) with one constant, `R`, that is **deliberately not fitted** because it
+   swings 0.998–1.085 with the MAF spectrum, and a **second necessary condition** that binds
+   with no budget involved. §5.7 carries the full proof and an explicit list of what a future
+   maintainer should *not* attempt.
+
+**The next experiments worth running, in order.** The first three are the only ones with a
+live target; 4–6 are standing warnings for whoever runs them.
 
 1. **Localise the 0.0182 IBD2 deficit with `chrprobe.py`.** It is the sharpest open residual
    the project has: four rows, identical to a printed ulp across two independent seeds, so it
@@ -805,7 +840,19 @@ live target; 3–5 are standing warnings for whoever runs them.
    (c) something that is not the call set. This is a two-line change to test and it must be
    graded on `oosseg.py` with **new** seeds, never on the one pair that raised it — on the
    corpus the pair set is already exactly right at every floor and cannot referee it.
-3. **Three hazards any new rig must respect** (`21-…` §8.2, §8.3), or it will misgrade its
+3. **Chase the screen's *second* condition, not its budget** (§5.7). It is the most
+   tractable thing left in `--related`, and the reason is methodological: it is **binary**
+   (accept / `No close relatives are inferred.`), its effect is **huge** (a pair at kinship
+   0.20006 refused outright), and it fires at `m = 32 768` where no budget is involved and the
+   screen is otherwise the exact whole-map kinship to 4e-6 — so one run reads one point and
+   nothing has to be bisected. `screenfold.py gate` is the rig. The companion search is for a
+   statistic that **degrades with the discarded markers' informativeness while the kept bits
+   are held fixed**, which is the one shape `separation` leaves open; a deterministic
+   bound-based early exit over the informativeness-sorted map has exactly that shape and
+   would supply the second condition for free. **Do not fit `R`** — that is the whole point
+   of §5.7, and a fitted `R` reproduces `bigish` and nothing else.
+
+4. **Three hazards any new rig must respect** (`21-…` §8.2, §8.3), or it will misgrade its
    own boundary rows:
    * The reference **stops behaving like a floor** outside `1 ≤ L ≤ 10` Mb. Above ~10 Mb a
      14.06 Mb call reports as a constant 8.93 Mb at every larger floor; below 1.0 the flag
@@ -815,14 +862,14 @@ live target; 3–5 are standing warnings for whoever runs them.
      `>=` and it never bites on the corpus — nothing there lands on an exact tie — but every
      fixture in the push/merge rig does.
    * Canvas read-back is a *measurement*, not an inspection: see `MAINTAINING.md` §8.3.
-4. **Do not re-sweep the caller's constants.** Forty single-knob perturbations and all 32
+5. **Do not re-sweep the caller's constants.** Forty single-knob perturbations and all 32
    combinations of the two IBD1 endpoint rules crossed with the two IBD1 fringe rules were
    scored: none improves exact rows, none beats the committed MAE, and the committed values
    are the unique maximum of that grid (`20-seg-writer.md` §6). Likewise the merge's own
    knobs, swept in `fit/seg20.py grid` and `fit/seg21.py grid` — where dropping `reach` costs
    982 → 959/947 at 5 Mb, `hethet` 982 → 981/980, `push_half` one row on each column at
    10 Mb, and `no_cap` nothing on this corpus but four canvases out of sample.
-5. **Five knobs the corpus cannot see at all** — `bridge_rule="17"`, `gate_end="right"`,
+6. **Five knobs the corpus cannot see at all** — `bridge_rule="17"`, `gate_end="right"`,
    `inf2_ibs1b=True`, `ibd1_clip_ibd2=True`, `clip_before_len=False` all score identically to
    the committed engine on every corpus row. They were settled on the canvases (`17-…` §14)
    and the canvases remain the only evidence for them. If you change one, grade it there.
@@ -999,11 +1046,15 @@ and it is the only `--related` failure left. The consequence is contained to tha
 `.kin0`'s row set comes from the exhaustive re-estimate below it and is byte-correct at every
 degree, including in both of those cases, and both of their `.seg` files are byte-identical.
 
-**What the stage is, measured.** Three rigs, each driving the reference over constructed
+**What the stage is, measured.** Four rigs, each driving the reference over constructed
 filesets and reading the count off its stdout: `docs/research/fixtures/screencanvas.py`
-(single-pair probe, clone canvas), `…/screenweight.py` (what the statistic weights) and
-`…/screendeflate.py` (this round). The last one's `facts` re-measures everything below and is
-the one to run; the full record is **`docs/research/22-screen.md`**.
+(single-pair probe, clone canvas), `…/screenweight.py` (what the statistic weights),
+`…/screendeflate.py` (the affine law and the subset proof) and `…/screenfold.py` (the merge
+and subset-function refutations, and the second condition). The last two each carry a `facts`
+subcommand that re-measures everything below; the full record is
+**`docs/research/22-screen.md`**. `screenfold.py`'s core instrument is a **ladder fileset** —
+48 pairs climbing through the cutoff, so a single run reads the effective threshold instead of
+bisecting for it, 17× cheaper.
 
 The sharp instrument is a **dilution bisection**: replace one member of a real `bigish` pair,
 at a growing random marker set, with genotypes drawn from that fileset's own allele
@@ -1062,14 +1113,83 @@ equally-informative markers than 32 768, the reference reaches its budget by som
 applied **uniformly across markers** rather than by keeping some and dropping others. Measured
 directly — on a flat-MAF map a contiguous clone block grown from marker 0, from 20 000, from
 32 768, or backwards from the tail hits the boundary at 0.0957/0.0957/0.0930/0.0940, with no
-preference for the head of the file. `22-screen.md` §5 lists the two mechanisms that survive
-(a merge into 32 768 slots grouped by informativeness rank; two stages intersected, with a
-stage-1 cutoff that tightens only above the budget) and the six that are now closed.
+preference for the head of the file.
+
+#### The two mechanisms that survived the proof are now closed too
+
+A second round (`22-screen.md` §§7–13, instrument `docs/research/fixtures/screenfold.py`,
+whose `facts` subcommand re-measures all of it) took the two candidates §5 had left standing
+— a merge of markers into 32 768 slots grouped by informativeness rank, and two stages
+intersected — and refuted both. **Nothing was landed; the negative got sharper.**
+
+* **Merging into 32 768 slots is dead, three ways.** (i) *No step at one marker over
+  budget*: appending `bigish`'s real tail one marker at a time to its 32 768-marker prefix
+  prints 50 at every `m` through 33 024 and only then ramps, where any block merge
+  (`blockSize = ceil(m/32768)`) flips every slot to a pair at `m = 32 769` and must step
+  there. (ii) *Same multiset, three arrangements, identical count*: 32 768 markers plus
+  8 192 duplicates print **41 against a true 47** whether the copies are appended in order
+  (so `j mod 32768` pairs each marker with its own copy), interleaved directly after their
+  originals (so consecutive-pair merging does), or shuffled. Every idempotent merge
+  operation — `or`, `and`, `max`, take-the-more-informative — is *lossless* for at least one
+  of those three, and all three lose the same six pairs. A stable rank sort makes tied copies
+  adjacent, so rank-block grouping dies on the same fixture. (iii) *Scored*: rank-stride and
+  rank-block groupings under `or`/`and`/`xor`/saturating-sum, on the sparse encoding where
+  merging junk is free, either accept every pair (`or`, `and` — wrong sign) or destroy the
+  estimate (`xor`, sum — already wrong where the reference is exact).
+
+* **The statistic is not a function of the markers the budget keeps** — which retires the
+  whole "function of a marker subset" family, not just the specific subsets tried. Hold
+  `m = 50 000` as 32 768 markers at MAF 0.45 plus 17 232 at MAF `x`, and vary `x`. The
+  top-32 768 by allele count is the MAF-0.45 group with **zero index swaps** through
+  `x = 0.25`, and — the column the rig prints and the one that matters — the kept markers'
+  **genotypes stay bit-identical** through `x = 0.30`, so every pair's kinship over the kept
+  set is unchanged to the last bit. The printed count nevertheless falls **46 → 46 → 45 → 43
+  → 39 → 37**. Whatever the screen computes, it reads markers it did not keep.
+
+* **And it is deterministic, so "two stages intersected" is out in its noisy-estimates
+  form.** Labelling 48 ladder pairs one at a time on the `x = 0.25` map gives **zero
+  inversions** in both the whole-map and the kept-subset kinship, with the threshold
+  displaced by 0.018 — twelve times the realisation spread of a fixed subset (0.0015).
+  A sharp threshold in the wrong place is not two noisy estimates ANDed together.
+
+* **A second necessary condition exists, with no budget in sight.** At `m = 32 768`, where
+  the screen is the exact whole-map kinship to 4e-6, a pair cloned across every marker of a
+  MAF-0.20 stratum and left untouched on an equally sized MAF-0.45 one is refused outright —
+  `No close relatives are inferred.` at kinship **0.20006**, a number KING's own `--kinship`
+  prints and agrees with. Same at 0.10/0.13890, at 0.25/0.21731, and at 24 576 @ 0.15 +
+  8 192 @ 0.45 / 0.30669. The accept region is flat in the low stratum's clone fraction: past
+  the cutoff, extra sharing among uninformative markers buys nothing. It is not a subset
+  kinship, not IBS0 under any normalisation (a pair at 0.1047 IBS0/marker and kinship 0.0655
+  is **accepted** while one at 0.0602 and 0.20006 is **refused**), not HetHet, not
+  contiguity, and not the `Dup/MZ` path. It never binds for uniformly related pairs, which is
+  why `bigish` and every Round 1 instrument miss it entirely.
+
+* **In-sample ascertainment is a real component and not the whole story.** It is the one
+  loophole in the proof above, and it has the right sign: only a ranking key that leans
+  against the pair's own heterozygosity deflates at all. Minor-homozygote count, the simplest
+  such key, reproduces the flat-MAF magnitude (model 1.0615 against a measured 1.0654) and
+  moves `bigish` from 47 to 41 — against the reference's 36. But it is **4× short** wherever
+  the ranking actually resolves, and `R − 1` falls only 2.1× between `n = 110` and `n = 700`
+  where a 2-in-`n` selection effect demands 6.4×.
+
+**Two false leads are recorded so nobody re-burns them.** `N = 8·IBS0` and
+`φ + 2·IBS0/min_het = 0.5` both look constant across the gate boundary; both are *identities*
+for clone-block pairs whose untouched markers sit at MAF 0.45, and neither is a rule.
+
+**What a future maintainer should not attempt.** Do not look for a better marker subset, a
+better weighting, a merge, a rank grouping, or a MAF/informativeness threshold — the algebra
+rules out the first two for *any* choice, and the measurements above rule out the rest. The
+three leads that are still worth an experiment are listed in `22-screen.md` §13: chase the
+second condition directly (it is binary, its effect is huge, and one run reads one point);
+look for a statistic that degrades with the **discarded** markers' informativeness while the
+kept bits are held fixed — a deterministic bound-based early exit over the sorted map has
+exactly that shape and would supply the gate for free; and do not fit `R`.
 
 Nothing is landed. Fitting `R` would reproduce `bigish` and nothing else, since `R` swings from
 0.998 to 1.085 with the MAF spectrum. The placeholder prefix stays: it reproduces the degree-1
 count (18) on every map tried, and swapping it for the whole map would lose that for nothing at
-degree 2 (47 against 36).
+degree 2 (47 against 36). The cost is two cases and one integer on one stdout line; the `.kin0`
+row set below that line comes from the exhaustive re-estimate and is byte-correct regardless.
 
 ### 5.8 `--ibs` and `.seg` do not share a segment rule
 
@@ -1303,72 +1423,137 @@ acceptance gate disagrees about (§5.11).
 `kingbuild.log`, all six byte-identical — 243 of its 806 bytes. The other 12 `--build`
 datasets are byte-identical because they need no reconstruction rules at all.
 
-`kingupdateparents.txt` **is now written and byte-identical.** It is the half of the
-reconstruction that reads no segment statistic — it carries only what the `RULE FS*` lines
-decided — and it was pinned on **twenty held-out merge shapes**, not on `bigish`:
-`docs/research/fixtures/build_shapes.py` builds them and re-runs the scorecard. Eighteen
-are in scope (two are excluded because the reference renames every individual to
-`<FID>-><IID>` when a `.fam` names a parent living in another family, a feature this binary
-does not implement at all), **fifteen of them byte-identical on the file and on the console
-tail**, and the remaining three carry identical `(IID, FATHER, MOTHER)` rows and differ only
-in which cluster is named `KING1` — see the numbering bug below. The rules the shapes
-pinned, none of which `bigish` alone shows:
+`kingupdateparents.txt` **is written and byte-identical**, and so is `kingupdateids.txt`.
+The two are in **different orders**, which is a thing this section previously had wrong
+because `bigish` cannot show it: `updateparents.txt` is in cluster order (`KING1`'s rows,
+then `KING2`'s), while `updateids.txt` is in original-`(FID, IID)` order, so a fileset
+whose clusters are `KING1 = Z1+Z2`, `KING2 = M1+M2`, `KING3 = A1+A2` writes the `A` rows
+first. On every corpus fileset the two orders coincide.
 
-* a sibship is a connected component of *inferred FS* ∪ *declares the same named couple*,
-  and only a component the inference touched is reassigned;
-* it takes the couple one of its members already declares if there is one, else the next
-  synthetic pair `1 2`, `3 4`, … — one pair per sibship whatever its size, counted across
-  the whole run;
-* two sibships inside one cluster take consecutive pairs ordered by their first member
-  under the ID comparator, **not** by `.fam` row order;
-* a cluster holding an inferred **duplicate** contributes no rows at all, while one merged
-  by **PO** alone contributes identity rows with nobody's parents changed — without ages
-  the reference will not orient a parent-offspring pair;
-* **nothing is written unless some sibship got parents**, so a run whose only merges are PO
-  or duplicate leaves a zero-byte file, no `Update-parent information is saved…` line and
-  the closing `No pedigrees can be reconstructed.` — even though its clusters *are* in
-  `updateids.txt`. The old code keyed that tail on "did clustering merge anything", which
-  is wrong on any such fileset; that is fixed.
+**The cluster-numbering bug recorded here is fixed.** Merged clusters are not numbered in
+family order and not by the relationship type of the joining pair either, though the two
+agree on the three shapes that first exposed it. They are numbered in the order a
+**staged merge queue** creates them:
 
-**A held-out clustering bug the same rig found, and which is *not* fixed.** Merged clusters
-are not numbered in family order: they are numbered by the *relationship type* of the pair
-that joined them — every `Dup/MZ`-joined cluster first, then the `PO`-joined ones, then the
-`FS`-joined ones, ties broken by family order. A fixture whose three clusters are joined, in
-family order, by `FS`, `PO` and a duplicate is numbered `KING3`, `KING2`, `KING1`.
-`unrelated::clusters` uses family order alone. Every merge in `bigish` is `FS`, and no other
-corpus fileset merges at all, so all 480 captures are indifferent to it and nothing moves
-either way; the fix belongs in `unrelated.rs`.
+* the qualifying cross-family pairs are worked through **by relationship type** —
+  `Dup/MZ`, then `PO`, then `FS`, then anything weaker — the scan order surviving inside
+  each type;
+* a cluster is created, and takes its `KING<k>`, the first time the queue joins two
+  families that are not already together;
+* a cluster's `OriginalFamID` list is in **absorption** order, not file order: a cluster
+  whose `Dup/MZ` edge is `QBB–QBC` and whose `FS` edge is `QBA–QBB` prints
+  `QBB,QBC,QBA`, and that list order is the clearest evidence that the queue is staged
+  rather than sorted afterwards.
 
-The case's third file, `kingupdateids.txt`, **already matches byte for byte** — the family
-numbering, which original families each `KING<n>` absorbs, and the row order are all
-correct, so none of the three obvious structural suspects (family numbering, parent
-tie-breaking, sex assignment) is what fails here.
+`docs/research/fixtures/clusternum.py` builds nineteen shapes that discriminate this from
+family order, cluster size, and the largest kinship of the joining pair: the queue rule is
+**19 of 19**, family order 7, size 7, kinship 11. `seeds` re-runs one two-type shape over
+eight fresh seeds and **4 of 8** contradict the kinship ordering outright — the `FS` pair
+scores φ = 0.30 against the `PO` pair's 0.25 and the `PO` cluster is still `KING1`. The
+corpus is indifferent to all of it (every merge in `bigish` is `FS`, and no other corpus
+fileset merges), and the harness stayed at 477 across the change.
 
-**The log's format is now derived, and its rule half is written.** `<prefix>build.log` is
-a per-cluster narration, written to the file and echoed to **stdout byte for byte** — the
-console block between the segment prepass and `Details of pedigree reconstruction …` is the
-file verbatim, plus one trailing blank line the file does not carry. Each cluster that
-raises a line opens with `Family KING<k>:`, then its `RULE` lines, then one or more blank
-lines, then the `INFERENCE` lines grouped by the sibship they are about; a cluster that
-raises nothing does not appear, which is why a duplicate-joined or PO-joined merge leaves a
-zero-byte log. Templates and the evidence for each are in `crates/king-cli/src/analysis/
-build.rs`'s module doc.
+**The same rig found that our clustering *gate* was wrong**, and that is fixed too. It was
+`kinship > 2^-2.5`; the reference admits a pair on the disjunction `--related` uses for a
+`.kin0` row at `--degree d`, `kinship >= 2^-(d+1.5) || PropIBD > 2^-(d+0.5)`. A 3/4-sib
+pair at `kinship 0.1749` — *under* `2^-2.5` — merges its two families on `PropIBD 0.3646`
+alone, and `clusternum.py gate` scores the disjunction 19 of 19 against the kinship rule's
+18. The cut also follows `--degree`: a fileset whose only cross-family link is a half-sib
+pair reports `No families were found to be connected.` at `--degree 1` and merges at
+`--degree 2`. No corpus capture moves, because no corpus fileset has a cross-family
+2nd-degree pair outside a cluster that merges anyway.
 
-The **header and `RULE FS0`/`FS1` lines are implemented**, and scored on **30 held-out
-shapes** (`build_shapes.py`'s twenty merge shapes plus ten `avfs.py` ones,
-`buildlog.py rules`) they are byte-identical on **23**. Of the seven that differ, three
-differ only in which cluster is called `KING1` — the numbering bug above — two are the
-`<FID>-><IID>` renaming shapes that are out of scope, and two differ only in the *order* an
-`FS1` line lists an existing sibship's members, which is the open rule below.
+Note the two gates are **not** the same one. Reconstruction keeps the plain 1st-degree band
+edge: the 3/4-sib cluster above merges and then reconstructs nothing at all, raising no
+header and no `RULE FS0`, which is why `unrelated::InfTypes` exposes `merging` and
+`first_degree` separately.
 
-The rest of the log — `INFERENCE AV.FS` with a `Join3/Join2` printed to three decimals
-(`bigish`: 0.778, 0.801, 0.779, 0.827, 0.803), the `HS … unrelated to …` lines and
-`INFERENCE HS.UN2` — is **not** written, and neither are the blank lines, whose count is a
-function of the inference half: one blank is printed before each sibship's block until the
-family prints its first inference, and if it never prints one, every block still prints its
-blank (that reproduces 1, 1, 2 for `bigish`'s three clusters and 3, 2, 1 for
-`three_clusters`'s, and 12 of the 13 other measured clusters; `three_fs` prints three where
-the rule says two).
+**Which log lines are in which half.** This is the other thing the round corrected. The log
+splits into a *rule* half (written) and an *inference* half (not), and the split is not the
+one the indentation suggests:
+
+| template | half | trigger |
+| --- | --- | --- |
+| `Family KING<k>:` | — | once, before the cluster's first line |
+| `Duplicate <a> (of <b>) is removed.` | **rule** | an inferred `Dup/MZ` pair, if the cluster raises something else |
+| `RULE FS0` | **rule** | a component of *inferred FS* ∪ *declares the same couple* that the inference created |
+| `RULE FS1` | **rule** | one more member joining a component that already had a sibship |
+| `RULE FS2` | rule | two declared sibships in one component — never observed |
+| `Reconstruct parent-offspring pair (X, Y)...` | **inference** | an inferred `PO` pair, in a cluster whose inference block also speaks |
+| `…'s sibship is used to determine…`, `RULE PO.S`, `<n> is created as …'s mother.` | inference | that `PO` pair, when a sibship orients it |
+| `INFERENCE AV.FS` | inference | an `R` inferred 2nd-degree to **both** named members of a sibship |
+| `INFERENCE AV.HS`, `HS <a> unrelated to <b>`, `INFERENCE HS.UN2` | inference | a half-sib pair the avuncular pass turned up |
+
+`Reconstruct parent-offspring pair` was assumed to be a rule line and is not: **42 of 42**
+clusters that print it also print an `INFERENCE` line, and a `PO` merge between two
+families with no sibship anywhere — two one-person families and two childless couples,
+three seeds each — prints nothing at all, not even a header. Writing it would have been a
+guess that happens to fit two shapes and fails at least nine.
+
+`Duplicate … is removed.` is the opposite and is now written. `dupkeep.py` scores it over
+ten shapes × three seeds: **23 of 27** runs print it in a file with no `INFERENCE` line, so
+it is rule-half. Which copy goes is measured the same way — the reference keeps the copy
+with more **declared 1st-degree relatives that the fileset carries** (named parents, full
+sibs naming the same couple, children naming it) and breaks ties on the ID comparator,
+keeping the later id: **27 of 27**, against 21 for "keep the later id" and 6 for "keep the
+earlier". That also corrects the old clause "a cluster holding an inferred duplicate
+contributes no rows at all" — it contributes them whenever removing the duplicate leaves an
+`FS` or `PO` pair behind.
+
+**The rule half now scores 53 of 59 held-out shapes**, byte-identical, up from 23 of 30
+(`buildlog.py rules`, over `build_shapes.py`'s twenty, `avfs.py`'s ten, `clusternum.py`'s
+nineteen and `dupkeep.py`'s ten). The six that differ are two `<FID>-><IID>` renaming shapes
+that are out of scope, three that differ only in the *order* a sibship's members are listed,
+and one where the unimplemented `PO.S` branch consumes a synthetic id so the next sibship
+takes `(4 5)` where we write `(3 4)`. `build_shapes.py` is **18 of 18** in scope on
+`updateparents.txt` and the console tail, up from 15.
+
+**The blank lines are still not written**, because their count is a function of the
+inference half. Two rules fit; the one this section carried is the weaker of them:
+
+* **block** — one blank before each sibship's block until the family prints its first
+  inference, and one per block if it never does;
+* **reject** — one blank opens the section, and one more per candidate `R` *examined and
+  turned down* before the first line prints.
+
+`buildlog.py blanks` scores both at **107 of 113** clusters, on different failure sets, with
+a scorer that has to guess the block order and the candidate order. What separates them by
+hand are the two clusters `block` provably misses: `three_fs`, whose first sibship faces two
+candidate uncles and prints **three** blanks where `block` says two, and `ord3`, whose two
+sibships face no candidate at all and prints **one** where `block` says two. `reject` gets
+both, and reproduces 1, 1, 2 for `bigish`, 3, 2, 1 for `three_clusters` and 1, 2 for
+`mixed_po_fs`.
+
+**The sibship member order is still the open question, and it is now much narrower.** The
+`RULE FS1` line prints a sibship's members in an internal order — `(A_C2 A_C3 A_C1)` for
+`A_C1..A_C3` — and the same order picks the pair an `AV.FS` line names. Earlier rounds ruled
+out genotypes, `.fam` row order, absolute sample index, sibship size and position, and every
+pairwise statistic. `docs/research/fixtures/siborder.py` closes the remaining space:
+
+* it **is** a function of the members' **id strings** — three distinct position-orders over
+  eight id sets in one fixed pedigree, `A_C1..A_C3` giving `(2,3,1)` where `K1..K3` and
+  `1001..1003` give the identity and `zeta,alpha,mu` gives `(3,2,1)`;
+* it is **not a per-id ranking**: over thirteen subsets of one eight-id pool the pairwise
+  precedences contradict each other **91** times, so no `sort by f(id)` can reproduce them —
+  the order moves when the *set* changes, which is what a hash table's capacity does;
+* the container is scoped to the **individual's own family**: renaming the sibship's parents
+  changes the kids' order, while the joiner's id, the other family's ids, the padding
+  vocabulary (four) and the total sample count (102 … 142, nine values) all leave it
+  byte-identical;
+* four `.fam` permutations of the same three ids give one order, confirming it is keyed by
+  the strings and not by position.
+
+So it is an iteration order over a family-scoped, id-keyed, capacity-sensitive container —
+a hash table — and reproducing it means identifying the hash. That is the next piece of work
+on this case, and it is worth exactly three of the 59 shapes: `bigish`'s log has no `FS1`
+line at all, so the corpus case does not turn on it.
+
+**The verdict cut is tightened** from (0.846, 0.902) to **(0.8495, 0.9005)**. `buildlog.py
+cut` re-reads every `AV` line every rig has produced — **259** of them, 133 `uncle|aunt`
+against 126 ambiguous, up from 53 — and the largest `uncle` prints `0.850` while the
+smallest ambiguous prints `0.900`. At `%.3lf` those stand for `[0.8495, 0.8505)` and
+`[0.8995, 0.9005)`, so all three of 0.85, 0.875 and 0.9 still survive; the bracket is now
+symmetric about 0.875 and one printed step from closing.
 
 **That statistic is no longer unknown, and it confirms the case is blocked on the segment
 caller.** Writing `IBD(x, y)` for the union of a pair's called IBD1 and IBD2 segments as a
@@ -1439,8 +1624,6 @@ residual did not move. So `--build`'s `INFERENCE` half is blocked on something t
 cannot show and no output file exposes: the base-pair **placement** of called segments,
 plus the unidentified sib-pair ordering below. Anyone resuming it should start there and
 not with the `.seg` columns.
-Rig: `docs/research/fixtures/avfs_score.py` (its module docstring still carries the
-withdrawn `ΔS / Join2` bound as history; the scorecard it prints is current).
 
 Two further rules were measured the same way, and one is a sharp negative:
 
@@ -1481,17 +1664,19 @@ Two further rules were measured the same way, and one is a sharp negative:
   `buildlog.py order` and `buildlog.py pairs` re-measure all of it.
 * **The verdict is a cut on the ratio**, `uncle|aunt` below against
   `grandfather|grandmother, HS, or nephew|niece` above, all three word pairs following
-  `R`'s sex. Bracketed to **(0.846, 0.902)** over the 53 values measured — which does not
-  separate 0.85, 0.875 and 0.9.
+  `R`'s sex. Bracketed at the top of this section to **(0.8495, 0.9005)** over 259 values,
+  which still does not separate 0.85, 0.875 and 0.9.
 
-`updateparents.txt` has since been written anyway — it cannot flip the case, but it is a
-rule that generalises (see the top of this section), and shipping it removed one of the
-three diffs and fixed the console tail on PO-only merges. The `build.log` derivation lives in `crates/king-cli/src/analysis/build.rs`'s module doc;
-`docs/research/fixtures/avfs.py` regenerates the held-out pedigree shapes and
-`docs/research/fixtures/avfs_score.py` drives the reference over them and prints the
-scorecard and the accounting bound above in about twenty seconds;
-`docs/research/fixtures/buildlog.py` scores the log itself (`rules`) and carries the two
-rigs that closed the ordering question (`order`, `pairs`).
+`updateparents.txt` and `updateids.txt` are both written and byte-identical, and the rule
+half of the log with them — none of which can flip the case, but all of which generalise.
+The `build.log` derivation lives in `crates/king-cli/src/analysis/build.rs`'s module doc;
+the rigs are `docs/research/fixtures/avfs.py` (held-out pedigree shapes),
+`avfs_score.py` (the `Join3/Join2` scorecard, about twenty seconds),
+`build_shapes.py` (twenty merge shapes and the `updateparents.txt` scorecard),
+`clusternum.py` (nineteen shapes for the merge queue and the merge gate: `score`, `seeds`,
+`gate`, `dump`), `dupkeep.py` (ten shapes for the duplicate rule), `siborder.py` (the
+sibship-order container: `names`, `popn`, `setsize`, `perm`, `subsets`, `family`, `sizes`)
+and `buildlog.py` (`rules`, `blanks`, `cut`, `order`, `pairs`).
 
 ---
 
