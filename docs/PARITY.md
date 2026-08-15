@@ -221,7 +221,7 @@ Measured on the tree this document describes:
 | `docs/research/fixtures/battery.py hs` | **out of sample**, the half-sib candidate gate over 26 candidate pairs: `PropIBD` bracketed to **(0.1868, 0.1878)**, 0 refutations; `Kinship` **refuted**, its silent and firing ranges overlapping |
 | `docs/research/fixtures/dupkeep.py` | **out of sample**, which duplicate copy is removed, 10 shapes × 3 seeds: **27/27**, against 21 for "keep the later id" and 6 for "keep the earlier"; the line appears with no `INFERENCE` line in 23 of 27 runs, which is what makes it rule-half |
 | `docs/research/fixtures/screenfold.py separation` | **the screen impossibility result**: the kept 32 768 markers' genotypes held bit-identical while the printed count falls **46 → 37** (§5.7) |
-| `cargo test --workspace` | **329 passed, 0 failed, 1 ignored** |
+| `cargo test --workspace` | **330 passed, 0 failed, 1 ignored** |
 | `cargo clippy --workspace --all-targets -- -D warnings` | clean |
 | `cargo fmt --all --check` | clean |
 | a pristine copy of the tree, `cargo build --release` | succeeds in **9.5 s** from cold; `Cargo.lock` has 15 packages — the 3 workspace crates and 12 external |

@@ -612,3 +612,256 @@ re-estimate that follows the screen and are byte-correct at every degree, and th
 the reference's screen drops all sit below the 0.08839 reporting threshold.
 
 Harness: **477 / 480 byte-identical, self-check 480 / 480** — unchanged.
+
+---
+---
+
+# Round 3 — the early exit is dead: rank does not matter, a MAF knee does
+
+The task set for this round was §12.2: the one hypothesis two rounds of negatives had
+converged on — a **deterministic bound-based early exit** over the informativeness-sorted
+map. It predicts every surviving observation. It reads the discarded markers (they enter
+the bound); it is deterministic, so per-pair labels are sharp; `R = 1` below the budget
+because no exit is possible; the deflation tracks the MAF spectrum because that is what
+the bound's slack depends on; and a conservative bound can only reject, which matches the
+sign.
+
+**It is refuted, twice over, and the refutations are cheap and reproducible.**
+
+* An early *accept* on a lower bound can only ever **under**-detect, so `R >= 1` always.
+  Measured directly: `R = 0.980` — the screen accepts pairs whose whole-map kinship is
+  *below* the printed cutoff (§16). That also settles the question Round 1 left open about
+  the beta spectrum's `R = 0.998`: a real acceptance, not measurement slack.
+* An early *reject* on a prefix is a statement about **rank**. Rank is not what matters.
+  A block of unshared markers ranked *above* the pair's entire sharing costs the pair
+  **nothing at all** at MAF 0.40 — at any block size up to 20 480, five eighths of the map
+  — and is **lethal** at MAF 0.45 (§17, §18). No scan over a ranking can tell those two
+  blocks apart: both are unshared, both outrank the sharing, and they differ by 3 % in
+  informativeness.
+
+In their place this round puts the two hardest facts in the file: the screen reads the
+pair's **genotypes** at markers the budget discards, and the second condition of §9 is a
+**knee in MAF**, not a position in a ranking.
+
+Still nothing landed. `related.rs` is unchanged apart from its documentation.
+
+Instrument: `docs/research/fixtures/screenexit.py` (`facts` re-measures everything below).
+
+## 14. The instrument: two canvases and one correction
+
+**The kept/discarded canvas.** Build `m` markers as `nA` at MAF 0.45 plus the rest at MAF
+`x < 0.42`, so the ranking separates the groups with zero swaps, and clone each ladder pair
+at fraction `fA` inside the high group and `fB` inside the low one, drawing the two clone
+sets from **separate generators keyed on the rung**. Every arm of a scan over `fB` then
+holds the high group's genotypes bit-identical — §10's condition — while the *pair's own
+genotypes* at the discarded markers change. §10 could only vary the discarded markers'
+frequencies; this varies the pair.
+
+**The block canvas.** `u` markers at MAF `a` that the pair never shares, above a window of
+`w` markers at a low MAF that it clones at fraction `f`, with junk at MAF 0.03 filling out
+to `m`. A 48-rung ladder over `f` reads the accept threshold in one run. Quoting the
+threshold **in whole-map kinship** is what makes the scan fair: it already charges the pair
+for whatever information the block adds to the map.
+
+**A correction to Round 2's reading.** The accept set is the top `det` pairs by *realised*
+kinship, not by ladder index. Near `f = 1` successive rungs differ by less in kinship than
+realisation noise, so an index-ordered reading inverts. Every number below reports the
+`det`-th largest kinship, which is what `screenfold.py`'s `read_threshold` already did;
+single-pair labels away from the boundary agree with it, and a 24-pair labelling run at
+`fB = 0.30` puts the flip between kinship 0.0696 and 0.0715 with no inversions.
+
+## 15. The screen reads the pair's genotypes at markers it discards
+
+`m = 50 000` = 32 768 @ MAF 0.45 + 17 232 @ MAF 0.25, `n = 200`, ladder in `fA` inside the
+kept group (`screenexit.py tail`):
+
+```
+    fB  printed thr(whole) thr(kept)      R   kept bits identical
+  0.00       30     0.0589    0.0854  0.9919        -
+  0.05       30     0.0665    0.0854  1.0093      True
+  0.10       30     0.0734    0.0854  1.0256      True
+  0.20       31     0.0811    0.0747  1.0444      True
+  0.40       32     0.1012    0.0640  1.0970      True
+  0.70       37     0.1358    0.0528  1.2013      True
+  1.00       38     0.1732    0.0428  1.3389      True
+```
+
+The kept group's genotypes are bit-identical down the column, so every pair's kinship over
+them is too. The screen's demand on the kept group nevertheless falls by a factor of two.
+Out of sample on a fresh canvas (`m = 45 056` = 30 000 @ 0.45 + 15 056 @ 0.20, `n = 240`,
+seed 404): printed 32 → 33 → 35 → 38 → 40 as `fB` runs 0 → 1, kept bits identical
+throughout.
+
+This is stronger than §10 and it cuts the other way from what one might hope: sharing in
+the discarded markers **does** count, but at roughly a quarter of the weight its
+information deserves — `thr(whole)` climbing from 0.059 to 0.173 is the screen charging the
+pair three times over for evidence it is only partly willing to spend.
+
+## 16. `R` below 1 is real, and it kills the bound
+
+Sharing confined to the *most informative* markers, `m = 50 000` (`screenexit.py below`):
+
+```
+     nA  MAF A  MAF B  thr(whole)      R
+  32768   0.45   0.25      0.0589   0.9919
+  32768   0.45   0.15      0.0571   0.9878
+  24576   0.45   0.20      0.0536   0.9801
+```
+
+The screen accepts pairs at whole-map kinship 0.0536 against a printed cutoff of 0.0625.
+A conservative bound — the whole content of the early-exit hypothesis — can only ever
+reject pairs a full computation would accept. It cannot do this. Round 1's lone
+sub-unity point (beta spectrum, 0.9980 ± 0.0003) was the same effect seen through a
+spectrum that happens to put a pair's sharing slightly above the map's centre of
+informativeness, and it is reproducible at four times the size.
+
+## 17. The second condition is a knee in MAF, not a place in the ranking
+
+`m = 32 768`; `u = 4096` unshared markers at MAF `a`, above 8192 @ MAF 0.15 that the pair
+clones at the rung's `f`, junk @ 0.03 filling the rest. The block outranks the window at
+every `a` below, by at least seven in-sample standard deviations
+(`screenexit.py band`, three seeds):
+
+```
+   a    2pq      n = 150              n = 300              n = 600
+0.34  0.4488  0.0666 0.0629 0.0712  0.0637 0.0627 0.0626  0.0628 0.0690 0.0648
+0.38  0.4712  0.0663 0.0628 0.0688  0.0639 0.0646 0.0651  0.0628 0.0633 0.0637
+0.40  0.4800  0.0660 0.0631 0.0691  0.0653 0.0634 0.0650  0.0639 0.0631 0.0626
+0.41  0.4838  0.0641 0.0660 0.0687  0.0641 0.0655 0.0651  0.0631 0.0643 0.0631
+0.42  0.4872  0.0655 0.0650 0.0754  0.0638 0.0655 0.0638  0.0654 0.0693 0.0786
+0.43  0.4902  0.0768 0.0646 0.0815  0.0843 0.0801 0.0758  0.0866 0.0834 0.0928
+0.44  0.4928  0.0791 0.0766 0.0823  0.1149 0.1101 0.0970  0.1040 0.1180 0.1115
+0.45  0.4950  0.1032 0.0900 0.0894  0.1467 0.1370 0.1435  0.1512 0.1568 0.1417
+0.46  0.4968  0.1062 0.0999 0.1025  0.1694 0.1664 0.1631  0.1591 0.1827 0.1555
+0.48  0.4992  0.1494 0.1301 0.1302  0.1837 0.1760 0.1744  0.1805 0.1911 0.1946
+```
+
+Flat at the printed cutoff to `a = 0.42`, then a knee: the same 4096 markers, in the same
+place in the ranking, differing by 3 % in `2pq`, have more than **doubled** what the pair
+must score by `a = 0.45` and nearly tripled it by 0.48. The knee does not move between
+`n = 150` and `n = 600`, so it is not a binomially smeared cut on the in-sample frequency
+sitting somewhere else. Out of sample it reproduces at `m = 45 056` (above the budget) and
+`m = 20 480` (well below it) with a window at MAF 0.22, junk at 0.06, `n = 260` and unused
+seeds — flat at 0.36 and 0.40, and 0.11–0.26 from 0.43 up — so it is **not a budget
+effect**.
+
+**The knee moves with the cutoff.** In one geometry (window 16 384 @ MAF 0.20, `n = 300`)
+the degree-2 knee sits at `a ≈ 0.435` while at degree 1 a block at `a = 0.34` already costs
+1.25× and everything from 0.38 up is out of reach — with the no-block control landing on
+0.1278/0.1390/0.1375 against the 0.1250 cutoff, as it must. So "MAF ≳ 0.42" is the knee's
+position at degree 2, not a constant of the algorithm.
+
+## 18. Rank, size and coding, each held apart
+
+Same canvas, degree 2, window 8192 @ MAF 0.15 (`screenexit.py size`, `rank`, `coding`):
+
+```
+    u   |  a = 0.40 (below the knee)   |  a = 0.45 (above it)
+    0   |  0.0626 0.0660 0.0646        |  0.0626 0.0660 0.0646
+ 1024   |  0.0682 0.0675 0.0637        |  0.0643 0.0679 0.0654
+ 2048   |  0.0673 0.0687 0.0705        |  0.0858 0.1083 0.0935
+ 4096   |  0.0653 0.0634 0.0650        |  0.1467 0.1370 0.1435
+ 8192   |  0.0643 0.0640 0.0636        |  0.1416   n/a    n/a
+12288   |  0.0641 0.0635 0.0650        |    n/a    n/a    n/a
+16384   |  0.0670 0.0651 0.0684        |    n/a    n/a    n/a
+20480   |  0.0642 0.0655 0.0628        |    n/a    n/a    n/a
+```
+
+* **Rank is free.** Below the knee the block is free at *every* size: 20 480 unshared
+  markers, five eighths of the map, every one of them ranked above the pair's entire
+  sharing, leave the threshold on the cutoff. A prefix scan cannot produce that column.
+* **Above the knee it is not.** 2048 markers already cost 1.5×; 8192 put the pair beyond
+  reach at any kinship the canvas can build (0.15).
+* **What rescues a pair is entering the band, not climbing the ranking.** With `u = 12 288`
+  at MAF 0.45 fixed and the window's own MAF raised: 0.15 and 0.30 refused outright, 0.38
+  refused-then-0.087, 0.42 and 0.45 back on the cutoff (0.0659–0.0702). MAF 0.38 outranks
+  two thirds of the map and is still refused.
+* **It is a band in MAF, not in allele coding.** Swapping hom-A1 and hom-A2 at a marker
+  leaves het, HetHet and IBS0 — and so every kinship — bit-identical. Recoding the 45
+  markers whose in-sample A1 is the major allele, or the whole 8192-marker block, leaves
+  the printed count and the threshold unchanged to the last digit.
+
+Also checked and negative: an IBS0 reweighting `phi - lambda*IBS0/min_het` needs
+`lambda` = 0.005, 0.059, 0.120 and 0.160 at four points of the §17 sweep; a MAF-thresholded
+subset `{MAF >= t}` on `bigish` counts 44–49 pairs at every `t` from 0 to 0.46 (§3.1's proof
+again, measured); and `--noscreen`, new in 2.3.2 and advertised for `--related`, prints the
+identical `Stages 1&2 (with 32768 SNPs): 36 pairs` line — it is a no-op on this path.
+
+## 19. The band is not the deflation
+
+Delete the band from `bigish` and the deflation does not move (`screenexit.py bigish`):
+
+```
+     c   m left  printed2  true2  printed1  true1  R(deg2)
+  1.01    50000        36     47        18     21   1.0220
+  0.45    47963        36     47        18     21   1.0221
+  0.44    47303        37     47        18     21   1.0193
+  0.42    45384        38     47        18     20   1.0154
+  0.40    43345        37     47        18     22   1.0150
+  0.38    41021        36     47        21     23   1.0152
+  0.35    37342        45     47        18     22   1.0053
+  0.30    30955        50     50        18     21   1.0009
+```
+
+`R` tracks `m` against the 32 768 budget and nothing else — the band-deleted maps land on
+§4.3's prefix-truncation curve at the same `m` (1.0087 at 36 864, 1.0128 at 40 960) — and
+the deflation vanishes only when `m` itself falls under the budget. So Round 1's deflation
+and Round 3's band are **two different phenomena**. `bigish`'s uniformly related pairs
+share inside the band in proportion to it, which is why the band never binds there and why
+no instrument before this one saw it.
+
+## 20. Where round 3 leaves the mechanism
+
+Closed this round, on top of §5's and §12's lists:
+
+* **a bound-based early exit**, in the early-accept form — §16 measures `R = 0.980`, and a
+  conservative bound cannot accept what the full computation rejects;
+* **a bound-based early exit**, in the early-reject form, and with it *every* mechanism
+  whose state is a prefix of a sorted scan — §18's `a = 0.40` column is flat at the cutoff
+  with 20 480 unshared markers ranked above the sharing;
+* **any account of §9's second condition in terms of rank, contiguity, block size or
+  informativeness** — the knee is 3 % wide in `2pq` and 60 % of the map wide in rank;
+* **allele coding**, **an IBS0 reweighting of the estimator**, and **a MAF-thresholded
+  subset** — §18;
+* **`--noscreen` as a lever** — it does not change this line.
+
+What a mechanism now has to do, all at once:
+
+1. equal the whole-map kinship exactly when `m <= 32768` and the pair's sharing is spread
+   (§1, §17's flat columns, §19's `c = 0.30` row);
+2. read the pair's genotypes at discarded markers, and weight them at roughly a quarter of
+   their information (§15);
+3. accept below the printed cutoff when the sharing sits high in the spectrum (§16);
+4. deflate above the budget as a function of `m/32768` and the spectrum, *independently* of
+   the band (§19);
+5. carry a condition that is nearly a step function of a marker's MAF, with the step at
+   ≈ 0.42 at degree 2 and below 0.34 at degree 1, insensitive to rank, size below the step,
+   and sample count (§17, §18).
+
+Worth the next round's time, in order:
+
+1. **Chase the knee, not the deflation.** It is a factor of three in kinship, it is one run
+   per point, it reproduces out of sample at three map sizes and two degrees, and item 5 is
+   a far tighter constraint on any candidate mechanism than the 2 % deflation ever was. The
+   right next scan is the knee's position against the *cutoff* at fixed geometry — degree 1
+   and 2 differ, so a third point (a fileset engineered so degree 3's exhaustive path still
+   prints a screen line, or a `--degree 2` map whose ladder reaches far higher) would say
+   whether the knee is a function of the cutoff alone.
+2. **Ask what a marker at MAF 0.45 has that one at MAF 0.40 does not**, when the pair does
+   not share it. `2pq` differs by 3 %, `2p²q²` by 6 %, `p²` by 27 %. Nothing smooth in `p`
+   has a knee there, so the answer is likely a comparison — a marker being *the most*
+   informative available, or crossing a fixed integer count — rather than a function.
+3. **Keep the two phenomena apart.** §19 shows the deflation survives deleting the band and
+   the band survives dropping below the budget; a mechanism that explains one and not the
+   other is still progress, and conflating them cost this round two hours.
+4. **Do not fit `R`.** Unchanged from §12.3.
+
+## 21. Consequence for the implementation, unchanged
+
+`related.rs` still estimates on the map's first `min(m, 32768)` markers. Right whenever
+`m <= 32768`, right at degree 1 on `bigish` (18), wrong at degree 2 (50 against 36). The
+blast radius is still one stdout line: `.kin0`'s rows come from the exhaustive re-estimate
+that follows the screen and are byte-correct at every degree, and the 14 pairs the
+reference's screen drops all sit below the 0.08839 reporting threshold.
+
+Harness: **477 / 480 byte-identical, self-check 480 / 480** — unchanged.

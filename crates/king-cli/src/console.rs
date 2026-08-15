@@ -921,6 +921,27 @@ pub fn build_inference_av_fs(
     )
 }
 
+/// `  Family KING1 INFERENCE AV.HS: A_F is uncle of (B_C1 D_C3), Join3/Join2=0.699`.
+///
+/// The avuncular test again, run against a **candidate half-sib pair** rather than a
+/// sibship: same [`crate::analysis::build::join_ratio`], same
+/// [`crate::analysis::build::av_verdict`] band, and the two named in parentheses in the
+/// order the `INFERENCE HS.UN2` line below will repeat. Because the pair comes from the
+/// HS candidate and not from a sibship's internal order, this is the one inference
+/// template that needs nothing still unidentified.
+pub fn build_inference_av_hs(
+    key: &str,
+    r: &str,
+    verdict: &str,
+    a: &str,
+    b: &str,
+    ratio: f64,
+) -> String {
+    format!(
+        "  Family {key} INFERENCE AV.HS: {r} is {verdict} of ({a} {b}), Join3/Join2={ratio:.3}\n"
+    )
+}
+
 /// `    HS B02_C4 unrelated to B01_M` — four spaces, not two.
 ///
 /// One line per declared parent of one half-sib candidate that the *other* candidate is
@@ -940,6 +961,37 @@ pub fn build_hs_unrelated(other: &str, parent: &str) -> String {
 /// [`crate::analysis::build::HS_CANDIDATE_PROP_IBD`] to have been a candidate at all.
 pub fn build_inference_hs_un2(key: &str, a: &str, b: &str) -> String {
     format!("  Family {key} INFERENCE HS.UN2: {a} and {b} are HS\n")
+}
+
+#[cfg(test)]
+mod build_log_tests {
+    use super::*;
+
+    /// The five inference templates, against lines lifted from reference captures.
+    #[test]
+    fn inference_templates_match_captured_lines() {
+        assert_eq!(
+            build_inference_av_fs("KING1", "B02_F", "uncle", "B01_C2", "B01_C3", 0.778_4),
+            "  Family KING1 INFERENCE AV.FS: B02_F is uncle of B01_C2 and B01_C3, \
+             Join3/Join2=0.778\n"
+        );
+        assert_eq!(
+            build_inference_av_hs("KING1", "A_F", "uncle", "B_C1", "D_C3", 0.699_224),
+            "  Family KING1 INFERENCE AV.HS: A_F is uncle of (B_C1 D_C3), Join3/Join2=0.699\n"
+        );
+        assert_eq!(
+            build_hs_unrelated("B02_C4", "B01_M"),
+            "    HS B02_C4 unrelated to B01_M\n"
+        );
+        assert_eq!(
+            build_inference_hs_un2("KING1", "B01_C3", "B02_C4"),
+            "  Family KING1 INFERENCE HS.UN2: B01_C3 and B02_C4 are HS\n"
+        );
+        assert_eq!(
+            build_rule_fs2("KING1", &["K_C1", "K_C2"], &["K_C4", "K_C3"]),
+            "  Family KING1 RULE FS2: Sibship (K_C1 K_C2) and sibship (K_C4 K_C3) are combined\n"
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------

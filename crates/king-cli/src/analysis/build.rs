@@ -89,6 +89,7 @@
 //! | `INFERENCE AV.FS`, `uncle\|aunt` form | inference | an `R` inferred 2nd-degree to **both** named members of a sibship, with `Join3/Join2 < 0.85` |
 //! | `INFERENCE AV.FS`, `grandfather\|…, HS, or nephew\|…` form | inference | the same candidate with `Join3/Join2 > 0.90` |
 //! | *(no line at all)* | — | the same candidate with `0.85 <= Join3/Join2 <= 0.90` — the dead band, see below |
+//! | `INFERENCE AV.HS: <R> is <verdict> of (<a> <b>), …` | inference | the same statistic and the same band, run against a candidate **HS pair** instead of a sibship |
 //! | `HS <a> unrelated to <b>` | inference | a candidate HS pair (`PropIBD > 0.1875`), one line per declared parent the other member is unrelated to |
 //! | `INFERENCE HS.UN2` | inference | that pair, when both sides produced such a line |
 //!
@@ -293,6 +294,26 @@
 //! constructed one: `battery.py hsrel` makes the mothers full sibs too (double first
 //! cousins), so **no** parent check can pass, and the log carries nine candidate pairs
 //! above the gate, two `RULE FS0` lines, three `AV.FS` lines — and not one `HS` line.
+//!
+//! ## `INFERENCE AV.HS` is `AV.FS` with the pair in place of the sibship
+//!
+//! Ahead of that block, every `R` inferred 2nd-degree to **both** members of the candidate
+//! pair raises
+//!
+//! ```text
+//!   Family KING1 INFERENCE AV.HS: A_F is uncle of (B_C1 D_C3), Join3/Join2=0.699
+//! ```
+//!
+//! — the pair in parentheses, in the same order the `HS.UN2` line will name it, and the
+//! same [`join_ratio`] under the same [`av_verdict`] band. `buildlog/m43`'s two read
+//! 0.699 and 0.587 and [`join_ratio`] returns 0.699224 and 0.586998, so this template needs
+//! nothing new: the pair it names is *given* by the HS candidate, not by a sibship order,
+//! which makes `AV.HS` the one inference template that is fully implementable today.
+//!
+//! That fileset also carries the tightest **printed** pair of verdicts anywhere —
+//! `uncle … 0.846` and `grandfather, HS, or nephew … 0.903` — which brackets the two cuts
+//! to `(0.8455, …)` and `(…, 0.9035)` from printed values alone, independently of the
+//! genotype-surgery bisection and agreeing with it.
 //!
 //! # `RULE FS2` — made to fire
 //!

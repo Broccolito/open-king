@@ -985,6 +985,47 @@ fn effective_degree(opts: &Options) -> i32 {
 /// reference's 36, but it is 4× short wherever the ranking resolves, and `R - 1` falls only
 /// 2.1× between n = 110 and n = 700 where a 2-in-`n` selection demands 6.4×.
 ///
+/// ## Not an early exit over the sorted map either
+///
+/// A third round (`22-screen.md` §§14–21, instrument
+/// `docs/research/fixtures/screenexit.py`) tested the last mechanism standing — a
+/// deterministic **bound-based early exit** over the informativeness-sorted map, which
+/// predicts every observation above — and closed it two independent ways.
+///
+/// **`R < 1` is real, so no bound is involved.** An early accept on a conservative lower
+/// bound can only ever *under*-detect. Confine a pair's sharing to the most informative
+/// markers and the screen accepts it at whole-map kinship **0.0536** against a printed
+/// cutoff of 0.0625 (`R` = 0.980; also 0.9878 and 0.9919 on two neighbours). Round 1's
+/// lone sub-unity point, a beta spectrum at 0.9980, was this effect and not slack.
+///
+/// **Rank is not what matters.** An early *reject* is a statement about a prefix. Put `u`
+/// unshared markers at MAF `a` above a window the pair clones, junk below, and read the
+/// accept threshold off a 48-rung ladder: at `a` = 0.40 the block is free at *every* size
+/// — 20 480 markers, five eighths of the map, all ranked above the pair's entire sharing,
+/// leave the threshold on the cutoff — while at `a` = 0.45 2 048 markers already cost 1.5×
+/// and 8 192 put the pair out of reach. The two blocks differ by 3 % in `2pq`; no scan
+/// over a ranking can tell them apart.
+///
+/// So §9's second condition is a **knee in MAF**, sitting at `a ≈ 0.42` at degree 2 — flat
+/// at the printed cutoff to 0.42, then 0.084, 0.110, 0.143, 0.166, 0.180 at 0.43…0.48 —
+/// unmoved between n = 150 and n = 600, reproduced out of sample at m = 20 480 and
+/// m = 45 056, and *lower* at degree 1 (a MAF-0.34 block already costs 1.25× there). It is
+/// not allele coding (swapping the two homozygote codes, which no pairwise count can see,
+/// changes nothing), not an IBS0 reweighting (`λ` runs 0.005 → 0.160 across one sweep), and
+/// not a MAF-thresholded subset (`{MAF ≥ t}` counts 44–49 on `bigish` at every `t`).
+///
+/// **The knee and the deflation are different phenomena.** Deleting every `bigish` marker
+/// above MAF 0.38 — the whole band — leaves `R` at 1.015…1.022, on §4.3's prefix-truncation
+/// curve for the `m` that remains; the deflation vanishes only when `m` itself drops under
+/// the budget (50 pairs, `R` = 1.0009, at m = 30 955).
+///
+/// The screen also reads the pair's **genotypes** at markers the budget discards, not just
+/// their frequencies as §10 showed: holding the kept 32 768 bit-identical and varying only
+/// how much of the *discarded* group the pair shares moves the threshold on the kept group
+/// from 0.0854 to 0.0428 — the discarded markers count, at roughly a quarter of the weight
+/// their information deserves. `--noscreen`, new in 2.3.2 and advertised for `--related`,
+/// prints the identical line and is a no-op on this path.
+///
 /// Landing the affine law with a fitted `R` would reproduce `bigish` and nothing else, so
 /// it is deliberately not landed. The consequence is contained: the count reaches stdout
 /// and nothing else. `.kin0`'s row set comes from the exhaustive re-estimate below and is
