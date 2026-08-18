@@ -176,3 +176,17 @@ reads the effective threshold — 17× cheaper than bisection.
 3. **The corpus-invisible differences** in `docs/PARITY.md` §5.10–§5.12 — these affect real
    users even though they cost no case, which arguably makes them more valuable than
    either of the above.
+
+## Open work
+
+Tracked as GitHub issues:
+
+| # | Title | Parity cases |
+| --- | --- | --- |
+| [1](https://github.com/Broccolito/open-king/issues/1) | `build.log` missing INFERENCE triggers | 1 |
+| [2](https://github.com/Broccolito/open-king/issues/2) | Two-stage screen pair count | 2 |
+| [3](https://github.com/Broccolito/open-king/issues/3) | Differences the corpus cannot see | 0 — but they affect real users |
+| [4](https://github.com/Broccolito/open-king/issues/4) | Unimplemented analyses exit 0 silently | 0 |
+
+Issue 3 is the one worth doing first: it costs no parity case, which is exactly why the
+suite cannot protect a user from it.
