@@ -1418,20 +1418,19 @@ segment pass; open-king does not. Two shapes, both derived from `multifam` by th
 Both exit 0. The first shape happens to agree on the file set for the wrong reason; the second
 produces a complete, confidently formatted, meaningless `.seg`.
 
-**3. Sample IDs colliding only in case are accepted.** The reference folds case when checking
+**3. Sample IDs colliding only in case — fixed.** The reference folds ASCII case when checking
 `(FID, IID)` uniqueness — established independently in
 [`BEHAVIOR.md`](BEHAVIOR.md#q6--the-sample-id-sort-comparator), which records `{A, a}` and
-`{ab, aB}` being rejected at load. `king-io`'s duplicate check is byte-exact, so a `.fam` with
-`A_F` and `a_f` in one family aborts under the reference with `Please correct problems with
-pedigree structure` and runs to completion under open-king. Exact duplicates are rejected by
-both.
+`{ab, aB}` being rejected at load. `king-io` now canonicalises only the identity key while
+retaining the original spelling for output, so exact duplicates and case-only FID/IID
+collisions stop at the same pedigree-validation point.
 
 *Reproduce:*
 
 ```text
 awk 'BEGIN{OFS=" "} {if ($1=="FAM1" && $2=="A_M") $2="a_f"; print}' \
     /tmp/kingdocs/multifam.fam > case.fam
-king -b /tmp/kingdocs/multifam.bed --fam case.fam --kinship    # reference: exit 1; open-king: exit 0
+king -b /tmp/kingdocs/multifam.bed --fam case.fam --kinship    # both: exit 1, same duplicate diagnostic
 ```
 
 **A1-major inputs** are the fourth known difference of this kind and were already recorded —

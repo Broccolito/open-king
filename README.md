@@ -91,6 +91,10 @@ Two things to know before your first real run: **`--prefix` is concatenated, not
 (`--prefix demo` gives `demo.kin` *and* `demoallsegs.txt`), and on a cohort of any size
 **always pass `--degree`** — unfiltered, `.kin0` is every pair in the dataset.
 
+Sample identity is the `(FID, IID)` pair under ASCII case-folding. For example, `A_F` and
+`a_f` in the same family collide and the fileset is rejected, matching KING. Make those
+keys case-insensitively unique before running an analysis.
+
 ## The analyses
 
 One or more of these must be given, or nothing is computed. Full reference, including all 46

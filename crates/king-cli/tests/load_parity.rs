@@ -539,6 +539,22 @@ fn duplicate_sample_is_named_before_the_fatal() {
     );
 }
 
+#[test]
+fn case_colliding_sample_is_named_before_the_fatal() {
+    let s = Scratch::new("case-duplicate");
+    write_fileset(&s, "t", &[("F1", "A_F"), ("f1", "a_f")], &chrom("1", 64));
+    assert_fatal(
+        &s,
+        &args(&[Path::new("-b"), &s.path("t.bed"), Path::new("--kinship")]),
+        concat!(
+            "Loading genotype data in PLINK binary format...\n",
+            "Read in PLINK fam file <DIR>/t.fam...\n",
+            "Family f1: Person a_f is duplicated\n",
+            "\nFATAL ERROR - \nPlease correct problems with pedigree structure\n\n\n",
+        ),
+    );
+}
+
 /// Analyses that do not open with the preamble must not be given one.
 #[test]
 fn build_does_not_print_the_preamble() {

@@ -254,7 +254,7 @@ names. Both behaviours match the reference binary exactly.
 | --- | --- |
 | `.bed` | PLINK 1 binary, magic bytes `0x6c 0x1b`, **SNP-major** (mode byte `0x01`), long enough for `ceil(N/4) × M` genotype bytes |
 | `.bim` | exactly 6 whitespace-separated columns `CHR ID CM BP A1 A2`; extra trailing columns are ignored, fewer than 6 is fatal |
-| `.fam` | exactly 6 whitespace-separated columns `FID IID FA MO SEX PHENO`; `(FID, IID)` must be unique |
+| `.fam` | exactly 6 whitespace-separated columns `FID IID FA MO SEX PHENO`; `(FID, IID)` must be unique under ASCII case-folding |
 
 Each has its own fatal error. A corrupted magic:
 
@@ -1461,10 +1461,9 @@ known set; these are the ones a command line can reach:
   `Positions unsorted: …` / `Chromosomes unsorted: …` and writes no `.seg`; open-king
   either reports `No informative IBD segments.` or, on a chromosome-unsorted map, proceeds
   and writes a full `.seg`. See [§3](#two-hard-requirements-that-are-easy-to-miss).
-* **Sample IDs colliding only in case are accepted.** The reference treats `A_F` and `a_f`
-  in one family as a duplicate and aborts with
-  `Please correct problems with pedigree structure`; open-king runs to completion. Exact
-  `(FID, IID)` duplicates are rejected by both.
+* **Sample IDs colliding only in case are rejected.** Both binaries treat `(FID, IID)` as
+  unique under ASCII case-folding, name the second spelling in the duplicate diagnostic and
+  abort with `Please correct problems with pedigree structure`.
 * **The A1-major QC check is not implemented** — open-king runs a fileset the reference
   refuses. [§3](#two-hard-requirements-that-are-easy-to-miss) has the numbers.
 * **`--ibdseg` does not apply the 100 Mb usable-segment floor.** Below it the reference

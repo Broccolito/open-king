@@ -80,18 +80,30 @@ pub fn parse_fam(text: &str, path: &Path) -> Result<Vec<Sample>> {
     Ok(samples)
 }
 
+/// KING's identity key: ASCII case-insensitive `(FID, IID)`.
+///
+/// Keep the original spelling in [`Sample`] for output and canonicalise only the lookup
+/// key. The reference's identifier comparator folds ASCII case, and its pedigree
+/// validation therefore treats `A_F` and `a_f` in one family as duplicates.
+fn identity_key(fid: &str, iid: &str) -> (String, String) {
+    (fid.to_ascii_uppercase(), iid.to_ascii_uppercase())
+}
+
 /// Return the first duplicated `(FID, IID)` pair, if any.
+///
+/// The returned strings retain the second row's original spelling, matching the loader's
+/// diagnostic.
 pub fn find_duplicate(samples: &[Sample]) -> Option<(&str, &str)> {
-    let mut seen: HashMap<(&str, &str), usize> = HashMap::with_capacity(samples.len());
+    let mut seen: HashMap<(String, String), usize> = HashMap::with_capacity(samples.len());
     for s in samples {
-        if seen.insert((s.fid.as_str(), s.iid.as_str()), 0).is_some() {
+        if seen.insert(identity_key(&s.fid, &s.iid), 0).is_some() {
             return Some((s.fid.as_str(), s.iid.as_str()));
         }
     }
     None
 }
 
-/// Error if any `(FID, IID)` pair occurs twice.
+/// Error if any `(FID, IID)` pair occurs twice under ASCII case-folding.
 ///
 /// The reference binary treats this as fatal (`Family <FID>: Person <IID> is duplicated`),
 /// so the loader does too.
@@ -282,6 +294,29 @@ fam2\ts3\t0\t0\t0\t2
             other => panic!("expected DuplicateSample, got {other:?}"),
         }
         assert!(SampleIndex::build(&dup).is_err());
+    }
+
+    #[test]
+    fn duplicate_identity_is_ascii_case_insensitive() {
+        let rows = parse_fam("Fam1 A_F 0 0 1 -9\nfam1 a_f 0 0 2 -9\n", &p()).unwrap();
+        assert_eq!(find_duplicate(&rows), Some(("fam1", "a_f")));
+        match check_duplicates(&rows) {
+            Err(IoError::DuplicateSample { fid, iid }) => {
+                assert_eq!((fid.as_str(), iid.as_str()), ("fam1", "a_f"));
+            }
+            other => panic!("expected case-folded DuplicateSample, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn either_identity_component_may_collide_by_case() {
+        let iid = parse_fam("F A 0 0 1 -9\nF a 0 0 2 -9\n", &p()).unwrap();
+        let fid = parse_fam("F A 0 0 1 -9\nf A 0 0 2 -9\n", &p()).unwrap();
+        let control = parse_fam("F A 0 0 1 -9\nf B 0 0 2 -9\n", &p()).unwrap();
+
+        assert_eq!(find_duplicate(&iid), Some(("F", "a")));
+        assert_eq!(find_duplicate(&fid), Some(("f", "A")));
+        assert_eq!(find_duplicate(&control), None);
     }
 
     #[test]
