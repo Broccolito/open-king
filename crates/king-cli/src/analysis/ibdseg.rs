@@ -58,6 +58,11 @@ use crate::cli::{Opt, Options};
 use crate::console;
 use crate::load::{self, Class, Loaded};
 
+const NO_SEGMENTS: &str = concat!(
+    "No informative IBD segments.\n",
+    "  Note chromosomal positions can be sorted conveniently using other tools such as PLINK.\n",
+);
+
 /// Below this many samples the reference silently runs `--kinship` instead.
 ///
 /// Measured by sweeping `n` over identical filesets: 2, 3 and 4 print
@@ -213,7 +218,7 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
 
     if auto.is_empty() {
         // No denominator, so nothing downstream can be computed and no file is written.
-        let _ = out.write_all(b"No informative IBD segments.\n");
+        let _ = out.write_all(NO_SEGMENTS.as_bytes());
         return;
     }
 
@@ -522,6 +527,17 @@ mod tests {
     fn the_small_sample_gate_is_five() {
         assert!(downgrades_to_kinship(4));
         assert!(!downgrades_to_kinship(5));
+    }
+
+    #[test]
+    fn no_segments_note_matches_the_reference() {
+        assert_eq!(
+            NO_SEGMENTS,
+            concat!(
+                "No informative IBD segments.\n",
+                "  Note chromosomal positions can be sorted conveniently using other tools such as PLINK.\n",
+            )
+        );
     }
 
     #[test]

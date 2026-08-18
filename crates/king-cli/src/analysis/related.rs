@@ -117,11 +117,15 @@ const KIN_HEADER: &str = concat!(
     "FID\tID1\tID2\tN_SNP\tZ0\tPhi\tHetHet\tIBS0\tHetConc\tHomIBS0\tKinship\t",
     "IBD1Seg\tIBD2Seg\tPropIBD\tInfType\tError\n"
 );
+const KIN_FALLBACK_HEADER: &str =
+    "FID\tID1\tID2\tN_SNP\tZ0\tPhi\tHetHet\tIBS0\tHetConc\tHomIBS0\tKinship\tError\n";
 /// Header of `<prefix>.kin0`. No `Z0`/`Phi` and no `Error` — those are `.kin` only.
 const KIN0_HEADER: &str = concat!(
     "FID1\tID1\tFID2\tID2\tN_SNP\tHetHet\tIBS0\tHetConc\tHomIBS0\tKinship\t",
     "IBD1Seg\tIBD2Seg\tPropIBD\tInfType\n"
 );
+const KIN0_FALLBACK_HEADER: &str =
+    "FID1\tID1\tFID2\tID2\tN_SNP\tHetHet\tIBS0\tHetConc\tHomIBS0\tKinship\n";
 /// Header of `<prefix>X.kin` — the X pass reports IBD sharing, not kinship.
 const XKIN_HEADER: &str = "FID\tID1\tID2\tSex1\tSex2\tPhiX\tIBD1Seg\tIBD2Seg\tPropIBD\n";
 /// Header of `<prefix>X.kin0`.
@@ -366,19 +370,28 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
         sexchr,
         seglength_bp,
     );
+    let with_segments = !engine.is_empty();
 
     // The segment pre-pass owns the `Total length …` block and `allsegs.txt`; it is
     // byte-identical to the one `--ibdseg` and the QC reports emit.
-    write(out, &crate::analysis::ibdseg::segment_prepass(opts, loaded));
+    if with_segments {
+        write(out, &crate::analysis::ibdseg::segment_prepass(opts, loaded));
+    } else {
+        write(out, "No informative IBD segments.\n");
+        write(
+            out,
+            "  Relationship inference will be based on kinship estimation only.\n",
+        );
+    }
 
     let blocks = family_blocks(samples);
     let within_ran = blocks.iter().any(|m| m.len() >= 2);
     if within_ran {
-        let rows = within_family_rows(loaded, &engine, &blocks);
+        let rows = within_family_rows(loaded, with_segments.then_some(&engine), &blocks);
         let path = out_path(opts, ".kin");
-        write_kin(&path, &rows, blocks.len() == 1);
+        write_kin(&path, &rows, blocks.len() == 1, with_segments);
         write(out, &console::within_family_kinship_saved(&path));
-        if let Some(table) = summary(&rows) {
+        if let Some(table) = summary(&rows, with_segments) {
             write(out, &table);
         }
     }
@@ -390,7 +403,9 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
     // neither line. (`--kinship`'s X pass differs here too: it emits a header-only
     // `X.kin` in exactly that case. Checked on a fileset of twelve singleton families,
     // against the same fileset with one two-member family added, which writes both.)
-    let x = x_engine(opts, loaded, seglength_bp);
+    let x = with_segments
+        .then(|| x_engine(opts, loaded, seglength_bp))
+        .flatten();
     if let (true, Some((xengine, xgenotypes))) = (within_ran, x.as_ref()) {
         let path = out_path(opts, "X.kin");
         write_x_kin(&path, loaded, xengine, xgenotypes, &blocks);
@@ -402,7 +417,13 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
         write(out, console::ONLY_ONE_FAMILY);
         return;
     }
-    between_family(opts, loaded, &engine, x.as_ref(), out);
+    between_family(
+        opts,
+        loaded,
+        with_segments.then_some(&engine),
+        x.as_ref(),
+        out,
+    );
 }
 
 /// The X engine and planes, when the X map yields a usable segment to measure over.
@@ -442,7 +463,11 @@ struct KinRow {
     pedigree: Class,
 }
 
-fn within_family_rows(loaded: &Loaded, engine: &Engine, blocks: &[Vec<usize>]) -> Vec<KinRow> {
+fn within_family_rows(
+    loaded: &Loaded,
+    engine: Option<&Engine>,
+    blocks: &[Vec<usize>],
+) -> Vec<KinRow> {
     let samples = &loaded.fileset.samples;
     let genotypes = &loaded.fileset.genotypes;
     let pedigree = Pedigree::from_samples(&with_phantom_parents(samples));
@@ -467,7 +492,7 @@ fn within_family_rows(loaded: &Loaded, engine: &Engine, blocks: &[Vec<usize>]) -
                     z0,
                     phi,
                     kinship: est::kinship(&c, Scope::WithinFamily),
-                    ibd: engine.pair(genotypes, i, j),
+                    ibd: engine.map_or_else(PairIbd::default, |e| e.pair(genotypes, i, j)),
                     pedigree: pedigree_class(phi, z0),
                     counts: c,
                 });
@@ -478,9 +503,32 @@ fn within_family_rows(loaded: &Loaded, engine: &Engine, blocks: &[Vec<usize>]) -
 }
 
 /// Render `.kin` and write it, honouring the reference's truncation bug.
-fn write_kin(path: &str, rows: &[KinRow], single_family: bool) {
-    let mut text = String::from(KIN_HEADER);
+fn write_kin(path: &str, rows: &[KinRow], single_family: bool, with_segments: bool) {
+    let mut text = String::from(if with_segments {
+        KIN_HEADER
+    } else {
+        KIN_FALLBACK_HEADER
+    });
     for r in rows {
+        if !with_segments {
+            let _ = writeln!(
+                text,
+                "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+                r.fid,
+                r.id1,
+                r.id2,
+                r.counts.n_snp,
+                f(r.z0, 3),
+                f(r.phi, 4),
+                f(est::het_het_prop(&r.counts), 4),
+                f(est::ibs0_prop(&r.counts), 4),
+                f(est::het_concordance(&r.counts), 4),
+                f(hom_ibs0(&r.counts), 4),
+                f(r.kinship, 4),
+                g(kinship::error_flag(r.kinship, r.phi)),
+            );
+            continue;
+        }
         let het_conc = est::het_concordance(&r.counts);
         let inferred = r.ibd.inf_type(het_conc);
         let _ = writeln!(
@@ -672,12 +720,29 @@ fn pedigree_class(phi: f64, z0: f64) -> Class {
 /// summary differs from `--kinship`'s on five of the seven corpus datasets that reach
 /// both (`multifam` is `24/11/1` by kinship and `24/12/0` by segment). Verified column
 /// for column against the `InfType` tallies of all seven golden `.kin` files.
-fn summary(rows: &[KinRow]) -> Option<String> {
+fn summary(rows: &[KinRow], with_segments: bool) -> Option<String> {
+    let po_cut = if with_segments {
+        None
+    } else {
+        let mut sum = 0.0;
+        let mut n = 0usize;
+        for r in rows {
+            if r.pedigree == Class::Fs && r.kinship >= band::FIRST && r.kinship < band::MZ {
+                sum += est::ibs0_prop(&r.counts);
+                n += 1;
+            }
+        }
+        (n > 0).then(|| 0.5 * sum / n as f64)
+    };
     let mut pedigree = RelationshipCounts::default();
     let mut inference = RelationshipCounts::default();
     let mut any = false;
     for r in rows {
-        let inferred = label_class(r.ibd.inf_type(est::het_concordance(&r.counts)));
+        let inferred = if with_segments {
+            label_class(r.ibd.inf_type(est::het_concordance(&r.counts)))
+        } else {
+            kinship::inferred_class(r.kinship, est::ibs0_prop(&r.counts), po_cut)
+        };
         any |= r.pedigree.is_relative() || inferred.is_relative();
         bump(&mut pedigree, r.pedigree);
         bump(&mut inference, inferred);
@@ -704,7 +769,7 @@ fn bump(c: &mut RelationshipCounts, class: Class) {
 fn between_family(
     opts: &Options,
     loaded: &Loaded,
-    engine: &Engine,
+    engine: Option<&Engine>,
     x: Option<&(Engine, &Genotypes)>,
     out: &mut dyn Write,
 ) {
@@ -769,12 +834,20 @@ fn between_family(
     let kin_cut = 2f64.powf(-(f64::from(degree) + 1.5));
     let prop_cut = 2f64.powf(-(f64::from(degree) + 0.5));
     let mut rows = Vec::new();
-    for ((&(i, j), c), &kinship) in pairs.iter().zip(&all).zip(&kinships) {
+    for (pair_index, ((&(i, j), c), &kinship)) in pairs.iter().zip(&all).zip(&kinships).enumerate()
+    {
         if c.n_snp == 0 {
             continue;
         }
-        let ibd = engine.pair(genotypes, i, j);
-        if !(kinship >= kin_cut || ibd.prop_ibd > prop_cut) {
+        let ibd = engine.map_or_else(PairIbd::default, |e| e.pair(genotypes, i, j));
+        let report = if engine.is_some() {
+            kinship >= kin_cut || ibd.prop_ibd > prop_cut
+        } else if screening {
+            screen_kinships[pair_index] > screen_cutoff(degree)
+        } else {
+            kinship >= kin_cut
+        };
+        if !report {
             continue;
         }
         rows.push((i, j, *c, kinship, ibd));
@@ -783,14 +856,19 @@ fn between_family(
     // `N pairs … are identified` counts the summary table, and the table never
     // increments its own `4th` column — so a run whose only rows are fourth-degree
     // reports zero pairs while still writing them.
-    let mut tally = RelationshipCounts::default();
-    for (_, _, c, _, ibd) in &rows {
-        let class = label_class(ibd.inf_type(est::het_concordance(c)));
-        if class != Class::Other {
-            bump(&mut tally, class);
+    let (tally, confirmed) = if engine.is_some() {
+        let mut tally = RelationshipCounts::default();
+        for (_, _, c, _, ibd) in &rows {
+            let class = label_class(ibd.inf_type(est::het_concordance(c)));
+            if class != Class::Other {
+                bump(&mut tally, class);
+            }
         }
-    }
-    let confirmed = tally.mz + tally.po + tally.fs + tally.second + tally.third;
+        let confirmed = tally.mz + tally.po + tally.fs + tally.second + tally.third;
+        (tally, confirmed)
+    } else {
+        (RelationshipCounts::default(), rows.len() as u64)
+    };
 
     if screening {
         let snps = loaded.fileset.genotypes.n_variants;
@@ -806,8 +884,8 @@ fn between_family(
         write(out, &identified_line(confirmed, degree));
     }
 
-    write_kin0(&out_path(opts, ".kin0"), samples, &rows);
-    if let Some((xengine, xgenotypes)) = x {
+    write_kin0(&out_path(opts, ".kin0"), samples, &rows, engine.is_some());
+    if let (true, Some((xengine, xgenotypes))) = (engine.is_some(), x) {
         write_x_kin0(
             &out_path(opts, "X.kin0"),
             samples,
@@ -819,6 +897,13 @@ fn between_family(
 
     if confirmed == 0 {
         write(out, &no_cryptic_relatedness(degree));
+        return;
+    }
+    if engine.is_none() {
+        write(out, &saved_line(kin_cut, &out_path(opts, ".kin0")));
+        if degree == 1 {
+            write(out, DEGREE_NOTE);
+        }
         return;
     }
     write(out, &between_family_summary(tally, confirmed));
@@ -1114,9 +1199,30 @@ fn called(g: &Genotypes, i: usize) -> u32 {
 
 type Kin0Row = (usize, usize, PairCounts, f64, PairIbd);
 
-fn write_kin0(path: &str, samples: &[Sample], rows: &[Kin0Row]) {
-    let mut text = String::from(KIN0_HEADER);
+fn write_kin0(path: &str, samples: &[Sample], rows: &[Kin0Row], with_segments: bool) {
+    let mut text = String::from(if with_segments {
+        KIN0_HEADER
+    } else {
+        KIN0_FALLBACK_HEADER
+    });
     for (i, j, c, kinship, ibd) in rows {
+        if !with_segments {
+            let _ = writeln!(
+                text,
+                "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+                samples[*i].fid,
+                samples[*i].iid,
+                samples[*j].fid,
+                samples[*j].iid,
+                c.n_snp,
+                f(est::het_het_prop(c), 4),
+                f(est::ibs0_prop(c), 4),
+                f(est::het_concordance(c), 4),
+                f(hom_ibs0(c), 4),
+                f(*kinship, 4),
+            );
+            continue;
+        }
         let _ = writeln!(
             text,
             "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
@@ -1351,6 +1457,18 @@ mod tests {
         assert_eq!(
             small_sample_notice(),
             "\n--related is replaced with --kinship for a small sample size.\n"
+        );
+    }
+
+    #[test]
+    fn segmentless_relatedness_uses_the_measured_short_headers() {
+        assert_eq!(
+            KIN_FALLBACK_HEADER,
+            "FID\tID1\tID2\tN_SNP\tZ0\tPhi\tHetHet\tIBS0\tHetConc\tHomIBS0\tKinship\tError\n"
+        );
+        assert_eq!(
+            KIN0_FALLBACK_HEADER,
+            "FID1\tID1\tFID2\tID2\tN_SNP\tHetHet\tIBS0\tHetConc\tHomIBS0\tKinship\n"
         );
     }
 

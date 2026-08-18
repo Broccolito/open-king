@@ -1376,9 +1376,9 @@ parity case** — every one of them needs an input shape the 480 captures do not
 all three are visible to a user, which is why they are recorded rather than left in a
 transcript. §5.10 and §5.11 remain the older, independently measured set.
 
-**1. The "no informative IBD segments" fallback is not implemented.** This is the one with the
-widest blast radius: any panel too sparse for the segment caller lands on it, which on a
-200-sample fileset means roughly 12 500 markers genome-wide.
+**1. The "no informative IBD segments" fallback is partially implemented.** Any panel too
+sparse for the segment caller lands on it, which on a 200-sample fileset means roughly
+12 500 markers genome-wide.
 
 *Reproduce* (`reshape.py` is the thinning script published in
 [`INTERPRETING.md`](INTERPRETING.md#appendix--reshapepy)):
@@ -1390,21 +1390,21 @@ king -b thin4.bed --related --cpus 1
 
 | | reference | open-king |
 | --- | --- | --- |
-| console | `No informative IBD segments.` + `Relationship inference will be based on kinship estimation only.` | neither line |
-| `.kin` | **12 columns** (`… Kinship Error`) | **16 columns**, `IBD1Seg`/`IBD2Seg`/`PropIBD` all `0.0000`, `InfType UN`, `Error 1` on every row |
-| relationship summary | 436 by inference | **0** by inference |
-| `.kin0` rows | 15 | **3** |
+| console | `No informative IBD segments.` + `Relationship inference will be based on kinship estimation only.` | **matches**; the screening/final counts are 17 instead of 15 |
+| `.kin` | **12 columns** (`… Kinship Error`) | **byte-identical**, all 574 lines |
+| relationship summary | 436 by inference | **matches**, 436 by inference |
+| `.kin0` rows | 15 | 17; all 15 shared rows are byte-identical, with two extra screening candidates |
 
-The reference detects that the map yields no usable segment and falls back to a pure
+The reference detects that the map yields no usable segment and falls back to pure
 kinship-based inference — a documented mode of KING, and the short `.kin` layout is its
-signature. open-king keeps the segment layout and reports zeros, so every relationship comes
-out `UN`. The same fallback is missing on `--unrelated` / `--cluster` / `--build`, where the
-reference additionally prints `Cutoff value for IBS0 between FS and PO is set at 0.0050` and
-infers 15 relatives against our 0; and on `--ibdseg`, where both binaries print
-`No informative IBD segments.` and write only `splitped.txt`, but the reference adds the
-trailing `Note chromosomal positions can be sorted conveniently using other tools such as
-PLINK.` line. Note that the sample counts differ upstream too: the two-stage screen reports
-17 candidate pairs to the reference's 15, which is §5.7's gap on a different input.
+signature. open-king now takes that path for `--related`, including the short headers,
+kinship-based within-family error/summary rules and the screened between-family row shape.
+The remaining two-row difference is confined to the already-localised screen: the Rust
+screen admits `BF01/B01_C2–BF02/B02_F` and `BF13/B13_C2–BF14/B14_F`; no shared row differs.
+The fallback remains missing on `--unrelated` / `--cluster` / `--build`, where the reference
+additionally prints `Cutoff value for IBS0 between FS and PO is set at 0.0050`. On
+`--ibdseg`, both binaries now print the PLINK sorting note after `No informative IBD
+segments.` and write only `splitped.txt`.
 
 **2. An unsorted `.bim` is not detected.** The reference validates map order before the
 segment pass; open-king does not. Two shapes, both derived from `multifam` by the

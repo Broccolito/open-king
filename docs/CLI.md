@@ -1450,12 +1450,14 @@ driving the command line can hit.
 shape the 480 captures do not contain. PARITY.md §4.6, §5.10, §5.11 and §5.12 enumerate the
 known set; these are the ones a command line can reach:
 
-* **A sparse map silently loses the kinship-only fallback.** On a panel too thin for the
-  segment caller (roughly under 12 500 markers at 200 samples) the reference prints
-  `No informative IBD segments.`, switches to a 12-column `.kin` and infers relationships
-  from kinship alone; open-king keeps the 16-column layout, writes `0.0000` segment columns
-  and calls every pair `UN`. **This is the difference most likely to cost you results.** Check
-  for the `usable for IBD segment analysis` line before trusting any segment column
+* **The sparse-map fallback is only partly complete.** On a panel too thin for the segment
+  caller (roughly under 12 500 markers at 200 samples), `--related` now prints
+  `No informative IBD segments.`, switches to the reference's 12-column `.kin` and infers
+  relationships from kinship alone. Its held-out comparison is byte-exact within families
+  and on every shared between-family row; the known screen residual admits two extra
+  cross-family candidates. `--unrelated`, `--cluster` and `--build` do not yet take the
+  corresponding kinship-only clustering path. Check for the `usable for IBD segment
+  analysis` line before trusting any segment column
   ([PARITY.md §5.12](PARITY.md#512-three-divergences-found-while-writing-the-user-documentation)).
 * **An unsorted `.bim` is not detected.** The reference refuses with
   `Positions unsorted: …` / `Chromosomes unsorted: …` and writes no `.seg`; open-king

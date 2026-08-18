@@ -331,7 +331,7 @@ fn pedigree_class(phi: f64, z0: f64) -> Class {
 }
 
 /// Bucket an estimate into a summary column. `po_cut` comes from [`po_cutoff`].
-fn inferred_class(kinship: f64, ibs0_prop: f64, po_cut: Option<f64>) -> Class {
+pub(crate) fn inferred_class(kinship: f64, ibs0_prop: f64, po_cut: Option<f64>) -> Class {
     if kinship >= band::MZ {
         Class::Mz
     } else if kinship >= band::FIRST {

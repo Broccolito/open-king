@@ -145,13 +145,13 @@ files this project writes.
 | 2 | one stdout line — `--related`'s two-stage screening count on the 200-sample dataset (`36` vs `50`) | **No.** `.kin`, `.kin0` and `.seg` are byte-identical; the rows come from the exhaustive re-estimate below that line |
 | 1 | `<prefix>build.log`'s `INFERENCE` half | **Yes, that one file.** Its header and `RULE` lines are byte-identical and the file is a strict subsequence of the reference's. `--build`'s `updateids.txt` and `updateparents.txt` are byte-identical |
 
-**Differences the corpus cannot see** cost no case but a user can still hit them. The one to
-know about: on a marker panel too sparse for the segment caller, KING 2.3.2 prints
-`No informative IBD segments.` and falls back to a kinship-only inference — open-king does
-not, and labels every pair `UN` instead. Check for the `usable for IBD segment analysis` line
-before trusting a segment column. That, an unsorted `.bim` going undetected, case-colliding
-sample IDs being accepted, and the missing A1-major input check are all measured in
-[`docs/PARITY.md`](docs/PARITY.md) §5.10–§5.12 and §4.6.
+**Differences the corpus cannot see** cost no case but a user can still hit them. The
+`--related` path now detects a marker panel too sparse for the segment caller and switches to
+the reference's short, kinship-only output, but that fallback is not yet complete for
+`--unrelated`, `--cluster` and `--build`. An unsorted `.bim` can also still go undetected,
+and the A1-major input check is missing. These are measured in
+[`docs/PARITY.md`](docs/PARITY.md) §5.10–§5.12 and §4.6; case-only sample-ID collisions are
+now rejected like KING.
 
 Every number above is measured against **one** reference build: KING 2.3.2, Mach-O arm64,
 macOS. KING's segment algorithm is unpublished and its release notes record repeated changes
