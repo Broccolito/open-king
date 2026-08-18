@@ -1705,9 +1705,11 @@ within- and a between-family position and inspect the emitted bytes.
 8-sample fixture whose true A1-major fraction is 0.00 %, with the percentage varying run to run;
 `--cpus 1` does not fix it (7/40); never seen at 164 samples. This is uninitialised memory in
 KING.
-*Experiment:* none — do not reproduce. Operational rule: **never build regression fixtures at
-~8 samples for `--bySNP`**; use ≥ 100 samples, and retry on failure. Successful runs are
-byte-deterministic (md5-identical across repeats).
+The stable part is now resolved: the intended window is the first 4,096 retained autosomal
+markers and the boundary is 410 A1-major markers. open-king does **not** reproduce the short-map
+tail read; it skips the gate until a complete window exists. Operational rule for reference
+research remains: **never build regression fixtures at ~8 samples for `--bySNP`**; use
+≥ 100 samples, and retry on failure. Successful runs are byte-deterministic.
 
 **23. `--cpus` default and thread-invariance.** Default is half the logical cores; autosomal
 `.kin0` is byte-identical between `--cpus 1` and `--cpus 8`, but the X writer races.

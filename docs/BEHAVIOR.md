@@ -748,8 +748,8 @@ which is consistent with the tiny capture cited in VERIFIED_FORMULAS. `Error` is
 mismatch: `0` when the inferred class equals the pedigree class, `0.5` when it is off by
 exactly one degree step, `1` when it is off by more.
 
-**2. A1-major fatal check.** The reference refuses to run the `--related` / `--ibs` /
-`--build` machinery when too many `.bim` A1 alleles are the *major* allele:
+**2. A1-major fatal check.** The reference refuses affected analyses when too many retained
+autosomal markers encode A1 as the observed *major* allele:
 
 ```
 FATAL ERROR -
@@ -757,13 +757,18 @@ Too many first alleles as the major allele (~11.4%). Please use plink1.9 --make-
 regenerate the genotype data again.
 ```
 
-Sweeping the fraction of A1-major SNPs (20 samples, 5000 SNPs): a strict-majority fraction
-of 7.98 % passes, 8.60 % and above abort. KING's own reported percentage runs about
-2 percentage points above a strict allele-count majority in these constructions (8.60 % →
-`~10.5%`, 10.00 % → `~12.2%`), so the gate is consistent with **"abort when KING's own
-A1-major percentage exceeds 10 %"** — but the exact statistic behind the printed
-percentage is **not established**. `--kinship` alone is not subject to this check. Any
-synthetic fileset built for testing must have A1 as the minor allele, or the run dies here.
+A controlled 20-sample, 5,000-marker sweep resolves the statistic: only the first **4,096**
+retained autosomal markers enter the denominator, and a marker counts when its observed
+A1/A1 count is strictly greater than its A2/A2 count. The threshold is strictly greater
+than ten percent: 409/4,096 passes, 410/4,096 aborts and prints `~10.0%`; 904 A1-major
+markers placed entirely after index 4,095 do not affect the gate.
+
+The stable affected surface is `--related`, `--ibs`, `--unrelated`, `--build`, `--bysample`,
+`--bySNP`, `--cluster` and `--ibdseg`. `--kinship`, `--duplicate` and `--autoQC` are exempt.
+The `--related` and clustering gates start at ten samples; `--ibdseg` starts at five, matching
+their full-pass thresholds. On shorter maps KING reads unstable tail state and can false-fatal;
+open-king skips that unsafe case. The differential regression is
+`tests/parity/probes/a1_major.py`.
 
 **3. Unrecognised options.** Passing an unknown flag makes the reference print
 `Please specify one of the following 24 options: --related --kinship …` and then proceed

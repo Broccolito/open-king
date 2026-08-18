@@ -92,7 +92,7 @@ Additional Options
                  Output Parameter : --prefix [king], --rpath []
 
 
-FATAL ERROR - 
+FATAL ERROR -
 Genotype files are required. e.g.,
   king -b ex.bed --related
 
@@ -306,33 +306,27 @@ is the *common* genotype and running KING 2.3.2 on it:
 ```
 $ king -b major.bed --ibs          # KING 2.3.2
 
-FATAL ERROR - 
+FATAL ERROR -
 Too many first alleles as the major allele (~77.9%). Please use plink1.9 --make-bed to regenerate the genotype data again.
 
 $ king -b major.bed --ibs          # open-king
-exit=0  files=[king.ibs king.ibs0 kingallsegs.txt]
+FATAL ERROR -
+Too many first alleles as the major allele (~77.9%). Please use plink1.9 --make-bed to regenerate the genotype data again.
 ```
 
-**open-king does not implement this check** and runs the fileset to completion. Most columns
-do not care which allele is called A1 — on that pair of filesets `--ibs`'s `.ibs` *and*
-`.ibs0` are byte-identical — but `HomIBS0` counts A1-homozygotes and is not
-orientation-invariant, so it and the segment columns downstream of it shift:
+Both binaries now enforce the same stable rule: inspect the first 4,096 retained autosomal
+markers, count a marker when its observed A1/A1 call count is greater than its A2/A2 count,
+and abort when more than 10% qualify. Thus 409/4,096 passes and 410/4,096 aborts; markers
+after the window do not enter the percentage. `--kinship`, `--duplicate` and `--autoQC` are
+exempt, as are the small-sample `--related`/`--ibdseg`/clustering paths that KING replaces
+or disables. The fatal console, exit status and files written before the fatal are compared
+against KING by `tests/parity/probes/a1_major.py`.
 
-```
-$ king -b minor.bed --related --prefix minor_ >/dev/null
-$ king -b major.bed --related --prefix major_ >/dev/null
-$ diff minor_.kin major_.kin | head -6
-2,3c2,3
-< FAM1	A_C1	A_C2	15000	0.250	0.2500	0.2219	0.0153	0.4615	0.1893	0.2721	0.4516	0.3144	0.5402	FS	0
-< FAM1	A_C1	A_C3	15000	0.250	0.2500	0.2171	0.0214	0.4460	0.2534	0.2476	0.4461	0.2703	0.4933	FS	0
----
-> FAM1	A_C1	A_C2	15000	0.250	0.2500	0.2219	0.0153	0.4615	0.0215	0.2721	0.4600	0.3144	0.5444	FS	0
-> FAM1	A_C1	A_C3	15000	0.250	0.2500	0.2171	0.0214	0.4460	0.0297	0.2476	0.4772	0.2703	0.5089	FS	0
-```
-
-Sixteen of the 34 rows differ. `Kinship` (column 11) is identical on every one of them —
-`cut -f11` of the two files is the same — but `HomIBS0` (column 10) is not. **Regenerate the
-fileset with `plink1.9 --make-bed` rather than relying on either binary to catch this.**
+KING's checker reads unstable tail state when fewer than 4,096 autosomal markers exist—it
+has produced random false fatals on a valid eight-sample fixture. open-king deliberately
+skips the gate on such short maps instead of reproducing that unsafe behavior. Most
+relatedness columns are allele-orientation invariant, but `HomIBS0` and segment-derived
+classification are not, so **regenerate questionable inputs with `plink1.9 --make-bed`.**
 
 **2. The `.bim` must be sorted by `(chromosome, position)`, ascending,** for anything that
 calls IBD segments — which is every analysis except `--kinship` and `--duplicate`. Both
@@ -1458,8 +1452,10 @@ known set; these are the ones a command line can reach:
 * **Sample IDs colliding only in case are rejected.** Both binaries treat `(FID, IID)` as
   unique under ASCII case-folding, name the second spelling in the duplicate diagnostic and
   abort with `Please correct problems with pedigree structure`.
-* **The A1-major QC check is not implemented** — open-king runs a fileset the reference
-  refuses. [§3](#two-hard-requirements-that-are-easy-to-miss) has the numbers.
+* **The A1-major QC check is implemented for the stable 4,096-marker window.** Its boundary,
+  analysis surface, fatal placement and pre-fatal artifacts match KING. Shorter maps skip
+  the check because KING's own tail read is nondeterministic
+  ([§3](#two-hard-requirements-that-are-easy-to-miss)).
 * **`--ibdseg` applies the closed 100 Mb usable-segment floor.** Below it both binaries
   print `Segments too short.` and suppress `.seg`; exactly 100,000,000 bp proceeds
   ([PARITY.md §5.10](PARITY.md)).

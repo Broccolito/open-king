@@ -527,6 +527,27 @@ pub fn run_bysnp(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
     let _ = out.write_all(format!("QC statistics by SNPs saved in file {path}\n\n").as_bytes());
 }
 
+/// The two QC lines emitted before their shared A1-major orientation gate.
+pub fn a1_gate_prelude(opt: Opt, loaded: &Loaded, out: &mut dyn Write) {
+    let name = if opt == Opt::Bysample {
+        "QC-by-sample"
+    } else {
+        "QC-by-SNP"
+    };
+    let _ = out.write_all(
+        format!(
+            "{name} starts at {}\n",
+            console::ctime(console::now_local())
+        )
+        .as_bytes(),
+    );
+    let _ = out.write_all(
+        Pedigree::build(&loaded.fileset.samples)
+            .console_line()
+            .as_bytes(),
+    );
+}
+
 /// The `Chr` column: the class symbol for X, Y and MT, the numeric code for everything
 /// else — `XY` prints as its number (`25` under the default `--sexchr`), not as `XY`.
 fn chr_symbol(label: &str, sexchr: i64) -> String {

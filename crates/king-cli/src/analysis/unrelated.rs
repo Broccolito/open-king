@@ -638,25 +638,14 @@ pub fn clustering_prologue(opts: &Options, loaded: &Loaded, out: &mut dyn Write)
     let samples = &loaded.fileset.samples;
     let tiny = samples.len() < TINY_DATASET;
 
-    let _ = out.write_all(
-        format!(
-            "Family clustering starts at {}\n",
-            console::ctime(console::now_local())
-        )
-        .as_bytes(),
-    );
+    clustering_start(out);
 
     if tiny {
         let _ = out.write_all(
             b"This function is currently disabled for tiny dataset with sample size < 10.\n",
         );
     } else {
-        // The preamble line without the blank line under it: `Sorting autosomes...`
-        // follows immediately.
-        let _ = out.write_all(
-            console::autosome_words(loaded.words(), loaded.fileset.samples.len()).as_bytes(),
-        );
-        let _ = out.write_all(console::SORTING_AUTOSOMES.as_bytes());
+        clustering_matrix_prelude(loaded, out);
         if let Some(warning) = super::ibdseg::map_order_warning(
             &loaded.fileset.variants,
             i64::from(opts.int(Opt::Sexchr)),
@@ -710,6 +699,31 @@ pub fn clustering_prologue(opts: &Options, loaded: &Loaded, out: &mut dyn Write)
         graph,
         groups,
     }
+}
+
+fn clustering_start(out: &mut dyn Write) {
+    let _ = out.write_all(
+        format!(
+            "Family clustering starts at {}\n",
+            console::ctime(console::now_local())
+        )
+        .as_bytes(),
+    );
+}
+
+fn clustering_matrix_prelude(loaded: &Loaded, out: &mut dyn Write) {
+    // The preamble line without the blank line under it: `Sorting autosomes...`
+    // follows immediately.
+    let _ = out.write_all(
+        console::autosome_words(loaded.words(), loaded.fileset.samples.len()).as_bytes(),
+    );
+    let _ = out.write_all(console::SORTING_AUTOSOMES.as_bytes());
+}
+
+/// Console lines emitted before the A1-major gate in the three clustering passes.
+pub fn a1_gate_prelude(loaded: &Loaded, out: &mut dyn Write) {
+    clustering_start(out);
+    clustering_matrix_prelude(loaded, out);
 }
 
 /// What [`clustering_prologue`] worked out, for the pass that called it.

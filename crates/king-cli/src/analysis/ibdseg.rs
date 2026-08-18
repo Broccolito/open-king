@@ -242,12 +242,7 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
     let sexchr = i64::from(opts.int(Opt::Sexchr));
     // Announced before `Options in effect:` and written before any segment work, so it
     // survives even the `No informative IBD segments.` early exit below.
-    if splitped::is_generated(&loaded.fileset.samples) {
-        write_file(
-            &format!("{prefix}splitped.txt"),
-            &splitped::text(&loaded.fileset.samples),
-        );
-    }
+    write_splitped(opts, loaded);
     if let Some(warning) = map_order_warning(&loaded.fileset.variants, sexchr) {
         let _ = out.write_all(warning.as_bytes());
         let _ = out.write_all(SORT_NOTE.as_bytes());
@@ -391,6 +386,16 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
         let x_path = format!("{prefix}X.seg");
         write_file(&x_path, &xseg::text(samples, &pairs(&rows), &x));
         let _ = out.write_all(xseg::saved_line(&x_path).as_bytes());
+    }
+}
+
+/// Write the pedigree-plot file that exists before the A1-major gate is evaluated.
+pub fn write_splitped(opts: &Options, loaded: &Loaded) {
+    if splitped::is_generated(&loaded.fileset.samples) {
+        write_file(
+            &format!("{}splitped.txt", opts.string(Opt::Prefix)),
+            &splitped::text(&loaded.fileset.samples),
+        );
     }
 }
 

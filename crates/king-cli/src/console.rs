@@ -214,6 +214,13 @@ pub fn fatal_block(message: &str) -> String {
     format!("\nFATAL ERROR - \n{message}\n\n")
 }
 
+/// The A1-orientation fatal raised at the start of analyses that depend on minor-A1.
+pub fn a1_major_fatal(percent: f64) -> String {
+    format!(
+        "\nToo many first alleles as the major allele (~{percent:.1}%). Please use plink1.9 --make-bed to regenerate the genotype data again.\n"
+    )
+}
+
 /// The notice printed when a fileset was given but no analysis was selected.
 pub fn no_analysis_block() -> String {
     format!("\n{NO_ANALYSIS_NOTICE}\n\n")

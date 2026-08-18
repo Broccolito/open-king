@@ -119,6 +119,10 @@ fn main() {
             emit(&console::options_in_effect(
                 &analysis::related::options_in_effect(opts),
             ));
+            if let Some(percent) = a1_rejected(&loaded) {
+                let _ = analysis::ibdseg::segment_prepass(opts, &loaded);
+                fail_a1(percent);
+            }
             analysis::related::run(opts, &loaded, &mut std::io::stdout());
             ran = true;
         }
@@ -159,6 +163,12 @@ fn main() {
         emit(&console::options_in_effect(&analysis::options_in_effect(
             opts, opt,
         )));
+        if opt == cli::Opt::Ibs {
+            if let Some(percent) = a1_rejected(&loaded) {
+                let _ = analysis::ibdseg::segment_prepass(opts, &loaded);
+                fail_a1(percent);
+            }
+        }
         body(opts, &loaded, &mut std::io::stdout());
         ran = true;
     }
@@ -189,6 +199,23 @@ fn main() {
         emit(&console::options_in_effect(&analysis::options_in_effect(
             opts, opt,
         )));
+        let n = loaded.fileset.samples.len();
+        if let Some(percent) = a1_rejected(&loaded) {
+            if matches!(opt, cli::Opt::Bysample | cli::Opt::BySnp) {
+                analysis::qc::a1_gate_prelude(opt, &loaded, &mut std::io::stdout());
+                fail_a1(percent);
+            }
+            if !analysis::related::downgrades_to_kinship(n)
+                && matches!(
+                    opt,
+                    cli::Opt::Unrelated | cli::Opt::Build | cli::Opt::Cluster
+                )
+            {
+                let _ = analysis::ibdseg::segment_prepass(opts, &loaded);
+                analysis::unrelated::a1_gate_prelude(&loaded, &mut std::io::stdout());
+                fail_a1(percent);
+            }
+        }
         body(opts, &loaded, &mut std::io::stdout());
         ran = true;
     }
@@ -214,6 +241,11 @@ fn main() {
             emit(&console::options_in_effect(
                 &analysis::ibdseg::options_in_effect(opts),
             ));
+            if let Some(percent) = a1_rejected(&loaded) {
+                analysis::ibdseg::write_splitped(opts, &loaded);
+                let _ = analysis::ibdseg::segment_prepass(opts, &loaded);
+                fail_a1(percent);
+            }
             analysis::ibdseg::run(opts, &loaded, &mut std::io::stdout());
         }
         ran = true;
@@ -240,6 +272,14 @@ fn emit(s: &str) {
     let mut stdout = std::io::stdout();
     let _ = stdout.write_all(s.as_bytes());
     let _ = stdout.flush();
+}
+
+fn a1_rejected(loaded: &load::Loaded) -> Option<f64> {
+    analysis::a1::rejected_percentage(&loaded.fileset.genotypes)
+}
+
+fn fail_a1(percent: f64) -> ! {
+    fatal(&console::a1_major_fatal(percent));
 }
 
 /// Print a FATAL ERROR block and leave with the reference's exit status of 1.

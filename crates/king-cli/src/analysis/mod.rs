@@ -17,6 +17,7 @@
 //! the three row orders, the `Options in effect` list and the C-compatible number
 //! formatting. Anything used by exactly one analysis lives in that analysis's module.
 
+pub mod a1;
 pub mod autoqc;
 pub mod build;
 pub mod cluster;

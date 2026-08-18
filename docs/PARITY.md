@@ -1433,11 +1433,14 @@ awk 'BEGIN{OFS=" "} {if ($1=="FAM1" && $2=="A_M") $2="a_f"; print}' \
 king -b /tmp/kingdocs/multifam.bed --fam case.fam --kinship    # both: exit 1, same duplicate diagnostic
 ```
 
-**A1-major inputs** are the fourth known difference of this kind and were already recorded —
-the reference aborts a fileset whose first alleles are mostly major
-(`Too many first alleles as the major allele (~77.9%)`), open-king analyses it. `Kinship` is
-unaffected by the orientation; `HomIBS0` and the segment columns downstream of it are not.
-[`CLI.md` §3](CLI.md#two-hard-requirements-that-are-easy-to-miss) has the measured diff.
+**A1-major inputs are now rejected at the same stable boundary.** Black-box sweeps identified
+the first 4,096 retained autosomal markers as the window, a strict ten-percent cutoff
+(409 passes, 410 aborts), and the affected analysis/sample-size surface. The fatal console,
+exit status and complete pre-fatal artifact set match in `tests/parity/probes/a1_major.py`.
+`--kinship`, `--duplicate`, `--autoQC` and KING's disabled/downgraded small-sample paths remain
+exempt. For maps shorter than 4,096 markers the reference reads unstable tail state and can
+abort valid data nondeterministically; open-king deliberately skips that unsafe check.
+[`CLI.md` §3](CLI.md#two-hard-requirements-that-are-easy-to-miss) states the input contract.
 
 ---
 
