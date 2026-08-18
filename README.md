@@ -3,8 +3,11 @@
 `king` estimates how every pair of samples in a PLINK1 fileset is related — kinship
 coefficients, duplicate and MZ pairs, IBD segments, and a relationship label per pair — and
 writes the answer as plain text files. **open-king** is a clean-room, MIT-licensed Rust
-reimplementation of [KING 2.3.2](https://www.kingrelatedness.com/) that aims to be a drop-in
-replacement: same command line, same input, byte-identical output files.
+reimplementation of the core relatedness and QC workflows in
+[KING 2.3.2](https://www.kingrelatedness.com/). On its supported surface it aims for the
+same command line, the same PLINK1 input and byte-identical output files. It deliberately
+does not reproduce KING's population-structure, association, risk, ROH or R-plotting
+toolbox; [`docs/SCOPE.md`](docs/SCOPE.md) defines that product boundary.
 
 ## Provenance and license
 
@@ -109,13 +112,15 @@ options and the parser's several surprises: [`docs/CLI.md`](docs/CLI.md).
 
 The common modifiers are `--degree <d>` (report only relatives that close), `--prefix`,
 `--seglength <Mb>`, `--minConc <x>` and `--cpus <n>`. `--cpus` changes no printed digit in
-any output file.
+any output file; it is retained for command-line compatibility and console reporting, not
+as a guaranteed Rayon thread cap.
 
-**Not implemented:** `--pca`, `--mds`, `--roh`, `--makeGRM`, `--plink`, `--lmm`, `--tdt`,
-`--gdt`, `--risk` and the R plotting flags. They are still *accepted*, so the banner stays
-byte-exact against the reference — and then **the run exits 0 having written nothing, with no
-message on stdout or stderr.** If your pipeline uses any of them, keep the original binary
-for those steps and **assert on the output files, not on the exit status.**
+**Deliberately excluded:** `--pca`, `--mds`, `--roh`, `--makeGRM`, `--plink`, `--lmm`,
+`--tdt`, `--gdt`, `--risk`, R plotting and comma-separated multi-fileset merging are not
+part of this minimal relatedness package. Their parser spellings are retained for banner
+compatibility but do not run an analysis. See [the product-scope contract](docs/SCOPE.md)
+and use a dedicated tool for those workflows. Until unsupported-option diagnostics land,
+assert on expected output files rather than exit status alone.
 
 ## Parity, honestly
 
@@ -184,6 +189,7 @@ improvement is a failure too.
 | [`docs/OUTPUTS.md`](docs/OUTPUTS.md) | every output file: columns, formats, row order, and when it is absent |
 | [`docs/COOKBOOK.md`](docs/COOKBOOK.md) | twelve task-oriented recipes, from "find duplicates" to "diff against KING" |
 | [`docs/INTERPRETING.md`](docs/INTERPRETING.md) | what the numbers mean, where they mislead, and what they cannot tell you |
+| [`docs/SCOPE.md`](docs/SCOPE.md) | the supported minimal core and deliberately excluded legacy/non-core analyses |
 
 **Working on it**
 

@@ -14,6 +14,7 @@ coefficient is; none of them assumes anything about this codebase.
 | [`OUTPUTS.md`](OUTPUTS.md) | I have the files — what is in them? Every output file: column meanings, numeric formats, the three different row orders, and the rules for when a file is empty, truncated or absent |
 | [`INTERPRETING.md`](INTERPRETING.md) | What does 0.177 mean, and when is it lying to me? The two estimators, the cutoffs, PO vs FS, the `Error` column, and seven demonstrated ways the numbers mislead |
 | [`COOKBOOK.md`](COOKBOOK.md) | Just show me the command. Twelve task-oriented recipes: find duplicates, screen a cohort, pick an unrelated set, QC a fileset, migrate from KING |
+| [`SCOPE.md`](SCOPE.md) | What is this package intentionally responsible for? The minimal relatedness/QC core, deliberately excluded analyses, and computing scope |
 
 Every command in all four pages was executed against `target/release/king` and its output
 pasted from that run.
@@ -31,6 +32,7 @@ is missing → [OUTPUTS: empty, header-only, truncated, absent](OUTPUTS.md#empty
 | [`PARITY.md`](PARITY.md) | **The authoritative claim.** 477 of 480 captured reference invocations byte-identical; the analysis × dataset matrix, the per-file and per-row scorecards, every remaining gap sized, and the labelled limitations — including the divergences the test corpus cannot see (§4.6, §5.10–§5.12) |
 | [`RELEASE_NOTES.md`](RELEASE_NOTES.md) | what changed in this release |
 | [`CONTINUATION.md`](CONTINUATION.md) | the handoff brief: what the three failing cases are, what has been excluded, and what is worth doing next |
+| [`SCOPE.md`](SCOPE.md) | the product boundary that separates deliberate exclusions from supported-core parity defects |
 
 ## If you want to work on it
 

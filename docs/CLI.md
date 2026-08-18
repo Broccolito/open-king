@@ -1353,11 +1353,12 @@ The fatal messages, in the order they can fire:
 
 ---
 
-## 8. Accepted but not implemented
+## 8. Accepted compatibility spellings outside product scope
 
-Twelve options and one input form are parsed, echoed in the banner, and then do nothing.
-They are accepted so that the banner and the parse surface stay byte-exact against the
-reference — see [SPEC.md §1.3](SPEC.md).
+Twelve options and one input form are outside open-king's deliberately minimal relatedness
+and QC scope. They are parsed and echoed only so the banner and parse surface stay
+byte-exact against the reference. They are not planned functionality and are not limitations
+of the supported core; see [SCOPE.md](SCOPE.md).
 
 `--pca` · `--mds` · `--roh` · `--lmm` · `--tdt` · `--gdt` · `--risk` · `--makeGRM` ·
 `--plink` · `--rplot` · `--pngplot` · `--rpath` · multi-dataset input
@@ -1383,8 +1384,8 @@ directory against both binaries:
 | `--rplot` | exit 0, `king_pedplot.R` `king_pedplot.Rout` `kingsplitped.txt` | exit 0, **no files** |
 
 The run is otherwise normal: the banner prints, the fileset loads, timestamps appear, and
-the process exits 0 having written nothing. **It does not tell you the analysis was
-skipped.** If you are scripting against open-king, assert on the output files.
+the process exits 0 having written nothing. **It does not yet tell you the excluded analysis
+was skipped.** If you are scripting against open-king, assert on the expected output files.
 
 Those twelve parameters are genuinely inert, not merely undocumented. A `--kinship
 --ibdseg` run on `multifam` with all twelve supplied produces byte-identical files to the

@@ -149,12 +149,14 @@ Tier 2 also includes `<p>allsegs.txt`, which several Tier-1 analyses emit as a s
 (§6.10) — it is specified here because Tier 1 needs it, but its *content* depends on the
 Tier-2 usable-segment rule.
 
-### 1.3 Tier 3 — out of scope for v1
+### 1.3 Deliberately excluded product surface
 
-Accepted on the command line (so the banner and the parse surface stay byte-exact) and then
-**rejected at dispatch** with a typed `UnsupportedAnalysis` error; never silently ignored.
+Accepted on the command line so the banner and parser remain compatible, but not implemented
+by this minimal relatedness/QC package. [SCOPE.md](SCOPE.md) is the binding product-scope
+statement. Clear unsupported-option diagnostics are desirable, but implementing these
+analysis families is not a parity requirement for the supported core.
 
-* **Analyses:** `--makeGRM`, `--cluster`, `--roh`, `--pca`, `--mds`, `--lmm`, `--tdt`, `--gdt`,
+* **Analyses:** `--makeGRM`, `--roh`, `--pca`, `--mds`, `--lmm`, `--tdt`, `--gdt`,
   `--risk`, `--invnorm`, `--plink`.
 * **Parameters of Tier-3 analyses:** `--projection`, `--pcs`, `--trait`, `--covariate`,
   `--maxP`, `--model`, `--prevalence`, `--noflip`, `--phefile`, `--covfile`, `--prunedsnp`.
@@ -195,6 +197,9 @@ Accepted on the command line (so the banner and the parse surface stay byte-exac
 4. Parity against the website's published example outputs. IBD-segment numerics changed
    materially at 2.1.2, 2.1.3, 2.2.1, 2.2.5, 2.2.6 and 2.2.7 — parity is meaningful **only**
    against the 2.3.2 binary in hand.
+5. Enforcing `--cpus` as a strict Rayon thread cap. The option remains part of the
+   compatibility parser and console surface; deterministic results, not performance parity,
+   are the requirement.
 
 ### 1.5 Library-first shape
 

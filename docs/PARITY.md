@@ -1015,10 +1015,11 @@ no such file on any invocation in the corpus. It is not a parity target.
 
 ### 5.5 Scope
 
-Out of scope for v1, and rejected at dispatch rather than silently ignored: `--pca`, `--mds`,
-`--roh`, `--lmm`, `--tdt`, `--gdt`, `--risk`, `--makeGRM`, `--plink`, the R plotting flags
-(`--rplot`, `--pngplot`, `--rpath`), and multi-dataset input. They are still *accepted* by the
-parser so the banner stays byte-exact.
+Deliberately outside the minimal product scope: `--pca`, `--mds`, `--roh`, `--lmm`, `--tdt`,
+`--gdt`, `--risk`, `--makeGRM`, `--plink`, the R plotting flags (`--rplot`, `--pngplot`,
+`--rpath`), and multi-dataset input. They remain accepted by the compatibility parser but do
+not run an analysis. They are documented product exclusions rather than relatedness-parity
+failures; see [SCOPE.md](SCOPE.md).
 
 ### 5.6 `--unrelated`'s greedy is derived, not tabulated
 
