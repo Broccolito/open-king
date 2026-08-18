@@ -65,11 +65,20 @@ const SEGMENT_COLUMNS: &str = "\tMaxIBD2\tPr_IBD2";
 pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
     let samples = &loaded.fileset.samples;
     let sexchr = i64::from(opts.int(Opt::Sexchr));
-    let segs = segments::usable(&loaded.fileset.variants, &loaded.fileset.kept, sexchr);
-    let x_segs = segments::usable_x(&loaded.fileset.variants, sexchr);
+    let map_warning = crate::analysis::ibdseg::map_order_warning(&loaded.fileset.variants, sexchr);
+    let (segs, x_segs) = if map_warning.is_some() {
+        (segments::Segments::empty(), segments::Segments::empty())
+    } else {
+        (
+            segments::usable(&loaded.fileset.variants, &loaded.fileset.kept, sexchr),
+            segments::usable_x(&loaded.fileset.variants, sexchr),
+        )
+    };
 
     let allsegs = out_path(opts, "allsegs.txt");
-    if segs.list.is_empty() {
+    if let Some(warning) = map_warning.as_ref() {
+        write(out, warning);
+    } else if segs.list.is_empty() {
         write(out, console::NO_INFORMATIVE_SEGMENTS);
     } else {
         write(
@@ -87,7 +96,7 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
         text.push_str(&x_segs.allsegs_continued(segs.list.len()));
         let _ = std::fs::write(&allsegs, text.as_bytes());
     }
-    if !segs.informative() {
+    if map_warning.is_none() && !segs.informative() {
         write(out, console::SEGMENTS_TOO_SHORT);
     }
 

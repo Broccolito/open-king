@@ -98,6 +98,14 @@ pub struct Segments {
 }
 
 impl Segments {
+    pub fn empty() -> Self {
+        Segments {
+            list: Vec::new(),
+            positions: Vec::new(),
+            names: Vec::new(),
+        }
+    }
+
     /// Length of a segment in base pairs: last marker minus first marker.
     pub fn length(&self, s: &Segment) -> i64 {
         self.positions[s.last] - self.positions[s.first]

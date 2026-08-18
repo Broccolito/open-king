@@ -58,10 +58,40 @@ use crate::cli::{Opt, Options};
 use crate::console;
 use crate::load::{self, Class, Loaded};
 
+const SORT_NOTE: &str =
+    "  Note chromosomal positions can be sorted conveniently using other tools such as PLINK.\n";
 const NO_SEGMENTS: &str = concat!(
     "No informative IBD segments.\n",
     "  Note chromosomal positions can be sorted conveniently using other tools such as PLINK.\n",
 );
+
+/// The first map-order problem KING reports before any segment analysis.
+pub fn map_order_warning(variants: &[Variant], sexchr: i64) -> Option<String> {
+    let mut previous: Option<(&Variant, i64)> = None;
+    for variant in variants {
+        let class = load::classify(&variant.chrom, sexchr);
+        if !class.is_autosomal() && class != Class::X {
+            continue;
+        }
+        let code = load::chromosome_code(&variant.chrom, sexchr);
+        if let Some((before, before_code)) = previous {
+            if code < before_code {
+                return Some(format!(
+                    "Chromosomes unsorted: {} on chr {}, {} on chr {}.\n",
+                    before.id, before_code, variant.id, code
+                ));
+            }
+            if code == before_code && variant.bp < before.bp {
+                return Some(format!(
+                    "Positions unsorted: {} at {}, {} at {}.\n",
+                    before.id, before.bp, variant.id, variant.bp
+                ));
+            }
+        }
+        previous = Some((variant, code));
+    }
+    None
+}
 
 /// Below this many samples the reference silently runs `--kinship` instead.
 ///
@@ -212,6 +242,11 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
         &format!("{prefix}splitped.txt"),
         &splitped::text(&loaded.fileset.samples),
     );
+    if let Some(warning) = map_order_warning(&loaded.fileset.variants, sexchr) {
+        let _ = out.write_all(warning.as_bytes());
+        let _ = out.write_all(SORT_NOTE.as_bytes());
+        return;
+    }
     let a = arrays(&loaded.fileset.variants, sexchr);
     let auto = ibdseg::usable_segments(&a.auto_chr, &a.auto_pos);
     let x_usable = ibdseg::usable_segments(&a.x_chr, &a.x_pos);
@@ -482,6 +517,9 @@ fn write_file(path: &str, text: &str) {
 pub fn segment_prepass(opts: &Options, loaded: &Loaded) -> String {
     let prefix = opts.string(Opt::Prefix).to_string();
     let sexchr = i64::from(opts.int(Opt::Sexchr));
+    if map_order_warning(&loaded.fileset.variants, sexchr).is_some() {
+        return String::new();
+    }
     let a = arrays(&loaded.fileset.variants, sexchr);
     let auto = ibdseg::usable_segments(&a.auto_chr, &a.auto_pos);
     let xseg = ibdseg::usable_segments(&a.x_chr, &a.x_pos);
@@ -521,6 +559,39 @@ mod tests {
     fn parse(args: &[&str]) -> Options {
         let v: Vec<String> = args.iter().map(|s| s.to_string()).collect();
         cli::parse(&v).options
+    }
+
+    fn marker(chrom: &str, id: &str, bp: i64) -> Variant {
+        Variant {
+            chrom: chrom.to_string(),
+            id: id.to_string(),
+            cm: 0.0,
+            bp,
+            a1: "A".to_string(),
+            a2: "G".to_string(),
+        }
+    }
+
+    #[test]
+    fn map_order_reports_the_first_position_or_chromosome_regression() {
+        let positions = [marker("1", "a", 20), marker("1", "b", 10)];
+        assert_eq!(
+            map_order_warning(&positions, 23).as_deref(),
+            Some("Positions unsorted: a at 20, b at 10.\n")
+        );
+
+        let chromosomes = [marker("22", "z", 20), marker("21", "y", 10)];
+        assert_eq!(
+            map_order_warning(&chromosomes, 23).as_deref(),
+            Some("Chromosomes unsorted: z on chr 22, y on chr 21.\n")
+        );
+
+        let sorted = [
+            marker("1", "a", 10),
+            marker("1", "b", 20),
+            marker("2", "c", 1),
+        ];
+        assert_eq!(map_order_warning(&sorted, 23), None);
     }
 
     #[test]

@@ -657,7 +657,21 @@ pub fn clustering_prologue(opts: &Options, loaded: &Loaded, out: &mut dyn Write)
             console::autosome_words(loaded.words(), loaded.fileset.samples.len()).as_bytes(),
         );
         let _ = out.write_all(console::SORTING_AUTOSOMES.as_bytes());
-        let _ = out.write_all(super::ibdseg::segment_prepass(opts, loaded).as_bytes());
+        if let Some(warning) = super::ibdseg::map_order_warning(
+            &loaded.fileset.variants,
+            i64::from(opts.int(Opt::Sexchr)),
+        ) {
+            let _ = out.write_all(warning.as_bytes());
+            let _ = out.write_all(b"  Inference will be based on kinship estimation only.\n");
+        } else {
+            let prepass = super::ibdseg::segment_prepass(opts, loaded);
+            if prepass.is_empty() {
+                let _ = out.write_all(b"No informative IBD segments.\n");
+                let _ = out.write_all(b"  Inference will be based on kinship estimation only.\n");
+            } else {
+                let _ = out.write_all(prepass.as_bytes());
+            }
+        }
         let _ = out.write_all(
             format!(
                 "{} CPU cores are used to compute the pairwise kinship coefficients...\n",

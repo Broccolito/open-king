@@ -370,12 +370,19 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
         sexchr,
         seglength_bp,
     );
-    let with_segments = !engine.is_empty();
+    let map_warning = crate::analysis::ibdseg::map_order_warning(&loaded.fileset.variants, sexchr);
+    let with_segments = map_warning.is_none() && !engine.is_empty();
 
     // The segment pre-pass owns the `Total length …` block and `allsegs.txt`; it is
     // byte-identical to the one `--ibdseg` and the QC reports emit.
     if with_segments {
         write(out, &crate::analysis::ibdseg::segment_prepass(opts, loaded));
+    } else if let Some(warning) = map_warning {
+        write(out, &warning);
+        write(
+            out,
+            "  Relationship inference will be based on kinship estimation only.\n",
+        );
     } else {
         write(out, "No informative IBD segments.\n");
         write(

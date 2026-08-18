@@ -335,28 +335,20 @@ Sixteen of the 34 rows differ. `Kinship` (column 11) is identical on every one o
 fileset with `plink1.9 --make-bed` rather than relying on either binary to catch this.**
 
 **2. The `.bim` must be sorted by `(chromosome, position)`, ascending,** for anything that
-calls IBD segments — which is every analysis except `--kinship` and `--duplicate`. The
-reference refuses an unsorted map and says so; open-king does not check. On a map whose
-positions run backwards within each chromosome:
+calls IBD segments — which is every analysis except `--kinship` and `--duplicate`. Both
+binaries now refuse segment work on an unsorted map at the same point and with the same
+diagnostic. On a map whose positions run backwards within each chromosome:
 
 ```
-$ king -b unsortedpos.bed --ibdseg     # open-king   -> kingsplitped.txt only
-No informative IBD segments.
-
-$ king -b unsortedpos.bed --ibdseg     # KING 2.3.2  -> kingsplitped.txt only
+$ king -b unsortedpos.bed --ibdseg     # both -> kingsplitped.txt only
 Positions unsorted: rs1_1009689 at 65904473, rs1_1055261 at 65851170.
   Note chromosomal positions can be sorted conveniently using other tools such as PLINK.
 ```
 
-Same files, opposite reasons: the reference refuses, open-king finds nothing to call. On a map
-whose chromosomes run 22 → 1 with positions ascending inside each, the two part company for
-real — open-king silently proceeds and writes a full `.seg` where the reference writes none:
+On a map whose chromosomes run 22 → 1 with positions ascending inside each:
 
 ```
-$ king -b unsortedchr.bed --ibdseg     # open-king   -> king.seg (104 rows), kingallsegs.txt, kingsplitped.txt
-Total length of 19 chromosomal segments usable for IBD segment analysis is 708.3 Mb.
-
-$ king -b unsortedchr.bed --ibdseg     # KING 2.3.2  -> kingsplitped.txt only
+$ king -b unsortedchr.bed --ibdseg     # both -> kingsplitped.txt only
 Chromosomes unsorted: rs22_14205438 on chr 22, rs21_1002722 on chr 21.
   Note chromosomal positions can be sorted conveniently using other tools such as PLINK.
 ```
@@ -1459,10 +1451,9 @@ known set; these are the ones a command line can reach:
   corresponding kinship-only clustering path. Check for the `usable for IBD segment
   analysis` line before trusting any segment column
   ([PARITY.md §5.12](PARITY.md#512-three-divergences-found-while-writing-the-user-documentation)).
-* **An unsorted `.bim` is not detected.** The reference refuses with
-  `Positions unsorted: …` / `Chromosomes unsorted: …` and writes no `.seg`; open-king
-  either reports `No informative IBD segments.` or, on a chromosome-unsorted map, proceeds
-  and writes a full `.seg`. See [§3](#two-hard-requirements-that-are-easy-to-miss).
+* **Unsorted `.bim` maps are rejected for segment work.** Both binaries emit the same
+  `Positions unsorted: …` / `Chromosomes unsorted: …` diagnostic and suppress the same
+  segment outputs. See [§3](#two-hard-requirements-that-are-easy-to-miss).
 * **Sample IDs colliding only in case are rejected.** Both binaries treat `(FID, IID)` as
   unique under ASCII case-folding, name the second spelling in the duplicate diagnostic and
   abort with `Please correct problems with pedigree structure`.

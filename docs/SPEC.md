@@ -632,10 +632,11 @@ everything else, including chromosome 0, is REMOVED
 `Non-human samples are analyzed, with %d pairs of chromosomes`. Zero-count classes are elided
 from the SNP-count line.
 
-**Sort order.** `--kinship`/`--ibs`/`--duplicate` counting is order-independent and KING
-accepts an unsorted `.bim` **[V]**. `--ibdseg` (Tier 2) refuses with
+**Sort order.** `--kinship`/`--duplicate` counting is order-independent. `--ibs` continues
+its counting pass but disables its segment columns, while every other segment consumer
+falls back or stops segment work. The diagnostic is
 `Chromosomes unsorted: %s on chr %d, %s on chr %d.` / `Positions unsorted: %s at %d, %s at %d.`
-So Tier 1 needs no sort; Tier 2 requires ascending `(chr, bp)`.
+So the relatedness counts need no sort; segment work requires ascending `(chr, bp)` **[V]**.
 
 ### 3.5 Identity, duplicates, and the FID `0` convention **[V]**
 

@@ -1406,17 +1406,17 @@ additionally prints `Cutoff value for IBS0 between FS and PO is set at 0.0050`. 
 `--ibdseg`, both binaries now print the PLINK sorting note after `No informative IBD
 segments.` and write only `splitped.txt`.
 
-**2. An unsorted `.bim` is not detected.** The reference validates map order before the
-segment pass; open-king does not. Two shapes, both derived from `multifam` by the
+**2. Unsorted `.bim` validation — fixed.** Two shapes, both derived from `multifam` by the
 `fixtures.py` script published in [`CLI.md`](CLI.md#10-the-derived-filesets-used-above):
 
-| map | reference | open-king |
-| --- | --- | --- |
-| positions descending inside each chromosome | `Positions unsorted: rs1_1009689 at 65904473, rs1_1055261 at 65851170.` + the PLINK note; writes only `splitped.txt` | `No informative IBD segments.`; writes only `splitped.txt` |
-| chromosomes 22 → 1, positions ascending inside each | `Chromosomes unsorted: rs22_14205438 on chr 22, rs21_1002722 on chr 21.` + the PLINK note; writes only `splitped.txt` | proceeds: `Total length of 19 chromosomal segments usable for IBD segment analysis is 708.3 Mb.` and a full 104-row `king.seg` |
+| map | both binaries |
+| --- | --- |
+| positions descending inside each chromosome | `Positions unsorted: rs1_1009689 at 65904473, rs1_1055261 at 65851170.` + the PLINK note; writes only `splitped.txt` under `--ibdseg` |
+| chromosomes 22 → 1, positions ascending inside each | `Chromosomes unsorted: rs22_14205438 on chr 22, rs21_1002722 on chr 21.` + the PLINK note; writes only `splitped.txt` under `--ibdseg` |
 
-Both exit 0. The first shape happens to agree on the file set for the wrong reason; the second
-produces a complete, confidently formatted, meaningless `.seg`.
+`tests/parity/probes/map_order.py` checks both shapes through `--related`, `--ibs`,
+`--unrelated`, `--build`, `--bysample`, `--bySNP`, `--cluster` and `--ibdseg`: all 16
+normalized console streams, file sets and file bytes match the reference.
 
 **3. Sample IDs colliding only in case — fixed.** The reference folds ASCII case when checking
 `(FID, IID)` uniqueness — established independently in
