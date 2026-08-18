@@ -58,3 +58,5 @@ from one seed with the Python standard library. `docs/CLI.md`
 [§10](CLI.md#10-the-derived-filesets-used-above) and `docs/INTERPRETING.md`
 [appendix](INTERPRETING.md#appendix--reshapepy) publish the two scripts that derive the
 deliberately awkward filesets a few examples need.
+
+- [CONTINUATION.md](CONTINUATION.md) — handoff brief: state, the three open cases, working rules, next steps.
