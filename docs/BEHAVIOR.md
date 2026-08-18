@@ -19,8 +19,8 @@ settle it.
 
 * [Q2 — parent–offspring vs full-sibling discrimination](#q2--parentoffspring-vs-full-sibling-discrimination)
 * [Q3 — SNP inclusion rules](#q3--snp-inclusion-rules)
-* [Q4 — `--cpus` determinism](#q4--cpus-determinism)
-* [Q5 — `--degree` semantics](#q5--degree-semantics)
+* [Q4 — `--cpus` determinism](#q4----cpus-determinism)
+* [Q5 — `--degree` semantics](#q5----degree-semantics)
 * [Q6 — the sample-ID sort comparator](#q6--the-sample-id-sort-comparator)
 * [Q7 — output-file existence](#q7--output-file-existence)
 * [Q8 — `.ibs` / `.ibs0` column-set variation](#q8--ibs--ibs0-column-set-variation)
@@ -72,7 +72,7 @@ out with `IBD1Seg 1.0000  IBD2Seg 0.0000  PropIBD 0.5000` exactly, FS pairs with
 
 Datasets with 1st-degree pairs whose IBS0 proportion is known exactly (built by choosing
 the per-pair genotype-pattern counts directly — see the construction in
-[Q5](#q5--degree-semantics)):
+[Q5](#q5----degree-semantics)):
 
 | dataset | 1st-degree pairs' IBS0 | printed cutoff | summary line `MZ PO FS 2nd 3rd 4th` |
 | --- | --- | --- | --- |

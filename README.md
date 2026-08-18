@@ -1,260 +1,201 @@
 # open-king
 
-A clean-room, MIT-licensed reimplementation of **KING** (Kinship-based INference for
-Genome-wide association studies) — the relatedness-inference program described in
-[Manichaikul *et al.* 2010, *Bioinformatics*](https://pmc.ncbi.nlm.nih.gov/articles/PMC3025716/).
+`king` estimates how every pair of samples in a PLINK1 fileset is related — kinship
+coefficients, duplicate and MZ pairs, IBD segments, and a relationship label per pair — and
+writes the answer as plain text files. **open-king** is a clean-room, MIT-licensed Rust
+reimplementation of [KING 2.3.2](https://www.kingrelatedness.com/) that aims to be a drop-in
+replacement: same command line, same input, byte-identical output files.
 
-KING answers one question about a genotype dataset: **for every pair of samples in it, how
-are those two people related?** Given a PLINK1 fileset (`.bed`/`.bim`/`.fam`) it estimates
-kinship coefficients from genome-wide SNPs, finds duplicate samples, calls the IBD segments
-two people share, labels each pair `PO`, `FS`, `2nd`, `3rd`, `4th`, `Dup/MZ` or `UN`, flags
-pairs whose inferred relationship contradicts the pedigree, reconstructs families, and picks
-a maximal unrelated subset. It is a standard first step in GWAS quality control, and the
-original implementation is a widely used binary with no source license permitting reuse.
+## Provenance and license
 
-open-king is that program rewritten in Rust from the published algorithms, the public
-documentation and black-box observation of the reference binary — **no KING source code was
-read or copied** — so that a permissively licensed implementation of these formats and
-estimators can be embedded in other software.
+open-king is **not affiliated with, endorsed by, or derived from the source code of** the
+original KING program by Wei-Min Chen and colleagues. It was written from the published
+algorithm descriptions, the publicly documented file formats, and black-box observation of
+the reference binary. **No KING source code was read or copied.** The rule is stated and
+justified in [`docs/MAINTAINING.md`](docs/MAINTAINING.md) §1.
 
-The goal is **drop-in parity**: the same command line, the same input files, and
-byte-identical output files as the reference `king` 2.3.2 binary. Not "statistically
-equivalent" — the same bytes, including column widths, row order and the reference's own
-rounding quirks. That is a falsifiable target, and the whole project is organised around
-measuring it: 480 captured reference invocations across 13 synthetic datasets are replayed
-on every change and diffed byte for byte.
+open-king's own code is **MIT** licensed ([LICENSE](LICENSE)). That covers this code only and
+makes no claim about the original KING, which its authors license separately.
+
+## Install
+
+A Rust toolchain (1.75+) is the only requirement. Python 3, standard library only, runs the
+test corpus and the parity suite.
 
 ```bash
+git clone https://github.com/Broccolito/open-king
+cd open-king
 cargo build --release
-target/release/king -b study.bed --related --prefix study
 ```
 
-Requires a Rust toolchain and nothing else. Python 3 (standard library only) runs the parity
-suite.
+The binary lands at **`target/release/king`**. Put it on your `PATH`, or call it by path.
 
-## Status
+## 60-second quickstart
 
-**477 of the 480 captured reference invocations reproduce byte-identically (99.4 %)**,
-including all 220 flag-plumbing and error probes. Run the suite yourself:
+You need a PLINK1 fileset. If you do not have one to hand, the repository can synthesise 13
+of them — real pedigrees, real recombination, no external tools:
 
 ```bash
-cargo build --release
-python3 tests/parity/run_parity.py --impl target/release/king
+python3 tests/parity/generate_corpus.py --outdir /tmp/kingdocs
 ```
 
-`docs/PARITY.md` is the authoritative claim — the full analysis × dataset matrix, the
-measured size of every remaining gap, and a labelled limitations section. Everything below
-is a summary of it and says nothing it does not support.
+Then find the relatives, out to second degree:
 
-The one-paragraph version: the relatedness estimators, the QC reports, duplicate detection,
-auto-QC, unrelated-set selection, clustering, `--ibs`, the whole X-chromosome surface
-(`X.kin`, `X.kin0`, `X.seg`), the whole command-line surface **and the IBD-segment engine at
-every captured reporting floor** are byte-identical everywhere. **Thirty of the thirty-one
-output files this project writes are byte-identical in every case that produces them**; only
-`<prefix>build.log` differs anywhere, and only in 1 of the 8 cases that write it. On the
-primary `--ibdseg` capture all **982**
-rows are byte-exact on all four printed fields — `IBD1Seg`, `IBD2Seg`, `PropIBD` and
-`InfType` — with **0 spurious and 0 missing rows on every output file in the corpus**.
-
-The 3 cases that are not byte-identical fall under two named causes, and neither is a
-segment estimate:
-
-| cases | cause |
-| ---: | --- |
-| 2 | one stdout line: `--related`'s two-stage screening count on `bigish`. Every output file in both cases, `.kin`, `.kin0` and `.seg` alike, is byte-identical |
-| 1 | `--build`'s `<prefix>build.log` — its `RULE` half lands, its `INFERENCE` half does not |
-
-**Row-level, over the same 982 pairs, at all three captured floors:**
-
-| `--seglength` | all four columns | `IBD1Seg` | `IBD2Seg` | extra | missing | MAE |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 3 Mb (default) | **982 / 982** | **982** | **982** | 0 | 0 | 0.000000 |
-| 5 Mb | **982 / 982** | **982** | **982** | 0 | 0 | 0.000000 |
-| 10 Mb | **982 / 982** | **982** | **982** | 0 | 0 | 0.000000 |
-
-(`python3 tests/parity/fit/scorecard.py`.)
-
-**Both of those numbers are saturated, and that is a fact about the corpus as much as about
-the caller.** So this release also measures the segment engine on filesets it has never
-seen — 24 of them, on 8 seeds used nowhere else in the repository, at all three floors,
-byte-diffed against the reference:
-
-```
-72 runs, 6 713 reference rows   ->   66 byte-identical
-rows: 0 extra, 2 missing, 4 value-differing
+```bash
+target/release/king -b /tmp/kingdocs/bigish.bed --related --degree 2 --prefix demo
 ```
 
-**66 of 72 runs and 6 707 of 6 713 rows.** The 6 wrong rows are one IBD2 deficit of
-0.0182 on a full-sib pair (identical on two independent seeds — one missed piece in one
-place) and one distant pair we drop that the reference reports. Both are written up with
-their next experiment in `docs/PARITY.md` §4.6, and neither is visible to the 480 captures.
-`python3 docs/research/fixtures/oosseg.py --ref /path/to/king` reproduces it.
+```
+Options in effect:
+	--related
+	--degree 2
+	--prefix demo
 
-**One caveat that applies to every number on this page.** All of it is measured against a
-single reference build — `KING 2.3.2`, Mach-O arm64, on macOS. KING's own release notes
-record repeated changes to the IBD-segment algorithm across 2.1.x–2.2.x, and that algorithm
-has never been published, so "byte-identical" here means *to 2.3.2*. No cross-build or
-cross-platform differential has been run. `docs/PARITY.md` opens with the full statement.
+Total length of 22 chromosomal segments usable for IBD segment analysis is 2498.9 Mb.
+  Information of these chromosomal segments can be found in file demoallsegs.txt
 
-Two further differences sit outside the 480 captures entirely, so they cost no case but a
-user could still hit them: `--ibdseg` does not apply the reference's 100 Mb usable-total
-floor, and `splitped.txt` is written unconditionally. Both are measured and written up in
-`docs/PARITY.md` §5.10.
+Within-family kinship data saved in file demo.kin
 
-### Two numbers, and why they are different
+Relationship summary (total relatives: 436 by pedigree, 435 by inference)
+  Source	MZ	PO	FS	2nd	3rd	OTHER
+  ===========================================================
+  Pedigree	0	226	111	81	18	137
+  Inference	0	226	111	79	19	138
+...
+  Final Stage (with 50000 SNPs): 26 pairs of relatives (up to 2nd-degree) are confirmed
 
-The headline is a **whole-file** count: a case turns `PASS` only when every row of every file
-it writes is byte-exact. For most of this project's life the residual was spread thinly
-across nearly every dataset, so it was routine for a large row-level gain to move the
-headline by nothing — and, at the very end, for a change that moved no estimate at all to
-move it by 28:
+Between-family relatives (kinship >= 0.08839) saved in file demo.kin0
+```
 
-| change | row-level effect | headline |
+Three files: `demo.kin` (573 within-family pairs), `demo.kin0` (26 cross-family pairs that
+cleared the 2nd-degree cut), `demoallsegs.txt` (the usable-genome denominator).
+
+```bash
+head -3 demo.kin0
+```
+
+```
+FID1	ID1	FID2	ID2	N_SNP	HetHet	IBS0	HetConc	HomIBS0	Kinship	IBD1Seg	IBD2Seg	PropIBD	InfType
+BF01	B01_F	BF02	B02_F	50000	0.2274	0.0132	0.4855	0.1175	0.2885	0.4575	0.3676	0.5964	FS
+BF01	B01_F	BF02	B02_C1	50000	0.1560	0.0299	0.2873	0.2261	0.1368	0.5684	0.0000	0.2842	2nd
+```
+
+`B01_F` and `B02_F` are declared in different families and share half their genome with a
+quarter of it doubled — full siblings the pedigree never mentioned. That is the finding
+`--related` exists to produce.
+
+Two things to know before your first real run: **`--prefix` is concatenated, not joined**
+(`--prefix demo` gives `demo.kin` *and* `demoallsegs.txt`), and on a cohort of any size
+**always pass `--degree`** — unfiltered, `.kin0` is every pair in the dataset.
+
+## The analyses
+
+One or more of these must be given, or nothing is computed. Full reference, including all 46
+options and the parser's several surprises: [`docs/CLI.md`](docs/CLI.md).
+
+| flag | what it does | writes |
 | --- | --- | --- |
-| the `.seg` IBD2 caller (`docs/research/17-seg-caller.md`) | `IBD2Seg` 822 → 896 of 982 exact; mean `PropIBD` error ÷3.7, worst row ÷24 | **+0** |
-| its bridge and gate, re-bisected (§14 of the same doc) | none at all — a binary with the change reverted scores the same `.seg` scorecard to the digit; on constructed canvases it goes 5 723 → **6 000 of 6 000** | **+0** |
-| the `IBD1Seg` overlap rule (`18-ibd1-caller.md`) | `IBD1Seg` 826 → **982 of 982** exact | **+5** |
-| the IBD2 segment fringe (`19-ibd2seg-residual.md`) | `IBD2Seg` 896 → **982 of 982** exact | 408 → **436** |
-| `.seg`'s two writer rules (`20-seg-writer.md`) | no estimate changed at all; byte-exact rows 806 → **982 of 982** | 436 → **464** |
-| `<prefix>X.seg` implemented (`crate::analysis::xseg`) | a new file, 28 rows, byte-exact | 464 → **466** |
-| the `--seglength` run merge (`20-seglength-floor.md`) | at the 10 Mb floor `IBD1Seg` 844 → **960 of 982** and byte-exact rows 832 → **943**; mean `PropIBD` error ÷3.2, worst row 0.0916 → 0.0111. Nothing at 3 Mb, where the rule cannot fire | 466 → **472** |
-| the push and the IBD2 merge, re-measured (`21-push-merge.md`) | `--seglength 5` becomes as exact as the default floor: both estimate columns 982 of 982 and byte-exact rows 947 → **982**. At 10 Mb `IBD2Seg` 945 → **972**, byte-exact rows 943 → **970** | 472 → **475** |
-| the gate window's own length bound and the IBD1 merge's budget word set (`23-gap-bound.md`) | `--seglength 10` becomes exact too: `IBD1Seg` 970 → **982**, `IBD2Seg` 972 → **982**, byte-exact rows 970 → **982**, printed-column MAE 0.000046 → **0** | 475 → **477** |
-| `<prefix>build.log`'s header, `Duplicate … is removed.` and `RULE` lines (`crate::analysis::build`) | 0 → **243 of 806 bytes**, 6 of 18 lines, every one byte-identical; byte-identical on **53 of 59** held-out pedigree shapes | **+0** — a case is all-or-nothing |
-| the merge queue, the clustering gate and the duplicate rule (`crate::analysis::unrelated`) | no corpus row at all: **19 of 19**, **19 of 19** and **27 of 27** held-out shapes, against 7, 18 and 21 for the rules they replaced | **+0** — invisible to the corpus |
+| [`--kinship`](docs/CLI.md#--kinship) | KING-robust kinship for every pair; no segments, no labels | `.kin`, `.kin0`, `X.kin`, `X.kin0` |
+| [`--related`](docs/CLI.md#--related) | kinship **plus** IBD segments and a relationship label per pair | `.kin`, `.kin0`, `X.kin`, `allsegs.txt` |
+| [`--duplicate`](docs/CLI.md#--duplicate) | duplicate and MZ pairs by heterozygote concordance | `.con` |
+| [`--ibdseg`](docs/CLI.md#--ibdseg) | pairwise IBD-segment inference on its own | `.seg`, `X.seg`, `allsegs.txt`, `splitped.txt` |
+| [`--ibs`](docs/CLI.md#--ibs) | full IBS and concordance counts for every pair | `.ibs`, `.ibs0`, `allsegs.txt` |
+| [`--unrelated`](docs/CLI.md#--unrelated) | a maximal mutually unrelated subset, and its complement | `unrelated.txt`, `unrelated_toberemoved.txt` |
+| [`--cluster`](docs/CLI.md#--cluster) | merge families connected by inferred relatedness | `cluster.kin`, `updateids.txt` |
+| [`--build`](docs/CLI.md#--build) | reconstruct pedigrees from the genotypes | `updateparents.txt`, `updateids.txt`, `build.log` |
+| [`--bysample`](docs/CLI.md#--bysample) | per-sample QC: call rate, heterozygosity, Mendelian errors | `bySample.txt` |
+| [`--bySNP`](docs/CLI.md#--bysnp) | per-marker QC: frequency, genotype counts, error rates | `bySNP.txt` |
+| [`--autoQC`](docs/CLI.md#--autoqc) | the packaged call-rate and sex QC pipeline | four `_autoQC_*` reports |
 
-The `20-seg-writer.md` row is the point about graders: `PropIBD` computed from the printed
-columns instead of the totals, and rows listed in 16-sample blocks instead of by index.
-Neither touches a segment, an estimate or a reported pair — and between them they were worth
-28 cases, because the numbers underneath had finally stopped being wrong. The three
-`--seglength` rows are the opposite case: real changes to the caller. The run merge was worth
-6 cases and 158 exact rows (47 at the 5 Mb floor, 111 at 10); the push and IBD2-merge
-corrections 3 cases and 62 more (35 at 5 Mb, 27 at 10), which took `--seglength 5` to exact;
-and the window bound with the budget word set took `--seglength 10` there too.
+The common modifiers are `--degree <d>` (report only relatives that close), `--prefix`,
+`--seglength <Mb>`, `--minConc <x>` and `--cpus <n>`. `--cpus` changes no printed digit in
+any output file.
 
-The last three rows are the two ends of that spectrum: `23-gap-bound.md` moved both
-scoreboards, while `build.log`'s `RULE` lines and the three clustering corrections moved
-neither despite being right — the corpus simply has no fileset that can tell the difference,
-which is why they were graded on 59, 19 and 27 held-out shapes instead.
+**Not implemented:** `--pca`, `--mds`, `--roh`, `--makeGRM`, `--plink`, `--lmm`, `--tdt`,
+`--gdt`, `--risk` and the R plotting flags. They are still *accepted*, so the banner stays
+byte-exact against the reference — and then **the run exits 0 having written nothing, with no
+message on stdout or stderr.** If your pipeline uses any of them, keep the original binary
+for those steps and **assert on the output files, not on the exit status.**
 
-A further track landed **nothing on purpose, and that is the result** —
-`docs/research/22-screen.md` *proves* the screening count is not the kinship over any subset
-of markers (the algebra is exact and covers every subset and every weighting), then closes
-the two mechanisms that survived the proof, and declines to fit the one constant that would
-have reproduced `bigish` and nothing else. `docs/PARITY.md` §5.7 carries the proof and a list
-of what a future maintainer should *not* attempt.
+## Parity, honestly
 
-So read both. `docs/PARITY.md` §4.4 is the row-level scoreboard, §3 the file-level one, §4.6
-the out-of-sample one — the only one that still discriminates — and §5.0 says which grader to
-use for what, what is left, and which experiment to run next.
+**477 of the 480 captured reference invocations are byte-identical** — every output file,
+plus stdout, stderr and exit status. [`docs/PARITY.md`](docs/PARITY.md) is the authoritative
+statement: the full analysis × dataset matrix, per-file and per-row scorecards, and a labelled
+limitations section. Everything here is a summary of it.
 
-## Scope (v1)
+Byte-identical everywhere the corpus produces them: `--kinship` (including the X pass),
+`--duplicate`, `--ibs`, `--unrelated`, `--bysample`, `--bySNP`, `--autoQC`, `--cluster`,
+`--ibdseg` and `--related` at all three captured `--seglength` floors — 30 of the 31 output
+files this project writes.
 
-`byte-identical` below means exactly that — every file, every column, plus stdout, stderr
-and exit status — on every dataset and flag combination the corpus captures. Counts are
-cases, not files.
+**The three failing cases, and their blast radius:**
 
-| Flag | Output files | Status |
-| --- | --- | --- |
-| `--kinship` | `.kin` (10 col), `.kin0` (8 col), `X.kin`, `X.kin0` | **byte-identical** (13/13 datasets, 220/220 param cases) |
-| `--duplicate` | `.con` | **byte-identical** (13/13) |
-| `--bysample` | `bySample.txt`, `allsegs.txt` | **byte-identical** (13/13) |
-| `--bySNP` | `bySNP.txt`, `allsegs.txt` | **byte-identical** (13/13) |
-| `--autoQC` | `_autoQC_Summary.txt`, `_autoQC_snptoberemoved.txt`, `_autoQC_sampletoberemoved.txt`, `_autoQC_updatesex.txt` | **byte-identical** (13/13) |
-| `--unrelated` | `unrelated.txt`, `unrelated_toberemoved.txt`, `allsegs.txt` | **byte-identical** (26/26) |
-| `--ibs` | `.ibs`, `.ibs0`, `allsegs.txt` | **byte-identical** (13/13) — every column, `MaxIBD2` and `Pr_IBD2` included, on all 21 561 rows |
-| `--cluster` | `allsegs.txt`, `updateids.txt`, `cluster.kin` | **byte-identical** (13/13) |
-| `--build` | `updateids.txt`, `updateparents.txt`, `build.log`, `allsegs.txt` | 12/13 — `updateids.txt` and `updateparents.txt` are byte-identical in all 8 cases that write them; on `bigish` only `build.log` differs, and only in its `INFERENCE` half — its header and `RULE` lines are byte-identical (6 of 18 lines, 243 of 806 bytes, a strict subsequence of the reference's file), while the rest needs exact segment *placement* and one still-unidentified ordering (`docs/PARITY.md` §6.2) |
-| `--related` | `.kin` (16 col), `.kin0` (14 col), `X.kin`, `allsegs.txt` | 64/65 — every file byte-identical in every case, all 4 805 16-column rows exact on all sixteen. The one failure is a single stdout line, the two-stage screening count on `bigish` (`docs/PARITY.md` §5.7) |
-| `--ibdseg` | `.seg`, `allsegs.txt`, `splitped.txt`, `X.seg` | 64/65 — **52/52 alone**, 12/13 with `--related`. `.seg`, `allsegs.txt`, `splitped.txt` and `X.seg` are byte-identical in **every** case, on all 4 172 `.seg` rows, at 3, 5 and 10 Mb alike; the one loss is `bigish --related --degree 2 --ibdseg` on the stdout line above, with its `.seg` byte-identical. Off-corpus: `docs/PARITY.md` §4.6, and `splitped.txt` is written unconditionally where the reference does not always do so (§5.10) |
+| cases | what differs | does it affect an output file? |
+| ---: | --- | --- |
+| 2 | one stdout line — `--related`'s two-stage screening count on the 200-sample dataset (`36` vs `50`) | **No.** `.kin`, `.kin0` and `.seg` are byte-identical; the rows come from the exhaustive re-estimate below that line |
+| 1 | `<prefix>build.log`'s `INFERENCE` half | **Yes, that one file.** Its header and `RULE` lines are byte-identical and the file is a strict subsequence of the reference's. `--build`'s `updateids.txt` and `updateparents.txt` are byte-identical |
 
-`--related` is **not** a synonym for `--kinship`: it emits six extra columns
-(`HetConc`, `HomIBS0`, `IBD1Seg`, `IBD2Seg`, `PropIBD`, `InfType`), four of which come from
-the IBD-segment engine, so full `--related` parity depends on `--ibdseg`. Below 10 samples
-the reference itself downgrades `--related` to the `--kinship` path and emits the
-10-column form; `--ibdseg` does the same below 5 samples.
+**Differences the corpus cannot see** cost no case but a user can still hit them. The one to
+know about: on a marker panel too sparse for the segment caller, KING 2.3.2 prints
+`No informative IBD segments.` and falls back to a kinship-only inference — open-king does
+not, and labels every pair `UN` instead. Check for the `usable for IBD segment analysis` line
+before trusting a segment column. That, an unsorted `.bim` going undetected, case-colliding
+sample IDs being accepted, and the missing A1-major input check are all measured in
+[`docs/PARITY.md`](docs/PARITY.md) §5.10–§5.12 and §4.6.
 
-The X chromosome **is** in scope, and each of its three passes has its own gate.
-`--kinship` writes `<prefix>X.kin` and `<prefix>X.kin0` — with their own three sex-specific
-estimators — when the map holds 512 or more X markers, no `--degree` is given and there is
-more than one family; byte-identical in all 17 and all 5 diffable cases. `--related`'s
-`<prefix>X.kin` and `--ibdseg`'s `<prefix>X.seg` are gated instead on the X map yielding a
-**usable segment** (there is no marker-count threshold on those two), and `X.seg`
-additionally on `--degree` being non-zero. `X.seg` carries the reference's own malformed
-header — eleven names over nine-value rows — deliberately.
+Every number above is measured against **one** reference build: KING 2.3.2, Mach-O arm64,
+macOS. KING's segment algorithm is unpublished and its release notes record repeated changes
+across 2.1.x–2.2.x, so "byte-identical" means *to 2.3.2*.
 
-Note that `--prefix` is a plain **concatenation**, not a stem plus separator:
-`--prefix ZZ_` yields `ZZ_.kin` and `ZZ_allsegs.txt`. The reference also opens
-`<prefix>$TMP$.ped` for writing while it loads the `.fam`, so an unwritable prefix is a
-fatal error there rather than at output time.
+### Run the parity suite yourself
 
-Out of scope for v1: `--pca`, `--mds`, `--roh`, `--lmm`, `--tdt`, `--gdt`, `--risk`,
-`--makeGRM`, `--plink`, the R plotting flags (`--rplot`, `--pngplot`, `--rpath`), and
-multi-dataset input. These are still *accepted* on the command line so the banner stays
-byte-exact, then rejected at dispatch rather than silently ignored.
-
-`.segments.gz` is **not** a target: the reference 2.3.2 build ships without zlib in its
-segment writer, so it never produces that file despite the manual documenting it.
-
-## Three things the reference itself gets wrong
-
-All three are measured. `docs/PARITY.md` §4.3, §5.1 and §5.2 have the evidence — and the
-third one stopped being an obstacle only when it was taken literally rather than treated as
-noise.
-
-* **`<prefix>X.kin0` is written by racing threads.** Six identical reference runs produced
-  six different files, one truncated to 187 of 662 bytes, with records torn mid-number.
-  `--cpus 1` makes it deterministic. The harness diffs only the `--cpus 1` captures — 5 of
-  the 13 — and all 5 are byte-identical.
-* **The four small datasets do not grade the segment caller.** They each report the 14
-  within-family pairs of one six-person nuclear family over 5 000–10 000 markers, against
-  `bigish`'s 50 000. On `monomorphic` the reference reports two full siblings as
-  `IBD1Seg 0.9800 / IBD2Seg 0.0000`, labels them `PO`, and its own `--kinship` puts the same
-  pair at 0.3384 where those segment numbers imply 0.2450. open-king reproduces that row
-  exactly, which says nothing about either implementation recovering the underlying IBD.
-* **The reference disagrees with itself about `PropIBD`.** In a single
-  `--related --degree 2 --ibdseg` run on `bigish`, 147 pairs appear in both `king.kin` and
-  `king.seg` — all 147 with identical `IBD1Seg` and `IBD2Seg`, and **43** with a different
-  `PropIBD` in the two files (e.g. 0.5048 against 0.5049). Corpus-wide the two writers
-  disagree on 54 of the 201 pairs the reference puts in both. This turned out to be the last
-  thing standing between the project and an exact `.seg`: `.kin` computes `PropIBD` from the
-  full-precision totals and `.seg` computes it from the four-decimal columns it is about to
-  print (`i2*1e-4 + i1*5e-5`, exact on all 4 172 captured `.seg` rows including all 1 313
-  that land on an exact decimal half). open-king implements both, one per writer, and
-  reproduces each file. `docs/research/20-seg-writer.md`.
-
-## Building
+It needs no reference binary — the goldens are committed — and takes about four seconds:
 
 ```bash
-cargo build --release
+python3 tests/parity/generate_corpus.py --outdir /tmp/kingdocs
+python3 tests/parity/run_parity.py --impl target/release/king -q
 ```
 
-The binary is emitted as `target/release/king`. It builds from a clean checkout in
-**about 9.5 seconds** with no external toolchain: `Cargo.lock` has 15 packages, three of which
-are this workspace. `cargo test --workspace` is 325 tests; CI additionally replays all 480
-captured invocations against `tests/parity/BASELINE.txt` on every push, and fails on any
-difference **in either direction** — an unrecorded improvement is a failure too, so the
-committed baseline can never drift from what the tree actually does. Contributing,
-regenerating the corpus, re-capturing goldens and the fixture technique the segment work
-depends on: `docs/MAINTAINING.md`.
+```
+[parity] 480 case(s), impl=/Users/wgu/Desktop/open-king/target/release/king, jobs=8
+FAIL  apps/bigish__build                          stdout!=; kingbuild.log!=(num)
+FAIL  core/bigish__related_degree2                stdout!=
+FAIL  ibdseg/bigish__related_degree2_ibdseg       stdout!=
 
-## Relationship to the original KING
+parity: 477 PASS, 3 FAIL, 480 total (2.1s wall, 876 output file(s) byte-compared, 8 diff-excluded)
+```
 
-This project is **not** affiliated with, endorsed by, or derived from the source code
-of the original KING program by Wei-Min Chen. It is an independent implementation
-written from:
+(The three `FAIL` rows can arrive in any order — cases run in parallel — and the wall-clock
+figure varies.) To diff the two binaries on your own data instead, recipe 12 of
+[`docs/COOKBOOK.md`](docs/COOKBOOK.md) has the procedure and the console normalizer it needs.
 
-* the published algorithm descriptions in the peer-reviewed literature,
-* the publicly documented input/output file formats, and
-* black-box observation of the reference binary's output.
+`cargo test --workspace` is 330 tests. CI replays all 480 captures against a committed
+baseline on every push and fails on any difference **in either direction**, so an unrecorded
+improvement is a failure too.
 
-No KING source code was read or copied. The original KING remains the work of its
-authors under its own license terms; if you use relatedness inference in published
-research, cite the original paper.
+## Documentation
 
-`docs/MAINTAINING.md` §1 states the clean-room rule, why it is absolute rather than
-best-effort, and exactly which three sources of information are permitted. Every rule in the
-segment engine names the black-box experiment that established it.
+**Using it**
+
+| | |
+| --- | --- |
+| [`docs/CLI.md`](docs/CLI.md) | every option, what it affects, and how the parser really behaves |
+| [`docs/OUTPUTS.md`](docs/OUTPUTS.md) | every output file: columns, formats, row order, and when it is absent |
+| [`docs/COOKBOOK.md`](docs/COOKBOOK.md) | twelve task-oriented recipes, from "find duplicates" to "diff against KING" |
+| [`docs/INTERPRETING.md`](docs/INTERPRETING.md) | what the numbers mean, where they mislead, and what they cannot tell you |
+
+**Working on it**
+
+| | |
+| --- | --- |
+| [`docs/PARITY.md`](docs/PARITY.md) | the measured parity claim, per file and per row |
+| [`docs/SPEC.md`](docs/SPEC.md) | the implementation specification |
+| [`docs/BEHAVIOR.md`](docs/BEHAVIOR.md) | the black-box experiments that fixed each rule |
+| [`docs/VERIFIED_FORMULAS.md`](docs/VERIFIED_FORMULAS.md) | every estimator, checked numerically against the reference |
+| [`docs/MAINTAINING.md`](docs/MAINTAINING.md) | the clean-room rule, the corpus, re-capturing goldens |
+
+[`docs/README.md`](docs/README.md) indexes all of it, including the 26 research notes.
 
 ## Citation
 
@@ -262,17 +203,12 @@ segment engine names the black-box experiment that established it.
 
 > Manichaikul A, Mychaleckyj JC, Rich SS, Daly K, Sale M, Chen WM. Robust relationship
 > inference in genome-wide association studies. *Bioinformatics*. 2010;26(22):2867–2873.
-> doi:10.1093/bioinformatics/btq559
+> doi:[10.1093/bioinformatics/btq559](https://doi.org/10.1093/bioinformatics/btq559)
 
 **Credit for KING itself belongs to Wei-Min Chen and colleagues** (University of Virginia),
 whose program — <https://www.kingrelatedness.com/> — this project reimplements and measures
 itself against. The IBD-segment algorithm in particular is theirs and is unpublished;
 open-king recovered its behaviour by observation, not by reading their work.
 
-If a paper needs to say which implementation produced a number, `CITATION.cff` in this
-repository carries machine-readable metadata for open-king alongside both references above.
-
-## License
-
-MIT — see [LICENSE](LICENSE). This license covers open-king's own code only; it makes no
-claim about the original KING, which is separately licensed by its authors.
+If a paper needs to say which implementation produced a number, [`CITATION.cff`](CITATION.cff)
+carries machine-readable metadata for open-king alongside both references above.

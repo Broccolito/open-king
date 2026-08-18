@@ -369,8 +369,10 @@ experiment that fixes each rule, in `crates/king-cli/src/analysis/autoqc.rs`.
 the pass, not in the option table: the banner prints `--callrateN` bare until the flag is
 given, and an explicit `--callrateM 0` is honoured literally.
 
-The four report files, all tab separated, all named by **concatenation**
-(`--prefix ZZ_` gives `ZZ__autoQC_Summary.txt`, double underscore):
+The four report files, all named by **concatenation** (`--prefix ZZ_` gives
+`ZZ__autoQC_Summary.txt`, double underscore). The three `*toberemoved*` / `updatesex` files
+are tab separated; `_autoQC_Summary.txt` is fixed-width and space-padded and contains no tab
+at all (measured: `grep -c $'\t'` returns 0):
 
 | file | header | rows |
 | --- | --- | --- |
@@ -439,11 +441,11 @@ live in **[BEHAVIOR.md](BEHAVIOR.md)**. Status summary below.
    retained; `23`/`X`, `24`/`Y`, `26`/`MT` are held aside; any other chromosome code is
    dropped at map load. Missingness is pairwise only.
 4. **`--cpus` determinism.** **RESOLVED** —
-   [BEHAVIOR.md § Q4](BEHAVIOR.md#q4--cpus-determinism). Every output file is
+   [BEHAVIOR.md § Q4](BEHAVIOR.md#q4----cpus-determinism). Every output file is
    byte-identical across `--cpus 1/2/4/8` on a 200 × 50 000 dataset; only stdout progress
    percentages differ.
 5. **`--degree` filtering semantics.** **RESOLVED** —
-   [BEHAVIOR.md § Q5](BEHAVIOR.md#q5--degree-semantics). `--degree d` filters `.kin0`
+   [BEHAVIOR.md § Q5](BEHAVIOR.md#q5----degree-semantics). `--degree d` filters `.kin0`
    only (never `.kin`, never `.ibs`/`.ibs0`), on the kinship **estimate**, keeping pairs
    with `kinship >= 2^-(d+1.5)` compared against the exact double rather than the printed
    `%.5lf`. `--degree 0` means unset. Negative degrees behave inconsistently between

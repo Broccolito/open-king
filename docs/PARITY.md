@@ -1366,6 +1366,79 @@ pair, any seed). It shows identically in `X.kin` and `X.seg`, so it is the share
 it is unreachable from the corpus, whose arrays all end mid-word. Not emulated: it is an
 uninitialised read, not a rule.
 
+
+### 5.12 Three divergences found while writing the user documentation
+
+Measured on 2026-08-18 against the same reference build, on filesets derived from the corpus
+by the recipes given below, and reproduced from a cold `cargo build --release`. **None costs a
+parity case** — every one of them needs an input shape the 480 captures do not contain — and
+all three are visible to a user, which is why they are recorded rather than left in a
+transcript. §5.10 and §5.11 remain the older, independently measured set.
+
+**1. The "no informative IBD segments" fallback is not implemented.** This is the one with the
+widest blast radius: any panel too sparse for the segment caller lands on it, which on a
+200-sample fileset means roughly 12 500 markers genome-wide.
+
+*Reproduce* (`reshape.py` is the thinning script published in
+[`INTERPRETING.md`](INTERPRETING.md#appendix--reshapepy)):
+
+```text
+python3 reshape.py /tmp/kingdocs/bigish thin4 --every 4     # 200 samples x 12 500 SNPs
+king -b thin4.bed --related --cpus 1
+```
+
+| | reference | open-king |
+| --- | --- | --- |
+| console | `No informative IBD segments.` + `Relationship inference will be based on kinship estimation only.` | neither line |
+| `.kin` | **12 columns** (`… Kinship Error`) | **16 columns**, `IBD1Seg`/`IBD2Seg`/`PropIBD` all `0.0000`, `InfType UN`, `Error 1` on every row |
+| relationship summary | 436 by inference | **0** by inference |
+| `.kin0` rows | 15 | **3** |
+
+The reference detects that the map yields no usable segment and falls back to a pure
+kinship-based inference — a documented mode of KING, and the short `.kin` layout is its
+signature. open-king keeps the segment layout and reports zeros, so every relationship comes
+out `UN`. The same fallback is missing on `--unrelated` / `--cluster` / `--build`, where the
+reference additionally prints `Cutoff value for IBS0 between FS and PO is set at 0.0050` and
+infers 15 relatives against our 0; and on `--ibdseg`, where both binaries print
+`No informative IBD segments.` and write only `splitped.txt`, but the reference adds the
+trailing `Note chromosomal positions can be sorted conveniently using other tools such as
+PLINK.` line. Note that the sample counts differ upstream too: the two-stage screen reports
+17 candidate pairs to the reference's 15, which is §5.7's gap on a different input.
+
+**2. An unsorted `.bim` is not detected.** The reference validates map order before the
+segment pass; open-king does not. Two shapes, both derived from `multifam` by the
+`fixtures.py` script published in [`CLI.md`](CLI.md#10-the-derived-filesets-used-above):
+
+| map | reference | open-king |
+| --- | --- | --- |
+| positions descending inside each chromosome | `Positions unsorted: rs1_1009689 at 65904473, rs1_1055261 at 65851170.` + the PLINK note; writes only `splitped.txt` | `No informative IBD segments.`; writes only `splitped.txt` |
+| chromosomes 22 → 1, positions ascending inside each | `Chromosomes unsorted: rs22_14205438 on chr 22, rs21_1002722 on chr 21.` + the PLINK note; writes only `splitped.txt` | proceeds: `Total length of 19 chromosomal segments usable for IBD segment analysis is 708.3 Mb.` and a full 104-row `king.seg` |
+
+Both exit 0. The first shape happens to agree on the file set for the wrong reason; the second
+produces a complete, confidently formatted, meaningless `.seg`.
+
+**3. Sample IDs colliding only in case are accepted.** The reference folds case when checking
+`(FID, IID)` uniqueness — established independently in
+[`BEHAVIOR.md`](BEHAVIOR.md#q6--the-sample-id-sort-comparator), which records `{A, a}` and
+`{ab, aB}` being rejected at load. `king-io`'s duplicate check is byte-exact, so a `.fam` with
+`A_F` and `a_f` in one family aborts under the reference with `Please correct problems with
+pedigree structure` and runs to completion under open-king. Exact duplicates are rejected by
+both.
+
+*Reproduce:*
+
+```text
+awk 'BEGIN{OFS=" "} {if ($1=="FAM1" && $2=="A_M") $2="a_f"; print}' \
+    /tmp/kingdocs/multifam.fam > case.fam
+king -b /tmp/kingdocs/multifam.bed --fam case.fam --kinship    # reference: exit 1; open-king: exit 0
+```
+
+**A1-major inputs** are the fourth known difference of this kind and were already recorded —
+the reference aborts a fileset whose first alleles are mostly major
+(`Too many first alleles as the major allele (~77.9%)`), open-king analyses it. `Kinship` is
+unaffected by the orientation; `HomIBS0` and the segment columns downstream of it are not.
+[`CLI.md` §3](CLI.md#two-hard-requirements-that-are-easy-to-miss) has the measured diff.
+
 ---
 
 ## 6. The remaining structural gap, in detail
