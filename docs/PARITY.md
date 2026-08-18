@@ -124,10 +124,9 @@ quoted**, so any claim here can be re-run rather than taken on trust.
 > and the IBD1 merge's budget word set were bisected (`23-gap-bound.md`). §5.0 says which
 > grader to use for what.
 >
-> **One remaining divergence lives outside the corpus entirely** and therefore costs no case
-> here, but a user could hit it: `<prefix>splitped.txt` is written unconditionally where the
-> reference sometimes writes none. The former 100 Mb `--ibdseg` floor difference is fixed.
-> Both rules were re-measured against the reference; §5.10.
+> The two former `--ibdseg` divergences outside the corpus — the 100 Mb floor and
+> conditional `splitped.txt` generation — are now fixed. Both rules were re-measured against
+> the reference; §5.10.
 
 ---
 
@@ -1305,21 +1304,20 @@ at and above the boundary `.seg` is added. The comparison is
 small-marker between-family flow differs from the current Rust path; that separate fallback
 work remains tracked under §5.12 rather than being hidden inside this `--ibdseg` gate.
 
-**2. `<prefix>splitped.txt` is written unconditionally.** On the *above-floor* run of the same
+**2. Conditional `<prefix>splitped.txt` generation — fixed.** On the *above-floor* run of the same
 6-sample fixture, whose families are all singletons, the reference writes **no**
-`splitped.txt` and prints no `… is generated for certain pedigree plot applications` line;
-open-king writes and announces it. The corpus cannot distinguish the two rules: every dataset
+`splitped.txt` and prints no `… is generated for certain pedigree plot applications` line.
+Both binaries now do the same. The corpus cannot distinguish the two rules: every dataset
 that reaches the segment pass has a family of at least 4 members (`unrelated` 10, `bigish` 9,
 `nuclear` 6, `admixed` 4), and the only datasets with no multi-member family at all —
 `singleton` and `pair` — sit below the `< 5` sample downgrade and never run the pass. So
 `kingsplitped.txt` is byte-identical in all 50 corpus cases and still wrong off-corpus.
 
-The obvious hypothesis — *the reference writes it only when some family has more than one
-member* — is consistent with every observation above but rests on **one** fixture shape, so
-it is a hypothesis and not a rule. Bisect it with `fixlab.py`: hold the sample count fixed and
-vary only the largest family size across 1, 2 and 3. It gained independent support from the
-X.seg work: `--related`'s `<prefix>X.kin` obeys exactly that rule (twelve singleton families
-write none; add one two-member family and it appears), which is now implemented.
+The exact rule is now pinned by holding 20 samples and their genotypes fixed while sweeping
+maximum family size 1, 2 and 3: size 1 writes and announces nothing; sizes 2 and 3 write and
+announce the file, with byte-identical contents. A singleton that names a parent also emits
+it, matching the renderer's pre-existing rule. `tests/parity/probes/splitped_presence.py`
+checks the three `--ibdseg` shapes and verifies that `--related` never owns this artefact.
 
 ### 5.11 Three more divergences the corpus cannot see
 

@@ -242,10 +242,12 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
     let sexchr = i64::from(opts.int(Opt::Sexchr));
     // Announced before `Options in effect:` and written before any segment work, so it
     // survives even the `No informative IBD segments.` early exit below.
-    write_file(
-        &format!("{prefix}splitped.txt"),
-        &splitped::text(&loaded.fileset.samples),
-    );
+    if splitped::is_generated(&loaded.fileset.samples) {
+        write_file(
+            &format!("{prefix}splitped.txt"),
+            &splitped::text(&loaded.fileset.samples),
+        );
+    }
     if let Some(warning) = map_order_warning(&loaded.fileset.variants, sexchr) {
         let _ = out.write_all(warning.as_bytes());
         let _ = out.write_all(SORT_NOTE.as_bytes());

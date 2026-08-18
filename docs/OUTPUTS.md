@@ -823,9 +823,9 @@ A pedigree file `--ibdseg` leaves behind for downstream pedigree-plotting tools.
 space-separated fields, no header.** Nothing in it depends on genotypes, `--degree` or
 `--seglength`.
 
-**Written by `--ibdseg`**, before any segment work — so it survives even an early exit.
-(See [Known divergences](#known-divergences-from-king-232): open-king writes it unconditionally where the
-reference sometimes writes none.)
+**Written by `--ibdseg`**, before any segment work, when at least one family has two members
+or a singleton names a parent — so it survives an early segment exit once that pedigree gate
+is met. All-parentless singleton families write and announce nothing.
 
 ```
 OldFID OldIID NewFID NewIID Father Mother Sex Pheno Dummy
@@ -1633,8 +1633,8 @@ affects output files:
 * **`--ibdseg` applies the reference's closed 100 Mb usable-total floor.** Below that
   floor both binaries print `Segments too short.` and suppress `.seg`; exactly
   100,000,000 bp proceeds. `--ibs` uses the same floor (§5.10).
-* **`<prefix>splitped.txt` is written unconditionally**, where the reference sometimes
-  writes none — specifically, on a fileset whose families are all singletons (§5.10).
+* **`<prefix>splitped.txt` is conditional**: all-parentless singleton families write and
+  announce nothing; a family of two or a singleton naming a parent emits it (§5.10).
 * **`.fam` `SEX` fields outside `{0,1,2}`** are read as `0`; the reference is more
   permissive (`M`/`m` → male, a leading `2` or `F`/`f` → female, and so on). Every column
   that prints or uses sex is affected. Deliberately not implemented (§5.11).

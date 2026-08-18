@@ -609,8 +609,9 @@ numbers for every pair rather than a filtered relative list.
 #### `--ibdseg`
 
 *Switch, default off.* Pairwise IBD-segment inference. Writes `<p>.seg`
-(`IBD1Seg IBD2Seg PropIBD InfType`), `<p>allsegs.txt` and `<p>splitped.txt`; with a
-`--degree`, also `<p>X.seg`.
+(`IBD1Seg IBD2Seg PropIBD InfType`) and `<p>allsegs.txt`; it also writes
+`<p>splitped.txt` when at least one family has two members or a singleton names a parent.
+With a `--degree`, it may also write `<p>X.seg`.
 
 Affected by [`--seglength`](#--seglength-mb) (the minimum length a called segment must
 reach) and [`--degree`](#--degree-d) (which pairs are reported). Under **5 samples** it

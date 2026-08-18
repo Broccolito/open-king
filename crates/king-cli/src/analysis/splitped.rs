@@ -2,7 +2,7 @@
 //!
 //! # What it is
 //!
-//! The reference announces it on every `--ibdseg` run
+//! The reference announces it on an `--ibdseg` run only when [`is_generated`] is true
 //! (`<prefix>splitped.txt is generated for certain pedigree plot applications.`) and
 //! writes it before any segment work happens. It is a *pedigree* file, not a segment
 //! file: nothing in it depends on genotypes, on `--degree`, or on `--seglength`, and the
@@ -52,6 +52,23 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use king_io::Sample;
 
 use crate::analysis::king_id_cmp;
+
+/// Whether KING writes and announces `splitped.txt` for this pedigree.
+///
+/// A lone parentless founder contributes nothing. The file exists iff at least one family
+/// has two members or a singleton names a parent; this is the same rule [`text`] applies
+/// while deciding which families to retain.
+pub fn is_generated(samples: &[Sample]) -> bool {
+    let mut family_sizes: HashMap<&str, usize> = HashMap::new();
+    for sample in samples {
+        *family_sizes.entry(sample.fid.as_str()).or_default() += 1;
+    }
+    samples.iter().any(|sample| {
+        family_sizes.get(sample.fid.as_str()).copied().unwrap_or(0) >= 2
+            || sample.pat != "0"
+            || sample.mat != "0"
+    })
+}
 
 /// One row of the file, before ordering.
 #[derive(Clone)]
@@ -332,6 +349,23 @@ mod tests {
     #[test]
     fn a_lone_parentless_founder_is_dropped() {
         assert_eq!(text(&[sample("F", "A", "0", "0", 1)]), "");
+    }
+
+    #[test]
+    fn generation_starts_at_family_size_two_or_a_named_parent() {
+        let singleton_families = [
+            sample("F1", "A", "0", "0", 1),
+            sample("F2", "B", "0", "0", 2),
+            sample("F3", "C", "0", "0", 1),
+        ];
+        assert!(!is_generated(&singleton_families));
+
+        let mut pair = singleton_families.clone();
+        pair[1].fid = "F1".to_string();
+        assert!(is_generated(&pair));
+
+        let named_parent = [sample("F1", "A", "DAD", "0", 1)];
+        assert!(is_generated(&named_parent));
     }
 
     #[test]

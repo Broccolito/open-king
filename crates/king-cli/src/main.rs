@@ -204,9 +204,13 @@ fn main() {
         } else {
             // The splitped line is the one console line that precedes `Options in
             // effect:` rather than following it.
-            emit(&analysis::ibdseg::splitped_notice(
-                opts.string(cli::Opt::Prefix),
-            ));
+            if analysis::splitped::is_generated(&loaded.fileset.samples) {
+                emit(&analysis::ibdseg::splitped_notice(
+                    opts.string(cli::Opt::Prefix),
+                ));
+            } else {
+                emit("\n");
+            }
             emit(&console::options_in_effect(
                 &analysis::ibdseg::options_in_effect(opts),
             ));
