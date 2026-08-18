@@ -455,7 +455,7 @@ Measured by running each analysis alone in an empty directory. `<p>` is the pref
 | analysis | files |
 | --- | --- |
 | `--kinship` | `<p>.kin`, `<p>.kin0`, plus `<p>X.kin` and `<p>X.kin0` when the X gate opens |
-| `--related` | `<p>.kin`, `<p>.kin0`, `<p>allsegs.txt`, plus `<p>X.kin` |
+| `--related` | `<p>.kin`, `<p>.kin0`, `<p>allsegs.txt`, plus `<p>X.kin` and — when a `.kin0` is written on a map with usable X segments — `<p>X.kin0` ([OUTPUTS.md](OUTPUTS.md#prefixxkin0)) |
 | `--duplicate` | `<p>.con` |
 | `--ibs` | `<p>.ibs`, `<p>.ibs0`, `<p>allsegs.txt` |
 | `--ibdseg` | `<p>.seg`, `<p>allsegs.txt`, `<p>splitped.txt`, plus `<p>X.seg` |
@@ -1567,3 +1567,15 @@ bim, fam, bed = read("multifam")
 The `c1`/`c16` and `n1`/`n2` directories in [§5](#--cpus-n) and [§8](#8-accepted-but-not-implemented)
 are just two empty directories per comparison, each holding one run of the command quoted
 beside them.
+
+---
+
+## See also
+
+* [`README.md`](README.md) — the documentation index
+* [`OUTPUTS.md`](OUTPUTS.md) — every output file: columns, formats, row order, existence rules
+* [`COOKBOOK.md`](COOKBOOK.md) — task-oriented recipes, from finding duplicates to diffing
+  against KING
+* [`INTERPRETING.md`](INTERPRETING.md) — what the numbers mean, and where they mislead
+* [`PARITY.md`](PARITY.md) — the authoritative statement of what is byte-identical to
+  KING 2.3.2, measured per file and per row

@@ -1650,6 +1650,7 @@ case that produces it.
 
 ## See also
 
+* [`README.md`](README.md) — the documentation index
 * [`CLI.md`](CLI.md) — every command-line option, and which analyses each one affects
 * [`INTERPRETING.md`](INTERPRETING.md) — how to read the numbers once you have them
 * [`COOKBOOK.md`](COOKBOOK.md) — task-oriented recipes

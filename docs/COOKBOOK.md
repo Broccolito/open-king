@@ -1772,6 +1772,7 @@ has 10 columns under `--kinship` and 16 under `--related`. **Always parse by hea
 
 ## Where to read next
 
+* [README.md](README.md) — the documentation index.
 * [CLI.md](CLI.md) — the complete command-line reference, including every flag this page
   does not use.
 * [OUTPUTS.md](OUTPUTS.md) — every output file, every column, every format and row order.

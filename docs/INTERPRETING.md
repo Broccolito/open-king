@@ -1103,6 +1103,18 @@ coordinates do not move.
 
 ---
 
+## See also
+
+* [`README.md`](README.md) — the documentation index
+* [`CLI.md`](CLI.md) — every command-line option, and which analyses each one affects
+* [`OUTPUTS.md`](OUTPUTS.md) — every output file: columns, formats, row order, existence rules
+* [`COOKBOOK.md`](COOKBOOK.md) — task-oriented recipes, from finding duplicates to diffing
+  against KING
+* [`PARITY.md`](PARITY.md) — the authoritative statement of what is byte-identical to
+  KING 2.3.2, measured per file and per row
+
+---
+
 ## References
 
 Manichaikul A, Mychaleckyj JC, Rich SS, Daly K, Sale M, Chen W-M. Robust relationship

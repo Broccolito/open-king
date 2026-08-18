@@ -30,6 +30,7 @@ is missing → [OUTPUTS: empty, header-only, truncated, absent](OUTPUTS.md#empty
 | --- | --- |
 | [`PARITY.md`](PARITY.md) | **The authoritative claim.** 477 of 480 captured reference invocations byte-identical; the analysis × dataset matrix, the per-file and per-row scorecards, every remaining gap sized, and the labelled limitations — including the divergences the test corpus cannot see (§4.6, §5.10–§5.12) |
 | [`RELEASE_NOTES.md`](RELEASE_NOTES.md) | what changed in this release |
+| [`CONTINUATION.md`](CONTINUATION.md) | the handoff brief: what the three failing cases are, what has been excluded, and what is worth doing next |
 
 ## If you want to work on it
 
@@ -39,7 +40,7 @@ is missing → [OUTPUTS: empty, header-only, truncated, absent](OUTPUTS.md#empty
 | [`BEHAVIOR.md`](BEHAVIOR.md) | the black-box experiments behind the rules — SNP inclusion, `--degree` semantics, the ID sort comparator, output-file existence, column-set variation |
 | [`VERIFIED_FORMULAS.md`](VERIFIED_FORMULAS.md) | every estimator and every printed column, checked numerically against the reference |
 | [`MAINTAINING.md`](MAINTAINING.md) | the clean-room rule, the test corpus, re-capturing goldens, and the fixture technique the segment work depends on |
-| [`research/`](research/) | 26 investigation notes, roughly chronological: `01-paper-estimators.md` through `23-gap-bound.md`. `research/SPEC.md` is the original clean-room spec; `research/fixtures/` holds the probe scripts each note names |
+| [`research/`](research/) | 25 investigation notes, roughly chronological: `01-paper-estimators.md` through `23-gap-bound.md`. `research/SPEC.md` is the original clean-room spec; `research/fixtures/` holds the probe scripts each note names |
 | [`reference-captures/`](reference-captures/) | recorded reference-binary transcripts used by the parity harness |
 
 **The clean-room rule** ([`MAINTAINING.md`](MAINTAINING.md) §1) is absolute: KING's source is

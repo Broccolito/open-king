@@ -195,7 +195,7 @@ improvement is a failure too.
 | [`docs/VERIFIED_FORMULAS.md`](docs/VERIFIED_FORMULAS.md) | every estimator, checked numerically against the reference |
 | [`docs/MAINTAINING.md`](docs/MAINTAINING.md) | the clean-room rule, the corpus, re-capturing goldens |
 
-[`docs/README.md`](docs/README.md) indexes all of it, including the 26 research notes.
+[`docs/README.md`](docs/README.md) indexes all of it, including the 25 research notes and the handoff brief.
 
 ## Citation
 
