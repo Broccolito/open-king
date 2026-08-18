@@ -1630,10 +1630,9 @@ affects output files:
   `Duplicate … is removed.` lines and the `RULE` lines, all byte-identical; it does not
   write the `INFERENCE` half. Our file is a strict subsequence of the reference's. This is
   the only output file that differs anywhere in the parity corpus (§6.2).
-* **`--ibdseg` does not apply the reference's 100 Mb usable-total floor.** Below that
-  floor the reference prints `Segments too short.` and writes only `allsegs.txt`;
-  open-king goes ahead and writes a `.seg`. `--ibs` *does* apply the floor on both
-  binaries (§5.10).
+* **`--ibdseg` applies the reference's closed 100 Mb usable-total floor.** Below that
+  floor both binaries print `Segments too short.` and suppress `.seg`; exactly
+  100,000,000 bp proceeds. `--ibs` uses the same floor (§5.10).
 * **`<prefix>splitped.txt` is written unconditionally**, where the reference sometimes
   writes none — specifically, on a fileset whose families are all singletons (§5.10).
 * **`.fam` `SEX` fields outside `{0,1,2}`** are read as `0`; the reference is more

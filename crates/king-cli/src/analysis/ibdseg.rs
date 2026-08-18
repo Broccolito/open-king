@@ -93,6 +93,10 @@ pub fn map_order_warning(variants: &[Variant], sexchr: i64) -> Option<String> {
     None
 }
 
+fn below_informative_floor(total_bp: i64) -> bool {
+    total_bp < super::segments::INFORMATIVE_BP
+}
+
 /// Below this many samples the reference silently runs `--kinship` instead.
 ///
 /// Measured by sweeping `n` over identical filesets: 2, 3 and 4 print
@@ -288,6 +292,11 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
         &allsegs_path,
         &allsegs_text(&loaded.fileset.variants, &a, &auto, &x_usable),
     );
+    if below_informative_floor(denom) {
+        let _ = out.write_all(b"Segments too short.\n");
+        let _ = out.write_all(SORT_NOTE.as_bytes());
+        return;
+    }
 
     let _ = out.write_all(
         format!(
@@ -609,6 +618,12 @@ mod tests {
                 "  Note chromosomal positions can be sorted conveniently using other tools such as PLINK.\n",
             )
         );
+    }
+
+    #[test]
+    fn ibdseg_floor_is_closed_at_one_hundred_megabases() {
+        let observed = [99_999_999, 100_000_000, 100_000_001].map(below_informative_floor);
+        assert_eq!(observed, [true, false, false]);
     }
 
     #[test]

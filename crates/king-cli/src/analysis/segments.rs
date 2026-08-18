@@ -43,7 +43,7 @@ const MIN_WORDS: usize = 5;
 ///
 /// Below it the reference prints `Segments too short.` and drops `MaxIBD2`/`Pr_IBD2`
 /// from both `.ibs` and `.ibs0`. Bracketed by a span sweep to `(99 990 000, 100 000 000]`.
-const INFORMATIVE_BP: i64 = 100_000_000;
+pub(crate) const INFORMATIVE_BP: i64 = 100_000_000;
 
 /// Shortest IBD2 call that lets a pair's `Pr_IBD2` be non-zero.
 ///

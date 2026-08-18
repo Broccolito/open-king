@@ -124,10 +124,10 @@ quoted**, so any claim here can be re-run rather than taken on trust.
 > and the IBD1 merge's budget word set were bisected (`23-gap-bound.md`). §5.0 says which
 > grader to use for what.
 >
-> **Two divergences live outside the corpus entirely** and therefore cost no case here, but
-> a user could hit them: `--ibdseg` does not apply the reference's 100 Mb usable-total floor,
-> and `<prefix>splitped.txt` is written unconditionally where the reference sometimes writes
-> none. Both were re-measured against the reference for this release; §5.10.
+> **One remaining divergence lives outside the corpus entirely** and therefore costs no case
+> here, but a user could hit it: `<prefix>splitped.txt` is written unconditionally where the
+> reference sometimes writes none. The former 100 Mb `--ibdseg` floor difference is fixed.
+> Both rules were re-measured against the reference; §5.10.
 
 ---
 
@@ -1282,32 +1282,28 @@ the same fixture with two more markers, `D` = 100 010 000 bp, just over:
 | `D` | binary | prints `Segments too short.` | files written |
 | --- | --- | --- | --- |
 | 99 990 000 | reference | **yes**, 12/12 | `allsegs.txt` |
-| 99 990 000 | open-king | no | `.seg`, `allsegs.txt`, `splitped.txt` |
+| 99 990 000 | open-king | **yes** | `allsegs.txt`, **`splitped.txt`** |
 | 100 010 000 | reference | no | `.seg`, `allsegs.txt` |
 | 100 010 000 | open-king | no | `.seg`, `allsegs.txt`, **`splitped.txt`** |
 
-**1. `--ibdseg` does not apply the 100 Mb usable-total floor.** Below it the reference prints
+**1. The `--ibdseg` 100 Mb usable-total floor — fixed.** Below it both binaries print
 
 ```text
 Segments too short.
   Note chromosomal positions can be sorted conveniently using other tools such as PLINK.
 ```
 
-and writes `<prefix>allsegs.txt` and **nothing else** — no `.seg`, no `splitped.txt`, and
-none of the "IBD segment analysis starts at" block. open-king produces a `.seg` at both.
+and stop before the `IBD segment analysis starts at` block or `.seg` write. The boundary is
+closed: a held-out pedigree-bearing fixture at 99,999,999 / 100,000,000 / 100,000,001 bp
+matches the reference in normalized console text, exact file set and every output byte. At
+the lower point the files are `allsegs.txt` and the independently justified `splitped.txt`;
+at and above the boundary `.seg` is added. The comparison is
+`tests/parity/probes/segment_floor.py`.
 
-The constant is **already in the tree and already correct** —
-`crates/king-cli/src/analysis/segments.rs`, `INFORMATIVE_BP = 100_000_000`, with
-`Segments::informative()` and `console::SEGMENTS_TOO_SHORT` — and `--ibs` already consults
-it (`analysis/ibs.rs` calls `segs.informative()` in four places; `analysis/ibdseg.rs` calls it
-nowhere). On the same below-floor fileset both binaries print `Segments too short.` under
-`--ibs` and write the same three files. The site of the missing check is
-`analysis::ibdseg::run`, between the `allsegs.txt` write and the `IBD segment analysis starts
-at` line. It was left unfixed on purpose: the same fixture exposes divergence 2 on the same
-code path, so a blind one-line patch would half-fix a path nobody had measured properly.
-Measure the `--related` and `--build` behaviour below the floor first — `--related` was
-checked and agrees, but only on a fileset small enough to take the `< 10` sample downgrade,
-which is not a real test.
+`--ibs` already used the same constant. A new 20-sample cross-check also found that
+`--related` treats a non-empty but below-floor map as a kinship-only fallback and that its
+small-marker between-family flow differs from the current Rust path; that separate fallback
+work remains tracked under §5.12 rather than being hidden inside this `--ibdseg` gate.
 
 **2. `<prefix>splitped.txt` is written unconditionally.** On the *above-floor* run of the same
 6-sample fixture, whose families are all singletons, the reference writes **no**
@@ -1405,6 +1401,12 @@ The fallback remains missing on `--unrelated` / `--cluster` / `--build`, where t
 additionally prints `Cutoff value for IBS0 between FS and PO is set at 0.0050`. On
 `--ibdseg`, both binaries now print the PLINK sorting note after `No informative IBD
 segments.` and write only `splitped.txt`.
+
+A second held-out shape found the adjacent non-empty case: at 99,999,999 bp of usable map,
+the reference prints `Segments too short.` and takes the same short kinship-only `--related`
+layout. That fallback and the reference's exhaustive small-marker between-family flow are not
+yet implemented; they remain part of the open fallback work rather than the now-fixed
+`--ibdseg` floor.
 
 **2. Unsorted `.bim` validation — fixed.** Two shapes, both derived from `multifam` by the
 `fixtures.py` script published in [`CLI.md`](CLI.md#10-the-derived-filesets-used-above):

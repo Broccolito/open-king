@@ -1459,9 +1459,9 @@ known set; these are the ones a command line can reach:
   abort with `Please correct problems with pedigree structure`.
 * **The A1-major QC check is not implemented** — open-king runs a fileset the reference
   refuses. [§3](#two-hard-requirements-that-are-easy-to-miss) has the numbers.
-* **`--ibdseg` does not apply the 100 Mb usable-segment floor.** Below it the reference
-  prints `Segments too short.` and writes only `allsegs.txt`; open-king writes a `.seg`
-  anyway ([PARITY.md §5.10](PARITY.md)).
+* **`--ibdseg` applies the closed 100 Mb usable-segment floor.** Below it both binaries
+  print `Segments too short.` and suppress `.seg`; exactly 100,000,000 bp proceeds
+  ([PARITY.md §5.10](PARITY.md)).
 
 **Reference bugs that are reproduced on purpose**, because parity requires it: the
 `--noscreen` uninitialised default, the `3nd-degree` typo, the truncated single-family
