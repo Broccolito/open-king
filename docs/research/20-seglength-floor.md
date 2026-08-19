@@ -290,6 +290,16 @@ the *left*, as bad, and excluded from `inf2` on the right — so it is charged t
 
 ## 8. What the ">10 Mb" pair filter reads
 
+> **Later correction (2026-08-18).** The conclusion below applied the early `R20` merge
+> candidate too broadly and is superseded. With the fully conditioned merge from `21-…`
+> and `23-…`, the corpus has 0 extra and 0 missing pairs whether the filter reads merged or
+> unmerged calls, so its floor-invariant row set cannot distinguish them. A fresh held-out
+> IBD1 pair and an independent IBD2 canvas do: each has only sub-10 Mb calls before the
+> floor-dependent merge and KING reports it only after the merged call exceeds 10 Mb.
+> `pair_segments` therefore reads the conditioned merged calls. See `PARITY.md` §4.6 and
+> `tests/parity/probes/segment_residuals.py`. The paragraph below is retained as the
+> historical reason the `R20.filter_merged` step-back exists.
+
 Merged calls make new long segments, so the clause immediately threatens the reported pair
 set. The reference settles it without a fixture:
 

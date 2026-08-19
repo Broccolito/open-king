@@ -204,20 +204,15 @@ def ibd2_23(sc, ds, i, j, p, pos, min_bp):
 def call_pair(ds, i, j, p, min_bp=E.SEGLEN):
     pos = ds.pos
     ibd1 = ibd2 = longest = 0
-    b = p.base.base
-    q = replace(b, merge1=False, merge2=False) if not b.filter_merged else b
-    qp = replace(p, base=replace(p.base, base=q))
     for seg in ds.segs:
         sc = E.SegScan(ds, i, j, seg, E.BASE)
         if sc.n == 0:
             continue
         c2 = ibd2_23(sc, ds, i, j, p, pos, min_bp)
         c1 = ibd1_23(sc, ds, i, j, pos, min_bp, p)
-        f2 = c2 if q is b else ibd2_23(sc, ds, i, j, qp, pos, min_bp)
-        f1 = c1 if q is b else ibd1_23(sc, ds, i, j, pos, min_bp, qp)
         for lo, hi in c2:
             ibd2 += int(pos[hi] - pos[lo])
-        for lo, hi in f2 + f1:
+        for lo, hi in c2 + c1:
             longest = max(longest, int(pos[hi] - pos[lo]))
         for lo, hi in c1:
             ibd1 += sum(w for w in (int(pos[y] - pos[x])

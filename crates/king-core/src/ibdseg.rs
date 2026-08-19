@@ -71,8 +71,8 @@
 //!   at most two unusable words and measures the gap run-to-run; IBD2 has no cap at all,
 //!   measures everything between the two runs' **gate windows** rather than between the
 //!   runs, and its informative count is HetHet with a switch to A1A1/A1A1 below
-//!   [`MIN_INFORMATIVE`]. A merged call may not satisfy the ">10 Mb" pair filter, which is
-//!   why [`pair_segments`] computes the longest segment from the unmerged call sets.
+//!   [`MIN_INFORMATIVE`]. The conditioned merged calls also feed the ">10 Mb" pair
+//!   filter; a held-out IBD1 pair and an independent IBD2 canvas require that ordering.
 //!   Neither can fire at the default floor on real spacings; at 5 and 10 Mb they take
 //!   `IBD1Seg` from 910/844 to **982/970** and `IBD2Seg` from 946/937 to **982/972**,
 //!   worth **11 parity cases** between them.
@@ -131,11 +131,11 @@
 //!
 //! **What is still wrong is out of sample, and measured.** `docs/PARITY.md` §4.6:
 //! `docs/research/fixtures/oosseg.py` runs 24 fresh filesets on unused seeds through both
-//! binaries at all three floors and gets **66 of 72** byte-identical — 6 wrong rows in
-//! 6 713. An IBD2 deficit of 0.0182 on one full-sib pair, identical on two independent
-//! seeds (so: one missed piece in one place, not a distribution), and one distant pair
-//! that [`pair_segments`]'s longest-segment filter drops at 5 and 10 Mb while the
-//! reference reports it at every floor. Neither is visible to the corpus.
+//! binaries at all three floors and gets **68 of 72** byte-identical — 4 value-differing
+//! rows in 6 713, with 0 extra and 0 missing. All four occur at exactly 40 000 markers;
+//! 39 999 and 40 001-marker controls are exact. This is KING's measured uninitialised
+//! exact-multiple-of-64 tail read, intentionally not reproduced by safe Rust. The formerly
+//! missing distant pair is fixed by letting the measured merged calls feed the filter.
 //!
 //! **How to grade work on it.** Not with the `.seg` row counts, which are now saturated at
 //! all three floors, and not with `--ibs`, whose IBD2 columns have been exact under every
@@ -1606,15 +1606,15 @@ pub fn pair_segments(
         let scan = Scan::new(g, i, j, seg);
         let ibd2 = scan.ibd2(pos, seglength_bp, true);
         let ibd1 = scan.ibd1(pos, seglength_bp, true);
-        // The pair-reporting filter reads the **unmerged** calls. The reference reports
-        // the same pair set at 3, 5 and 10 Mb on all ten corpus datasets while the merge
-        // is floor-dependent by construction, so whatever that filter reads is not it;
-        // letting merged calls feed it invents 251 pairs at 5 Mb and 297 at 10
-        // (`docs/research/20-seglength-floor.md` §8).
-        for c in scan.ibd2(pos, seglength_bp, false) {
+        // The pair-reporting filter reads the conditioned, floor-dependent merged calls.
+        // A held-out distant pair has two sub-10 Mb IBD1 calls at 3 Mb, then one 14.6 Mb
+        // merged call at 5/10 Mb; KING reports it only at the raised floors. A separate
+        // canvas pins the same rule on IBD2. The older unconditioned merge candidate did
+        // invent hundreds of pairs, but the measured merge above does not.
+        for c in &ibd2 {
             acc.longest_bp = acc.longest_bp.max(pos[c.hi] - pos[c.lo]);
         }
-        for c in scan.ibd1(pos, seglength_bp, false) {
+        for c in &ibd1 {
             acc.longest_bp = acc.longest_bp.max(pos[c.hi] - pos[c.lo]);
         }
         for c in &ibd2 {

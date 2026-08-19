@@ -10,6 +10,7 @@ nowhere else in this repository, compared **byte for byte** against KING 2.3.2.
 
     python3 oosseg.py --ref /path/to/king                 # the committed draw
     python3 oosseg.py --ref /path/to/king --impl ./target/release/king
+    python3 oosseg.py --ref ... --expect-known-safe-divergence
     python3 oosseg.py --ref ... --seeds 5 6 7 --shapes twofam
 
 Every fileset is built by `tests/parity/generate_corpus.py`'s own simulator, so the marker
@@ -23,36 +24,37 @@ Per run it reports **extra** rows (pairs we report and the reference does not), 
 rows (the reverse) and **value-differing** rows (a pair both report, on which some printed
 column differs). They fail for different reasons and a single "rows differ" count hides
 that: a whole-file line diff charges a single dropped row against every row after it —
-`twofam31415926` reads "39 of 106 rows differ" that way and is in fact **one** missing pair
-with all 105 shared rows byte-identical.
+Before the merged-call filter fix, `twofam31415926` read "39 of 106 rows differ" that way
+and was in fact **one** missing pair with all 105 shared rows byte-identical.
 
 # The measured result at the time of writing (the committed draw, 24 filesets x 3 floors)
 
-    72 runs, 66 byte-identical; 6 of 6 713 rows wrong: 0 extra, 2 missing, 4 value-differing
+    72 runs, 68 byte-identical; 4 of 6 713 rows differ: 0 extra, 0 missing, 4 value-differing
 
-and both residuals have a shape:
+The remaining four rows have one measured shape:
 
 * **4 value rows** — one full-sib pair (`FA A_C2 / A_C3`) on two filesets at 3 and 5 Mb.
   `IBD1Seg` is exact, `IBD2Seg` is **low** by 0.0181-0.0182 on all four, and `PropIBD`
-  follows it. The deficit is the same to a printed ulp across two independent seeds, which
-  points at one missed IBD2 piece in one place on the shared map rather than at a
-  data-dependent error.
-* **2 missing rows** — the same distant pair of padding singletons, dropped at 5 and 10 Mb
-  but reported correctly at 3. Only the `.seg` **pair filter** (longest single segment
-  > 10 Mb, `king_core::ibdseg::pair_segments`) can drop a pair, and ours reads the unmerged
-  calls *at the requested floor*. The reference reports this pair at all three floors, so
-  whatever it reads is floor-independent. That is the sharpest open hypothesis this rig has
-  produced and it is **not** landed here: it is one pair.
+  follows it. Both affected filesets contain exactly 40 000 markers. Removing the last
+  marker or appending one all-missing marker makes all four rows exact; the anomaly exists
+  only at the exact multiple of 64. It is KING's independently measured uninitialised tail
+  read (`PARITY.md` §5.11), not a safe segment rule, and is deliberately not emulated.
+
+The former two missing rows are fixed: the >10 Mb pair filter reads the conditioned merged
+IBD1 and IBD2 calls. `tests/parity/probes/segment_residuals.py` pins the IBD1 held-out pair,
+an independent merged-IBD2 canvas, and the 39 999 / 40 000 / 40 001-marker safety controls.
 
 # It is also how the window bound was validated out of sample
 
 `docs/research/23-gap-bound.md`'s window bound is invisible to the corpus at 3 and 5 Mb and
 worth two cases at 10. Re-running this rig against a binary with `WINDOW_FRACTION` disabled
-scores **60 of 72** where the shipped binary scores **66 of 72** — six further filesets
-wrong, every one of them at `--seglength 10`, and none right that the shipped binary gets
-wrong. Out-of-sample and in one direction only, which is the bar of `MAINTAINING.md` §8.6.
+scored **60 of 72** where that binary scored **66 of 72** — six further filesets wrong,
+every one of them at `--seglength 10`, and none right that it got wrong. The later pair-filter
+fix raises the current result to 68/72 without changing that historical ablation. Out of
+sample and in one direction only, which is the bar of `MAINTAINING.md` §8.6.
 
-Exit status is 0 iff every run is byte-identical.
+Exit status is 0 iff every run is byte-identical, or when
+`--expect-known-safe-divergence` is given and the complete 68/72 fingerprint above matches.
 """
 
 from __future__ import annotations
@@ -152,6 +154,11 @@ def main() -> int:
     ap.add_argument("--seeds", type=int, nargs="*", default=SEEDS)
     ap.add_argument("--shapes", nargs="*", default=["twofam", "threegen", "multi"])
     ap.add_argument("--floors", nargs="*", default=FLOORS)
+    ap.add_argument(
+        "--expect-known-safe-divergence",
+        action="store_true",
+        help="succeed only for the four pinned exact-40,000-marker value differences",
+    )
     args = ap.parse_args()
 
     for p in (args.ref, args.impl):
@@ -162,6 +169,7 @@ def main() -> int:
     root = tempfile.mkdtemp(prefix="oosseg")
     runs = same = rows = extra = missing = valdiff = 0
     notes: list[str] = []
+    observed = []
     try:
         for shape in args.shapes:
             for seed in args.seeds:
@@ -183,6 +191,7 @@ def main() -> int:
                     extra += len(ex)
                     missing += len(mi)
                     valdiff += len(vd)
+                    observed.append((name, fl, tuple(ex), tuple(mi), tuple(vd)))
                     notes.append("%-22s L=%-3s of %3d rows: extra %d, missing %d, "
                                  "value-differing %d"
                                  % (name, fl, len(ra), len(ex), len(mi), len(vd)))
@@ -205,7 +214,23 @@ def main() -> int:
     print("rows: %d extra, %d missing, %d value-differing" % (extra, missing, valdiff))
     for n in notes:
         print("  " + n)
-    return 0 if same == runs else 1
+    expected_key = (("FA", "A_C2", "FA", "A_C3"),)
+    expected = {
+        ("twofam13572468", "3", (), (), expected_key),
+        ("twofam13572468", "5", (), (), expected_key),
+        ("twofam20260814", "3", (), (), expected_key),
+        ("twofam20260814", "5", (), (), expected_key),
+    }
+    safe_baseline = (
+        runs == 72
+        and rows == 6_713
+        and same == 68
+        and extra == 0
+        and missing == 0
+        and valdiff == 4
+        and set(observed) == expected
+    )
+    return 0 if same == runs or (args.expect_known_safe_divergence and safe_baseline) else 1
 
 
 if __name__ == "__main__":

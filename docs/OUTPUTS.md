@@ -1640,8 +1640,10 @@ affects output files:
 * **`.fam` `SEX` fields outside `{0,1,2}`** are read as `0`; the reference is more
   permissive (`M`/`m` → male, a leading `2` or `F`/`f` → female, and so on). Every column
   that prints or uses sex is affected. Deliberately not implemented (§5.11).
-* Two out-of-sample segment-caller differences: 6 wrong rows in 6 713 over 24 filesets the
-  corpus has never seen (§4.6), and one acceptance-gate counterexample (§5.11).
+* One deliberate out-of-sample segment safety divergence: 4 value rows in 6 713 over 24
+  filesets the corpus has never seen, all caused by KING's uninitialised exact-multiple-of-64
+  tail read; open-king has 0 extra and 0 missing rows on that battery (§4.6). One separate
+  acceptance-gate counterexample remains (§5.11).
 
 Everything else — `.kin`, `.kin0`, `X.kin`, `X.kin0`, `.seg`, `X.seg`, `cluster.kin`,
 `.ibs`, `.ibs0`, `.con`, `allsegs.txt`, `splitped.txt`, `unrelated.txt`,

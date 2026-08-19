@@ -358,7 +358,9 @@ python3 docs/research/fixtures/gradebinary.py target/release/king --ibd1   # 540
 python3 docs/research/fixtures/segwriter.py                        # the two .seg writer rules
 python3 tests/parity/probes/xseg_probe.py --impl target/release/king  # 1040/1040, 625/625
 python3 tests/parity/probes/degree_filter.py --ref "<reference>"   # 0 false-keep, 0 false-drop
-python3 docs/research/fixtures/oosseg.py --ref "<reference>"       # OUT OF SAMPLE: 66/72 runs
+python3 docs/research/fixtures/oosseg.py --ref "<reference>" \
+  --expect-known-safe-divergence                                  # OUT OF SAMPLE: pinned 68/72
+python3 tests/parity/probes/segment_residuals.py --ref "<reference>" --impl target/release/king
 python3 docs/research/fixtures/avfs_score.py                       # the AV.FS residual, 0/14 exact
 # the --build rigs: all four are out-of-sample, none is visible to the 480 captures
 cd docs/research/fixtures
@@ -374,7 +376,8 @@ find . -path ./.git -prune -o -size +95M -print                    # must print 
 
 The last release measured **477 PASS / 3 FAIL / 480**, self-check **480/480**, **325** tests
 passing (1 ignored), the row scorecard **982/982/982** at 3 / 5 / 10 Mb with MAE 0.000000 at
-each, the out-of-sample differential **66/72** runs and 6 of 6 713 rows, the four `--build`
+each, the out-of-sample differential **68/72** runs and 4 of 6 713 rows (0 extra/missing),
+the four `--build`
 rigs at **53/59**, **18/18**, **19/19** and **27/27**, a clean build in **9.5 s** from a
 pristine copy of the tree, and that clean-tree binary re-measured at 477/480
 with `baseline: MATCH` — from a cold tree with no `target/` and no pre-generated corpus,
@@ -404,8 +407,9 @@ console line the rows cannot see. `tests/parity/fit/scorecard.py` prints all thr
 **And now that both are saturated, publish the out-of-sample number too.** 982/982 at every
 floor is a statement about 480 captures of 13 simulated datasets, not about the caller.
 `docs/research/fixtures/oosseg.py` grades the same binary on 24 filesets it has never seen,
-at all three floors, byte for byte: **66 of 72 runs**, 6 of 6 713 rows. A release note that
-omits it overstates the claim. `PARITY.md` §4.6.
+at all three floors, byte for byte: **68 of 72 runs**, 4 value-differing rows of 6 713 and
+0 extra/missing. The four differences are the deliberate exact-64 safety divergence. A
+release note that omits it overstates the claim. `PARITY.md` §4.6.
 
 **Three scales, and they are not interchangeable.** `scorecard.py` compares printed column
 against printed column, which is what a user diffing two files sees, so an exact floor reads
@@ -886,9 +890,9 @@ runs localise the fault. Two traps it documents, both of which gave a wrong answ
 simulator on seeds used nowhere else in the tree, run through both binaries at three floors,
 and diffed byte for byte. It is the only instrument here that answers the question a user
 actually asks — "will this give me KING's answer on my data?" — and its answer is currently
-66 of 72 runs, not 72. It reports extra, missing and value-differing rows separately, because
-a whole-file line diff charges one dropped row against every row after it and reads 39 wrong
-where the truth is 1.
+68 of 72 runs, not 72. It reports extra, missing and value-differing rows separately; the
+current result has 0 extra, 0 missing and four value rows caused by KING's exact-64 unsafe
+tail read.
 
 ### 8.6 The rule for landing a change
 
@@ -897,7 +901,7 @@ datasets; the fixture is an experiment.
 
 **Read this section knowing the corpus scorecard is now saturated.** 982 of 982 rows at 3, 5
 and 10 Mb: it can only move **down**. It is a regression guard, not a grader. Every "must go
-up" below now means one of the three graders that can still go up — `oosseg.py` (66/72 whole
+up" below now means one of the three graders that can still go up — `oosseg.py` (68/72 whole
 filesets, `PARITY.md` §4.6), `gradebinary.py` (6 000/6 000 and 600/600 canvases), and the
 held-out draws in `window1.py`/`mergelab.py`/`push1.py`.
 
@@ -911,8 +915,9 @@ the rule it replaces. The bar for landing such a change is:
   scorecards for the historical comparisons). Since all three floors read 982, this now means
   literally "no row regresses";
 * the out-of-sample count must not go down, and should go up: `oosseg.py --ref <reference>`,
-  currently 66 of 72 runs. This is the grader that separated the window bound from the rule it
-  replaced (66/72 against 60/72, all six gains at `--seglength 10`, none lost);
+  currently 68 of 72 runs. This is the grader that separated the window bound from the rule it
+  replaced (66/72 against 60/72 at that landing, all six gains at `--seglength 10`, none lost)
+  and later pinned the merged-call pair filter (68/72, 0 missing);
 * the canvas count must go **up**, on the binary (`gradebinary.py`), with each clause of the
   change shown independently necessary by ablation (`seg21.py grid` and `seg23.py grid` are
   the worked examples: in `23-…`'s grid the window bound is worth 970/972 → 982/982 at 10 Mb,

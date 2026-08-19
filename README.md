@@ -154,7 +154,11 @@ held-out sparse fixture. The shared two-stage screen still admits two extra betw
 not yet exact. The A1-major input gate, unsorted-map rejection and case-insensitive sample-ID
 validation are implemented and have focused differential probes. These are measured in
 [`docs/PARITY.md`](docs/PARITY.md) §5.10–§5.12 and §4.6; case-only sample-ID collisions are
-now rejected like KING.
+now rejected like KING. The independent 24-fileset segment battery is **68/72** whole-run
+exact with **0 extra and 0 missing rows** across 6,713 reference rows. Its four value
+differences occur only on exact-40,000-marker inputs and are KING's uninitialised
+multiple-of-64 tail read; 39,999- and 40,001-marker controls are exact, so safe Rust does
+not emulate that undefined behavior.
 
 Every number above is measured against **one** reference build: KING 2.3.2, Mach-O arm64,
 macOS. KING's segment algorithm is unpublished and its release notes record repeated changes

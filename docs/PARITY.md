@@ -61,7 +61,8 @@ quoted**, so any claim here can be re-run rather than taken on trust.
 > byte-exact on all four printed fields, mean and worst `PropIBD` error a true 0, 0 extra and
 > 0 missing pairs. Both numbers in this summary are now saturated, which is a fact about the
 > *corpus* as much as about the caller: see §4.6, which grades the same engine on filesets it
-> has never seen and finds **66 of 72** runs byte-identical, 6 wrong rows in 6 713.
+> has never seen and finds **68 of 72** runs byte-identical, 4 value-differing rows in
+> 6 713 and no extra or missing rows. All four are KING's unsafe exact-64 tail read (§4.6).
 >
 > **Both numbers moved this pass, and by different amounts.** The case headline went
 > 475 → **477** (two cases, `bigish` and `multifam` at `--seglength 10`). On the same tree and
@@ -209,7 +210,8 @@ Measured on the tree this document describes:
 | `tests/parity/fit/seg20.py` | the merge's own before/after, both under the retired `.kin` `PropIBD` rule: `19` (no merge) `806 / 755 / 713` exact at 3 / 5 / 10 Mb, `20` (merge) `806 / 795 / 793` |
 | `tests/parity/fit/seg21.py` | the push + IBD2-merge corrections, same scale: `20` (previous commit) `806 / 795 / 793`, `21` `806 / 817 / 811` exact, `IBD1Seg` `982 / 982 / 970` and `IBD2Seg` `982 / 982 / 972` |
 | `tests/parity/fit/seg23.py` | the window bound and the budget word set, same scale: `21` (previous commit) `806 / 817 / 811` exact, **`23` (committed) `806 / 817 / 820`**, `IBD1Seg` and `IBD2Seg` both `982 / 982 / 982`, MAE at 10 Mb 0.000067 → **0.000022** |
-| `docs/research/fixtures/oosseg.py --ref <reference>` | **out of sample**, 24 fresh filesets × 3 floors on 8 unused seeds: **66 / 72** runs byte-identical, **6 of 6 713 rows** wrong — 0 extra, 2 missing, 4 value-differing (§4.6) |
+| `docs/research/fixtures/oosseg.py --ref <reference>` | **out of sample**, 24 fresh filesets × 3 floors on 8 unused seeds: **68 / 72** runs byte-identical, **4 of 6 713 rows** value-differing — 0 extra, 0 missing; all four are the deliberate exact-64 safety divergence (§4.6) |
+| `tests/parity/probes/segment_residuals.py --ref <reference> --impl target/release/king` | merged IBD1 and IBD2 calls both feed the >10 Mb pair filter; 39 999/40 001-marker controls exact; exactly four expected value divergences at 40 000 markers (§4.6) |
 | `tests/parity/fit/seg18.py` | `18-…`'s own numbers, unchanged: committed `exact 747  ibd1 982  ibd2 896  MAE 0.000067`; retired overlap rule `709 / 826 / 896` |
 | `docs/research/fixtures/buildlog.py rules` | **out of sample**, the `--build` log's rule half over 59 held-out pedigree shapes: **53 match, 6 differ** — 2 out-of-scope `<FID>-><IID>` renamings, 3 sibship member order, 1 the unimplemented `PO.S` branch (§6.2) |
 | `docs/research/fixtures/build_shapes.py` | **out of sample**, `updateparents.txt` + the console tail over 20 held-out merge shapes: **18 OK, 0 MISMATCH, 2 skipped** (the renaming shapes) |
@@ -606,7 +608,7 @@ whether the reference reports any IBD2:
 count at any floor — all four are saturated. Three graders still discriminate, in this order:
 
 1. **`docs/research/fixtures/oosseg.py`** — whole fresh filesets, unused seeds, byte diff
-   against the reference. Currently **66 of 72** runs; §4.6.
+   against the reference. Currently **68 of 72** runs, with no extra or missing rows; §4.6.
 2. **The canvases** — `gradebinary.py` (6 000/6 000 `IBD2Seg`, 600/600 `IBD1Seg`),
    `mergelab.py`, `push1.py`, `window1.py`. They grade constructed word sequences, one clause
    at a time, and they are where every landed rule was bisected.
@@ -648,41 +650,42 @@ three pedigree shapes, runs both binaries at 3, 5 and 10 Mb, and diffs `<prefix>
 for byte.
 
 ```
-72 runs, 6 713 reference rows   ->   66 byte-identical
-rows: 0 extra, 2 missing, 4 value-differing
+72 runs, 6 713 reference rows   ->   68 byte-identical
+rows: 0 extra, 0 missing, 4 value-differing
 ```
 
-**91.7 % of whole-file runs and 99.91 % of rows** — and note how far apart those two are,
+**94.4 % of whole-file runs and 99.94 % of rows** — and note how far apart those two are,
 which is the same whole-file-versus-row effect the headline warns about, seen off-corpus.
-The 6 wrong rows have two distinct shapes, both recorded here rather than smoothed away:
+The four differing rows have one shape, recorded here rather than smoothed away:
 
 | shape | rows | what differs |
 | --- | ---: | --- |
-| one full-sib pair on 2 filesets, at 3 and 5 Mb | 4 | `IBD1Seg` **exact**; `IBD2Seg` low by 0.0181–0.0182; `PropIBD` follows it |
-| one distant pair on 1 fileset, at 5 and 10 Mb | 2 | the row is **not written at all** — the reference reports it, we drop it. Correct at 3 Mb |
+| one full-sib pair on 2 exact-40 000-marker filesets, at 3 and 5 Mb | 4 | `IBD1Seg` **exact**; safe Rust `IBD2Seg` is lower by 0.0181–0.0182 because it does not reproduce KING's uninitialised tail read; `PropIBD` follows it |
 
-Two things are worth saying precisely about them.
+Two controls make the cause precise.
 
-* **The IBD2 deficit is the same size on two independent seeds** — 0.0182, 0.0181, 0.0182,
-  0.0181 — which points at one missed IBD2 piece in one place on the shared marker map,
-  not at a data-dependent error. `IBD1Seg` is exact on all four, so this is *not* the
-  IBD1/IBD2 subtraction coupling of earlier campaigns.
-* **The dropped pair is the `.seg` pair filter, not the caller.** Only the "longest single
-  segment > 10 Mb" test in `king_core::ibdseg::pair_segments` can drop a pair, and ours
-  reads the unmerged calls **at the requested floor**. The reference reports this pair at
-  all three floors, so whatever it reads is floor-independent. That is the sharpest
-  hypothesis this rig has produced, and it is deliberately **not** landed: it rests on one
-  pair, and the corpus — where the reported pair set is exactly right at every floor on
-  every dataset — cannot referee it.
+* **Marker-count control.** The same two seeds, genotypes and target pair are exact at
+  39 999 markers and after appending one all-missing marker (40 001); only 40 000 differs.
+  This is the exact-multiple-of-64 uninitialised read already independently measured in
+  §5.11. It is a memory-safety bug in KING, not a caller law, and is deliberately not
+  emulated. `tests/parity/probes/segment_residuals.py` runs all twelve controls.
+* **The former two missing rows are fixed.** On the held-out distant pair, two IBD1 calls
+  of 7.71 and 6.84 Mb remain separate at 3 Mb, then merge to 14.60 Mb at 5/10 Mb. KING
+  reports the pair only after that merge. An independent canvas makes the same distinction
+  for IBD2. `pair_segments` now applies the >10 Mb filter to the conditioned merged calls;
+  the 480-case corpus admits 0 extra/0 missing under both hypotheses, while the held-out
+  pair and canvas reject the former unmerged-call implementation.
 
-**This rig also validated the window bound out of sample.** Rebuilt with `WINDOW_FRACTION`
-disabled, the same 72 runs score **60 of 72**: six further filesets wrong, every one of them
-at `--seglength 10`, and none right that the shipped binary gets wrong. One direction only,
-on data no rule was fitted to.
+**This rig also validated the window bound out of sample.** At the time that clause landed,
+disabling `WINDOW_FRACTION` scored **60 of 72** against 66: six further filesets wrong,
+every one at `--seglength 10`, and none right that the candidate got wrong. The later
+pair-filter correction raises the current result to 68/72 without changing that one-way
+ablation result.
 
 **Take §4.4 and this section together.** "982 of 982 at every floor" is true, and is a
-statement about this corpus. "66 of 72" is also true, and is the better estimate of what a
-new user should expect on data of their own.
+statement about this corpus. "68 of 72, with no row-set errors" is also true. The remaining
+four differences are a deliberate safe-product divergence from undefined C++ behavior, not
+an unresolved Rust segment rule.
 
 ---
 
@@ -709,7 +712,7 @@ from `docs/research/`, so their numbers must not move.
 | **The IBD1 caller, its boundary refinement, its gate and its `IBD1Seg` overlap rule** (`Scan::ibd1`, `ibd1_pieces`) | every clause bisected on an IBD1-native canvas; `IBD1Seg` exact on **all 982** primary rows and on every `.kin`/`.kin0`/`X.kin`/`cluster.kin` row; the binary matches the reference on **600 of 600** IBD1 canvases — 540 closed plus the 60 of the family that was open until the run merge landed | `18-ibd1-caller.md`, `20-seglength-floor.md`, `fixtures/ibd1canvas.py`, `gradebinary.py --ibd1` |
 | **The `--ibs` IBD2 caller** (`Scan::ibd2_words`, the chunk scan) | exact on all **21 561** rows | §5.8 |
 | **The `.seg` IBD2 caller** (`Scan::ibd2`) — word predicate, gate, reach, push, bridge and fringe | every constant bisected on a `.seg`-native canvas; the binary reproduces the reference on **6 000 of 6 000** word-aligned canvases and **504 of 504** fringe canvases; `IBD2Seg` exact on **all 982** primary rows at **all three** floors | `17-seg-caller.md` §3–§7 and §14, `19-ibd2seg-residual.md`, `fixtures/segcanvas.py`, `fixtures/fringecanvas.py`, `gradebinary.py` |
-| **The gate window's own length bound** (`WINDOW_FRACTION`) — the floor is asked a *second* time, of the span of the gate window rather than of the reported call, at emit and after the merge; IBD2 keeps `>= L/2`, IBD1 is one unit tighter | bisected **to the base pair** on two independent corpus calls and on canvases at four spacings (4/4 each pass); out of sample **353/360** IBD2 and **360/360** IBD1 held-out canvases against 344 and 328 without it, and **66/72** whole filesets against 60 | `23-gap-bound.md` §1–§4, `fixtures/chrprobe.py`, `fixtures/window1.py`, `fixtures/oosseg.py` |
+| **The gate window's own length bound** (`WINDOW_FRACTION`) — the floor is asked a *second* time, of the span of the gate window rather than of the reported call, at emit and after the merge; IBD2 keeps `>= L/2`, IBD1 is one unit tighter | bisected **to the base pair** on two independent corpus calls and on canvases at four spacings (4/4 each pass); out of sample **353/360** IBD2 and **360/360** IBD1 held-out canvases against 344 and 328 without it, and at landing time **66/72** whole filesets against 60 | `23-gap-bound.md` §1–§4, `fixtures/chrprobe.py`, `fixtures/window1.py`, `fixtures/oosseg.py` |
 | **The IBD1 merge's budget word set** — summed over *every* word between the two runs, a gate-refused run's included, while the word cap still counts only the unusable ones | bisected on a refused run's own het-vs-A1A1 load: merge off at 0–1, on at 2, which is where `V` crosses 8 → 10 | `23-gap-bound.md` §5, `fixtures/mergelab.py` |
 
 **The `--seglength` run merge and the one-word push** (`20-seglength-floor.md`, corrected by
@@ -720,9 +723,9 @@ from `docs/research/`, so their numbers must not move.
 * **Shared.** After the gate has refused what it refuses, two runs are joined iff the gap
   between them is **strictly** under `--seglength` and a budget `cost·(bad − 2) ≤ X` passes
   over the interrupting words. A run the gate refused lies *inside* an interruption rather
-  than ending one, and a merged call may **not** satisfy the >10 Mb pair filter — which is
-  why `pair_segments` computes the longest segment from the *unmerged* call sets. (That
-  filter is the one piece of this paragraph the out-of-sample rig can still fault: §4.6.)
+  than ending one. The conditioned merged calls from both passes **do** feed the >10 Mb
+  pair filter: one held-out IBD1 pair and a separate IBD2 canvas distinguish that rule from
+  the former unmerged-call implementation (§4.6).
   The gap rule itself is exactly right and was bisected to the base pair on real data — a
   `multifam` IBD1 pair splits at a run-to-run gap of 9 652 629 bp and merges at 9 652 630
   (`23-…` §5).
@@ -751,7 +754,8 @@ canvases at 5 and 10 Mb on three unused seeds for the IBD1 merge, 357/360 on thr
 unused seeds for the corrected IBD2 rule (the committed-at-the-time rule scored 343/360 on
 the same canvases), 353/360 and 360/360 on three more unused seeds for the two sides of the
 window bound (against 344 and 328 for the rule it replaced), plus 600/600 independently drawn
-interruptions and 66/72 whole filesets (§4.6). **Never fitted to the corpus.** Between them
+interruptions and, after the pair-filter correction, 68/72 whole filesets (§4.6). **Never
+fitted to the corpus.** Between them
 they took the headline 464 → 472 → 475 → **477**, `IBD1Seg` at 10 Mb from 844 to 982 of 982,
 and both raised floors to byte-exact.
 
@@ -759,27 +763,14 @@ and both raised floors to byte-exact.
 are byte-exact on all four printed fields at 3, 5 and 10 Mb, printed-column MAE a true
 0.000000 at each. What follows is what is left *elsewhere*.
 
-**Not solved — one out-of-sample residual, plus two corpus gaps.**
+**One deliberate out-of-sample safety divergence, plus two corpus gaps.**
 
-1. **The segment caller is not exactly right, and only out-of-sample data can still say
-   so.** 0 corpus rows, **6 of 6 713 rows on 24 fresh filesets** (§4.6,
-   `fixtures/oosseg.py`). Two distinct shapes, both measured:
-
-   * **An IBD2 deficit of 0.0181–0.0182 on one full-sib pair, on two independent seeds, at
-     3 and 5 Mb.** `IBD1Seg` is exact on all four rows, so this is *not* the IBD1/IBD2
-     subtraction coupling that produced every earlier residual. Two seeds giving the same
-     deficit to a printed ulp says one missed IBD2 piece in one place on the shared marker
-     map. **Not localised yet** — `fixtures/chrprobe.py` is the instrument for it, and it
-     was written after this measurement.
-   * **One distant pair dropped at 5 and 10 Mb but reported correctly at 3.** The only
-     mechanism that can drop a pair is the `.seg` pair filter, and ours reads the unmerged
-     calls at the requested floor while the reference's answer is floor-independent
-     (`pair_segments`). Rests on a single pair; deliberately not landed.
-
-   **Ruled out for both, measured:** the window bound is not the cause of either (rebuilding
-   with `WINDOW_FRACTION` disabled reproduces the same 6 rows, and adds 6 further wrong
-   filesets); and the corpus cannot referee either one, since it reports the right pair set
-   and the right totals at every floor on every dataset.
+1. **KING's exact-multiple-of-64 tail read is intentionally not reproduced.** 0 corpus
+   rows, **4 of 6 713 rows on 24 fresh filesets** (§4.6, `fixtures/oosseg.py`). The four
+   value differences occur on two independent 40 000-marker seeds at 3/5 Mb. Holding the
+   target pair and its genotypes fixed, 39 999 and 40 001 markers are exact; only 40 000
+   differs. This is the uninitialised array-tail read independently pinned in §5.11, not an
+   unresolved segment rule. `probes/segment_residuals.py` asserts the safe divergence.
 
 2. **`<prefix>build.log` is written only down to its `RULE` lines** (§6.2). 1 case. Its
    header, `Duplicate … is removed.` and `RULE FS0`/`FS1` lines now land — 6 of `bigish`'s 18
@@ -828,27 +819,11 @@ are byte-exact on all four printed fields at 3, 5 and 10 Mb, printed-column MAE 
    with no budget involved. §5.7 carries the full proof and an explicit list of what a future
    maintainer should *not* attempt.
 
-**The next experiments worth running, in order.** The first three are the only ones with a
-live target; 4–6 are standing warnings for whoever runs them.
+**The next experiment worth running, followed by standing warnings.** The two segment
+targets formerly at the head of this list are closed: the four value rows are the deliberate
+exact-64 safety divergence, and the merged-call pair filter is pinned on both passes.
 
-1. **Localise the 0.0182 IBD2 deficit with `chrprobe.py`.** It is the sharpest open residual
-   the project has: four rows, identical to a printed ulp across two independent seeds, so it
-   is one piece of one chromosome and not a distribution. Rebuild
-   `oosseg.py --seeds 13572468 --shapes twofam`, take the `FA A_C2 / A_C3` pair, and mute the
-   chromosomes one at a time — the reference then prints that chromosome's own called length
-   and the deficit's carrier falls out in 22 runs. Then sweep `--seglength` continuously
-   across it, because the jumps of `IBD2Seg(L)` are the individual call lengths. Two hazards
-   (`23-…`): mute, never subset the `.bim`, which re-phases the 64-marker word grid; and
-   `--seglength` is in **Mb** and clamped to 1..10, silently falling back to 3 outside.
-2. **Decide what the `.seg` pair filter reads.** One out-of-sample pair is reported by the
-   reference at 3, 5 and 10 Mb and by us only at 3, and the only mechanism that can drop a
-   pair is the longest-segment test in `pair_segments`. Ours reads the unmerged calls at the
-   requested floor; the reference's answer is floor-**independent**, so the candidates are
-   (a) the unmerged calls at the *default* floor, (b) the calls with no floor at all, or
-   (c) something that is not the call set. This is a two-line change to test and it must be
-   graded on `oosseg.py` with **new** seeds, never on the one pair that raised it — on the
-   corpus the pair set is already exactly right at every floor and cannot referee it.
-3. **Chase the screen's *second* condition, not its budget** (§5.7). It is the most
+1. **Chase the screen's *second* condition, not its budget** (§5.7). It is the most
    tractable thing left in `--related`, and the reason is methodological: it is **binary**
    (accept / `No close relatives are inferred.`), its effect is **huge** (a pair at kinship
    0.20006 refused outright), and it fires at `m = 32 768` where no budget is involved and the
@@ -860,7 +835,7 @@ live target; 4–6 are standing warnings for whoever runs them.
    would supply the second condition for free. **Do not fit `R`** — that is the whole point
    of §5.7, and a fitted `R` reproduces `bigish` and nothing else.
 
-4. **Three hazards any new rig must respect** (`21-…` §8.2, §8.3), or it will misgrade its
+2. **Three hazards any new rig must respect** (`21-…` §8.2, §8.3), or it will misgrade its
    own boundary rows:
    * The reference **stops behaving like a floor** outside `1 ≤ L ≤ 10` Mb. Above ~10 Mb a
      14.06 Mb call reports as a constant 8.93 Mb at every larger floor; below 1.0 the flag
@@ -870,14 +845,14 @@ live target; 4–6 are standing warnings for whoever runs them.
      `>=` and it never bites on the corpus — nothing there lands on an exact tie — but every
      fixture in the push/merge rig does.
    * Canvas read-back is a *measurement*, not an inspection: see `MAINTAINING.md` §8.3.
-5. **Do not re-sweep the caller's constants.** Forty single-knob perturbations and all 32
+3. **Do not re-sweep the caller's constants.** Forty single-knob perturbations and all 32
    combinations of the two IBD1 endpoint rules crossed with the two IBD1 fringe rules were
    scored: none improves exact rows, none beats the committed MAE, and the committed values
    are the unique maximum of that grid (`20-seg-writer.md` §6). Likewise the merge's own
    knobs, swept in `fit/seg20.py grid` and `fit/seg21.py grid` — where dropping `reach` costs
    982 → 959/947 at 5 Mb, `hethet` 982 → 981/980, `push_half` one row on each column at
    10 Mb, and `no_cap` nothing on this corpus but four canvases out of sample.
-6. **Five knobs the corpus cannot see at all** — `bridge_rule="17"`, `gate_end="right"`,
+4. **Five knobs the corpus cannot see at all** — `bridge_rule="17"`, `gate_end="right"`,
    `inf2_ibs1b=True`, `ibd1_clip_ibd2=True`, `clip_before_len=False` all score identically to
    the committed engine on every corpus row. They were settled on the canvases (`17-…` §14)
    and the canvases remain the only evidence for them. If you change one, grade it there.

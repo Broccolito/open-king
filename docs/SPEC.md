@@ -1004,7 +1004,10 @@ from the printed values **[V]**. Confirmed in the binary by an `fmov d8,#0.5` + 
 **[S]**.
 
 Fixed filters, announced verbatim on every run **[V]**:
-* a pair is emitted iff it has **at least one segment > 10 Mb** (not tunable);
+* a pair is emitted iff the conditioned, floor-dependent merged IBD1 or IBD2 call set has
+  at least one segment **≥ 10 Mb** (not tunable). A held-out IBD1 pair and an independent
+  IBD2 canvas distinguish this from filtering the unmerged calls
+  (`tests/parity/probes/segment_residuals.py`);
 * segments shorter than `--seglength` (default **3 Mb**, valid 1–10 Mb, units Mb stored as bp;
   out-of-range values silently revert to 3 Mb — `--seglength 0` and `11` gave md5-identical
   output) are discarded.

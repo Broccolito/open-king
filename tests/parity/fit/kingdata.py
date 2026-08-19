@@ -86,7 +86,9 @@ def _pack(bits):
     if pad:
         bits = np.hstack([bits, np.zeros((n, pad), dtype=bool)])
     packed = np.packbits(bits, axis=1, bitorder="little")
-    return packed.view(np.uint64)
+    # NumPy 2.4 can preserve a non-contiguous last axis here; viewing that axis as
+    # eight-byte words is valid only after materialising its byte order contiguously.
+    return np.ascontiguousarray(packed).view(np.uint64)
 
 
 class Dataset:
