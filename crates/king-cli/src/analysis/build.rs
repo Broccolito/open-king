@@ -544,10 +544,9 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
     // Console only: `monomorphic`'s warned run leaves a zero-byte `build.log`.
     let _ = out.write_all(first_degree_warnings(opts, loaded).as_bytes());
 
-    // The log, echoed to stdout and written to the file byte for byte. Only its `RULE`
-    // half is built: the `INFERENCE AV.FS` lines need two rules this engine has not
-    // identified as well as a statistic it reproduces only to ~0.005, so they are left
-    // out rather than invented. See the module doc.
+    // The reconstructed log is echoed to stdout and written to the file byte for byte.
+    // The primary RULE and INFERENCE paths are implemented; rare held-out trigger,
+    // repetition, and cross-family shapes remain documented in the module-level audit.
     let Reconstruction { parents, log } = reconstruct(opts, loaded, &clustering);
     let _ = out.write_all(log.as_bytes());
     let _ = out.write_all(b"\n");

@@ -1489,7 +1489,7 @@ and `.kin0` bytes, so do not expect it to be a performance lever.
 
 open-king is a clean-room reimplementation whose target is **byte-identical output**, not
 statistical equivalence. Of 480 captured reference invocations across the 13 corpus datasets,
-**477 reproduce byte for byte** — every output file, plus stdout, stderr and exit status.
+**all 480 reproduce byte for byte** — every output file, plus stdout, stderr and exit status.
 
 Byte-identical everywhere: `--kinship` (including the X pass), `--duplicate`, `--ibs`,
 `--unrelated`, `--bysample`, `--bySNP`, `--autoQC`, `--cluster`, `--ibdseg` and `--related` at
@@ -1497,42 +1497,29 @@ all three captured `--seglength` floors, plus `X.kin`, `X.kin0` and `X.seg`. The
 the console banner, the warning and fatal frames, and the reference's own rounding and
 row-ordering quirks are all reproduced.
 
-The three cases that are not byte-identical are **all on the largest dataset**, and only two
-distinct causes:
-
-| cases | what differs |
-| ---: | --- |
-| 2 | one **stdout** line — the two-stage screen's candidate count. No output *file* is affected |
-| 1 | `<prefix>build.log`'s `INFERENCE` lines |
+The committed corpus currently has no differing invocation. This is a regression claim about
+the recorded inputs, not a claim that every possible KING input is identical; the held-out
+counterexamples are listed in [CONTINUATION.md](CONTINUATION.md#remaining-supported-core-work).
 
 ### What differs
 
-**Out-of-scope analyses are not implemented.** This is the difference most likely to bite a
-migrating user, because it is silent:
+**Out-of-scope analyses are not implemented.** Their recognized spellings fail before any
+input is opened, with exit status 1 and a diagnostic that points to the product scope:
 
 ```
-$ for a in --pca --mds --roh --makeGRM; do
-      king -b /tmp/kingdocs/trio.bed $a --prefix un_ >o.txt 2>e.txt
-      printf '%-10s exit=%d  last stdout line: %s  files written: %s\n' \
-             $a $? "$(tr '\r' '\n' < o.txt | grep -v '^[0-9]*%$' | tail -1)" \
-             "$(ls un_* 2>/dev/null | tr '\n' ' ')"
-  done
---pca      exit=0  last stdout line:   KING format genotype data successfully converted.  files written:
---mds      exit=0  last stdout line:   KING format genotype data successfully converted.  files written:
---roh      exit=0  last stdout line:   KING format genotype data successfully converted.  files written:
---makeGRM  exit=0  last stdout line:   KING format genotype data successfully converted.  files written:
+$ king -b /path/that/does/not/exist.bed --pca
+FATAL ERROR - --pca is outside open-king's minimal relatedness/QC product scope.
+$ echo $?
+1
 ```
 
-They are accepted on the command line (so the banner stays byte-exact), the genotypes load,
-and then **nothing happens: exit 0, no result file, no error message.** The reference binary
-runs the analysis and writes, for `--pca`, a `<prefix>pc.txt`. If your pipeline calls KING for
+The reference binary runs the analysis and writes, for `--pca`, a `<prefix>pc.txt`. If your pipeline calls KING for
 PCA, MDS, ROH, GRM, association testing (`--lmm`, `--tdt`, `--gdt`), risk scores, `--plink`
-conversion, or the R plotting flags, keep the original binary for those steps. Do not check
-only the exit status.
+conversion, or the R plotting flags, keep the original binary for those steps.
 
-Two smaller differences sit outside the captured corpus: `--ibdseg` does not apply the
-reference's 100 Mb usable-total floor, and `splitped.txt` is written unconditionally where the
-reference does not always write it. Both are measured in [PARITY.md](PARITY.md) §5.10.
+The former 100 Mb segment-floor and conditional `splitped.txt` differences are fixed. The
+remaining supported-core work is deliberately kept separate from the green corpus headline
+and summarized in [CONTINUATION.md](CONTINUATION.md#remaining-supported-core-work).
 
 Everything here is measured against **one reference build** — KING 2.3.2, Mach-O arm64, macOS.
 KING's release notes record repeated changes to the (unpublished) IBD-segment algorithm across
@@ -1542,16 +1529,11 @@ KING's release notes record repeated changes to the (unpublished) IBD-segment al
 
 ```
 $ python3 tests/parity/run_parity.py --impl target/release/king -q
-[parity] 480 case(s), impl=/Users/wgu/Desktop/open-king/target/release/king, jobs=8
-FAIL  apps/bigish__build                          stdout!=; kingbuild.log!=(num)
-FAIL  core/bigish__related_degree2                stdout!=
-FAIL  ibdseg/bigish__related_degree2_ibdseg       stdout!=
-
-parity: 477 PASS, 3 FAIL, 480 total (3.7s wall, 876 output file(s) byte-compared, 8 diff-excluded)
+[parity] 480 case(s), impl=target/release/king, jobs=8
+parity: 480 PASS, 0 FAIL, 480 total (876 output file(s) byte-compared, 8 diff-excluded)
 ```
 
-(The three `FAIL` rows can come out in any order — cases run in parallel — and the wall-clock
-figure varies; everything else is fixed.) Under four seconds, and it needs no reference binary — the goldens are committed. Point
+The wall-clock figure varies. It needs no reference binary — the goldens are committed. Point
 `--impl` at the reference binary itself to prove the harness's normalization is sound.
 
 ### Diff the two binaries on your own data
@@ -1604,11 +1586,8 @@ $ (cd g/ref && /path/to/king -b /tmp/kingdocs/bigish.bed --related --degree 2 --
 $ (cd g/new && king             -b /tmp/kingdocs/bigish.bed --related --degree 2 --cpus 1 > stdout.txt 2>&1)
 $ ./scrub.sh g/ref/stdout.txt > g/ref.norm; ./scrub.sh g/new/stdout.txt > g/new.norm
 
-$ diff g/ref.norm g/new.norm
-60c60
-<   Stages 1&2 (with 32768 SNPs): 36 pairs of relatives are detected (with kinship > 0.0625)
----
->   Stages 1&2 (with 32768 SNPs): 50 pairs of relatives are detected (with kinship > 0.0625)
+$ diff g/ref.norm g/new.norm && echo "console: byte-identical"
+console: byte-identical
 
 $ for f in king.kin king.kin0 kingallsegs.txt; do
       cmp -s g/ref/$f g/new/$f && echo "$f: byte-identical" || echo "$f: DIFFERS"
@@ -1618,12 +1597,7 @@ king.kin0: byte-identical
 kingallsegs.txt: byte-identical
 ```
 
-**One console line, and every output file identical.** The number is how many candidate pairs
-the fast screening stage raised; the rows in `.kin0` come from the exhaustive re-estimate that
-follows, which is why they are byte-correct either way. If you parse that line, you will see a
-difference; if you read the files, you will not.
-
-And the `--build` gap, in full:
+The fast screening count and every output byte now match. Check `--build` the same way:
 
 ```
 $ mkdir -p b/ref b/new
@@ -1635,29 +1609,12 @@ $ for f in kingupdateids.txt kingupdateparents.txt kingbuild.log; do
   done
 kingupdateids.txt: byte-identical
 kingupdateparents.txt: byte-identical
-kingbuild.log: DIFFERS
-
-$ diff b/ref/kingbuild.log b/new/kingbuild.log
-3,8d2
-<
-<   Family KING1 INFERENCE AV.FS: B02_F is uncle of B01_C2 and B01_C3, Join3/Join2=0.778
-<   Family KING1 INFERENCE AV.FS: B01_F is uncle of B02_C3 and B02_C4, Join3/Join2=0.801
-<     HS B02_C4 unrelated to B01_M
-<     HS B01_C3 unrelated to B02_M
-<   Family KING1 INFERENCE HS.UN2: B01_C3 and B02_C4 are HS
-11,13d4
-<
-<   Family KING2 INFERENCE AV.FS: B14_F is uncle of B13_C2 and B13_C1, Join3/Join2=0.779
-<   Family KING2 INFERENCE AV.FS: B13_F is uncle of B14_C1 and B14_C2, Join3/Join2=0.827
-16,18d6
-<
-<
-<   Family KING3 INFERENCE AV.FS: B25_F is uncle of B26_C3 and B26_C1, Join3/Join2=0.803
+kingbuild.log: byte-identical
 ```
 
-Every difference is a deletion — open-king's log is a strict subsequence of the reference's,
-with no line that contradicts it — and the two files a pipeline actually consumes,
-`updateids.txt` and `updateparents.txt`, are byte-identical.
+This primary reconstruction includes the complete `INFERENCE` narration as well as the two
+files a pipeline consumes. `PARITY.md` separately records rare held-out pedigree shapes that
+the 480 captures do not exercise.
 
 ### Running both side by side
 

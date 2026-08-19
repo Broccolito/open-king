@@ -6,8 +6,8 @@ formatted, and what order its rows come out in.
 This page is for someone who has PLINK filesets and wants to read the results. It does not
 explain the estimators — [`VERIFIED_FORMULAS.md`](VERIFIED_FORMULAS.md) does that — and it
 is not the parity statement, which is [`PARITY.md`](PARITY.md). It documents open-king's
-behaviour, which is byte-identical to KING 2.3.2 on 477 of the 480 captured reference
-invocations; the three known gaps are named in [§ Known divergences](#known-divergences-from-king-232)
+behaviour, which is byte-identical to KING 2.3.2 on all 480 captured reference
+invocations; held-out differences are named in [§ Known divergences](#known-divergences-from-king-232)
 and none of them affects a data column of any file below.
 
 **Everything shown here was produced by running the binary.** Reproduce any of it:
@@ -1094,9 +1094,9 @@ king -b /tmp/kingdocs/multifam.bed --build
 
 leaves `kingbuild.log` at **0 bytes** — nothing was reconstructed.
 
-> This is the one file open-king does not fully reproduce; see
-> [Known divergences](#known-divergences-from-king-232). Every line it writes is byte-identical to the
-> reference's, but the reference also emits an `INFERENCE` half that open-king omits.
+> This file is byte-identical in all captured cases, including the complete `INFERENCE`
+> half on `bigish`. See [Known divergences](#known-divergences-from-king-232) for rare
+> held-out pedigree shapes.
 
 ---
 
@@ -1628,22 +1628,26 @@ segment columns. Check the header before assuming you have the 16-column form.
 Complete, current, and quantified in [`PARITY.md`](PARITY.md). The short list, as it
 affects output files:
 
-* **`<prefix>build.log` is incomplete.** open-king writes the header, the
-  `Duplicate … is removed.` lines and the `RULE` lines, all byte-identical; it does not
-  write the `INFERENCE` half. Our file is a strict subsequence of the reference's. This is
-  the only output file that differs anywhere in the parity corpus (§6.2).
+* **`<prefix>build.log` is byte-identical in all captured cases.** Rare constructed
+  pedigrees still expose repetition/trigger and cross-family-parent-renaming differences;
+  the cached held-out replay is 277/347 whole-log exact (§6.2).
 * **`--ibdseg` applies the reference's closed 100 Mb usable-total floor.** Below that
   floor both binaries print `Segments too short.` and suppress `.seg`; exactly
   100,000,000 bp proceeds. `--ibs` uses the same floor (§5.10).
 * **`<prefix>splitped.txt` is conditional**: all-parentless singleton families write and
   announce nothing; a family of two or a singleton naming a parent emits it (§5.10).
-* **`.fam` `SEX` fields outside `{0,1,2}`** are read as `0`; the reference is more
-  permissive (`M`/`m` → male, a leading `2` or `F`/`f` → female, and so on). Every column
-  that prints or uses sex is affected. Deliberately not implemented (§5.11).
+* **`.fam` `SEX` fields outside `{0,1,2}`** follow the reference's permissive rule:
+  `M`/`m` is male, a leading `2` or `F`/`f` is female, and other nonzero numeric prefixes
+  except `-9` are male. All 43 measured spellings are pinned (§5.11).
 * One deliberate out-of-sample segment safety divergence: 4 value rows in 6 713 over 24
   filesets the corpus has never seen, all caused by KING's uninitialised exact-multiple-of-64
   tail read; open-king has 0 extra and 0 missing rows on that battery (§4.6). One separate
   acceptance-gate counterexample remains (§5.11).
+* The segment-unavailable PO/FS path currently prints and uses `0.0050`; held-out reference
+  probes show that KING derives a deterministic cutoff from the data, but its rule remains
+  unidentified (§5.12 and `VERIFIED_FORMULAS.md`).
+* Rare `HomIBS0` exact ties can differ in the last printed digit, and one of seven focused
+  `MI_Removal` probes refutes the current approximate predicate. No golden row differs.
 
 Everything else — `.kin`, `.kin0`, `X.kin`, `X.kin0`, `.seg`, `X.seg`, `cluster.kin`,
 `.ibs`, `.ibs0`, `.con`, `allsegs.txt`, `splitped.txt`, `unrelated.txt`,

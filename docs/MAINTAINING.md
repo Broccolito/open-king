@@ -16,12 +16,11 @@ because it corrects `17-…` §6 and three clauses of `20-…`, and **`23-gap-bo
 because it corrects `21-…`'s standing diagnosis and is the current word on the floor test
 and the merge**.
 
-The one-line summary of where things stand: **the segment engine is byte-exact on all 982
-corpus rows at all three captured floors**, so the corpus can no longer grade it; the two
-things still measurably wrong are 6 rows of 6 713 on fresh filesets (`PARITY.md` §4.6) and
-`--build`'s `INFERENCE` lines, which need segment **placement** rather than segment totals
-(§6.2 there). The 3 remaining failing cases are 2 stdout lines and 1 log file — none is a
-segment estimate.
+The one-line summary of where things stand: **all 480 cases and all 982 segment rows at all
+three captured floors are byte-exact**, so the corpus is now only a regression guard.
+Held-out graders still distinguish the exact-64 safety divergence, one segment acceptance
+counterexample, rare numeric ties/QC behavior, and unusual reconstruction pedigrees
+(`PARITY.md` §4.6, §5.11, §6.2).
 
 ---
 
@@ -361,7 +360,7 @@ python3 tests/parity/probes/degree_filter.py --ref "<reference>"   # 0 false-kee
 python3 docs/research/fixtures/oosseg.py --ref "<reference>" \
   --expect-known-safe-divergence                                  # OUT OF SAMPLE: pinned 68/72
 python3 tests/parity/probes/segment_residuals.py --ref "<reference>" --impl target/release/king
-python3 docs/research/fixtures/avfs_score.py                       # the AV.FS residual, 0/14 exact
+python3 docs/research/fixtures/avscore.py 1 work/*                 # reported intervals: 296/297 exact
 # the --build rigs: all four are out-of-sample, none is visible to the 480 captures
 cd docs/research/fixtures
 python3 buildlog.py rules                                          # 53 match, 6 differ
@@ -374,18 +373,18 @@ find . -path ./.git -prune -o -size +95M -print                    # must print 
 # tell you this, because inserting into a sorted-key JSON reflows the whole file
 ```
 
-The last release measured **477 PASS / 3 FAIL / 480**, self-check **480/480**, **325** tests
-passing (1 ignored), the row scorecard **982/982/982** at 3 / 5 / 10 Mb with MAE 0.000000 at
+The current tree measures **480 PASS / 0 FAIL / 480**, self-check **480/480**, all workspace
+tests passing (1 timing probe ignored), the row scorecard **982/982/982** at 3 / 5 / 10 Mb with MAE 0.000000 at
 each, the out-of-sample differential **68/72** runs and 4 of 6 713 rows (0 extra/missing),
 the four `--build`
 rigs at **53/59**, **18/18**, **19/19** and **27/27**, a clean build in **9.5 s** from a
-pristine copy of the tree, and that clean-tree binary re-measured at 477/480
+pristine copy of the tree, and that clean-tree binary re-measured at 480/480
 with `baseline: MATCH` — from a cold tree with no `target/` and no pre-generated corpus,
 which is the configuration CI runs in. Do not publish a count you have not just re-run: the
 parity number is the project's entire claim, and it is cheap to check (the suite takes about
 two seconds warm, eight cold).
 
-**Publish both counts, not just the headline.** The 477 is a *whole-file* number — a case
+**Publish both counts, not just the headline.** The 480 is a *whole-file* number — a case
 turns `PASS` only when every row of every file it writes is byte-exact — and the two counts
 move independently in **both** directions. `docs/PARITY.md` §4.4 is the row-level scoreboard
 and §3 the file-level one; a release note that quotes one without the other misleads one way
@@ -559,7 +558,7 @@ passed, 1 at least one failed, 2 harness error. Useful flags: `--jobs N`, `--tim
 `--include-analysis` (also run the 10 `core/_analysis/` captures, which are kept for
 analysis rather than as targets).
 
-**The suite is now a regression guard, not a measurement of the caller.** 477 of 480 cases
+**The suite is now a regression guard, not a measurement of the caller.** 480 of 480 cases
 and 982 of 982 `.seg` rows at every captured floor: a change to the segment engine can only
 make those numbers worse, never better. Run it to prove you broke nothing, and grade the
 change itself on `oosseg.py` and the canvases (§8.6).

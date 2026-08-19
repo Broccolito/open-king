@@ -43,7 +43,7 @@ links to it.
 * [5. Option reference](#5-option-reference)
 * [6. How the parser behaves](#6-how-the-parser-behaves)
 * [7. Exit status and fatal errors](#7-exit-status-and-fatal-errors)
-* [8. Accepted but not implemented](#8-accepted-but-not-implemented)
+* [8. Accepted compatibility spellings outside product scope](#8-accepted-compatibility-spellings-outside-product-scope)
 * [9. Differences from the reference](#9-differences-from-the-reference)
 * [10. The derived filesets used above](#10-the-derived-filesets-used-above)
 
@@ -1097,24 +1097,22 @@ Also note that bare `--sexchr` with no value sets it to **0**, which is fatal �
 #### `--pngplot`
 
 *Switches, default off.* In the reference these shell out to `R CMD BATCH` with embedded
-scripts. **Not implemented**, and never will be: open-king has no R dependency.
-
-They do still count as "an analysis was requested", so a run that names only `--rplot` is
-*silent* about having done nothing:
+scripts. **Outside the minimal product scope**: open-king has no R dependency. A recognized
+plotting request exits 1 before opening the input:
 
 ```
-$ king -b multifam.bed --rplot   | grep -c "Please specify one of the following"
-0
+$ king -b multifam.bed --rplot
+FATAL ERROR - --rplot is outside open-king's minimal relatedness/QC product scope.
 ```
 
 #### `--plink`
 
-*Switch, default off.* **Not implemented.** Unlike `--rplot`/`--pngplot` it does *not* count
-as an analysis, so a run that names only `--plink` does print the notice:
+*Switch, default off.* **Outside the minimal product scope.** It is rejected through the same
+pre-I/O scope gate:
 
 ```
-$ king -b multifam.bed --plink   | grep -c "Please specify one of the following"
-1
+$ king -b multifam.bed --plink
+FATAL ERROR - --plink is outside open-king's minimal relatedness/QC product scope.
 ```
 
 ### Output Parameter
@@ -1389,8 +1387,8 @@ Merge the filesets with PLINK first.
 ## 9. Differences from the reference
 
 [**PARITY.md**](PARITY.md) is the authoritative statement, with the measurement behind every
-claim: 477 of 480 captured reference invocations are byte-identical, and it names every one
-that is not. Read it before trusting a cross-check. This section only lists what a *user*
+claim: all 480 captured reference invocations are byte-identical. Read its held-out section
+before treating that finite corpus as universal proof. This section only lists what a *user*
 driving the command line can hit.
 
 **Byte-identical on every capture that produces them:** `--kinship` (including the X pass),
@@ -1398,34 +1396,26 @@ driving the command line can hit.
 `--ibdseg` and `--related` at all three captured `--seglength` floors, plus `X.kin`,
 `X.kin0` and `X.seg`.
 
-**The three known gaps in the captured suite**, all on the largest dataset:
-
-1. `--related`'s two-stage screening count on stdout — one line, one integer. On
-   `bigish --related --degree 2` the reference prints `36 pairs of relatives are detected`
-   and open-king prints `50`. **No output file is affected**: `.kin0`'s rows come from the
-   exhaustive re-estimate below that line and are byte-correct at every degree
-   ([PARITY.md §5.7](PARITY.md)).
-2. The same line again, in the `--related --ibdseg` combination.
-3. `<prefix>build.log` emits a correct *subsequence* of the reference's lines — its header
-   and `RULE` half are byte-identical, its `INFERENCE` half is incomplete
-   ([PARITY.md §6.2](PARITY.md)). Every other `--build` output file matches.
+**There are no known gaps in the captured suite.** The former two-stage-screen console
+differences and incomplete primary `build.log` are fixed; stdout, stderr, exit status, and
+all compared files match in every case.
 
 **Divergences outside the captured suite**, which the corpus cannot see — they need an input
 shape the 480 captures do not contain. PARITY.md §4.6, §5.10, §5.11 and §5.12 enumerate the
 known set; these are the ones a command line can reach:
 
-* **The sparse-map fallback is implemented, with one shared screening residual.** On a panel too thin for the segment
+* **The sparse-map fallback and screen are implemented.** On a panel too thin for the segment
   caller (roughly under 12 500 markers at 200 samples), `--related` now prints
   `No informative IBD segments.`, switches to the reference's 12-column `.kin` and infers
   relationships from kinship alone. Its held-out comparison is byte-exact within families
-  and on every shared between-family row; the known screen residual admits two extra
-  cross-family candidates. `--unrelated`, `--cluster` and `--build` now take the same
+  and on all 15 between-family candidates. `--unrelated`, `--cluster` and `--build` take the same
   kinship-only clustering path; both unrelated lists, `updateids.txt`, `updateparents.txt`
   and `build.log` are byte-identical, and `--cluster` correctly omits its segment-only
-  `cluster.kin`. Their only observed sparse-console difference is the same 17-versus-15
-  screen count. Check for the `usable for IBD segment analysis` line before trusting any
+  `cluster.kin`. Check for the `usable for IBD segment analysis` line before trusting any
   segment column
   ([PARITY.md §5.12](PARITY.md#512-three-divergences-found-while-writing-the-user-documentation)).
+  The fallback's PO/FS split still uses a fixed `0.0050`; KING's printed cutoff is
+  data-derived and its derivation remains a held-out open question.
 * **Unsorted `.bim` maps are rejected for segment work.** Both binaries emit the same
   `Positions unsorted: …` / `Chromosomes unsorted: …` diagnostic and suppress the same
   segment outputs. See [§3](#two-hard-requirements-that-are-easy-to-miss).

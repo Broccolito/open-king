@@ -54,6 +54,8 @@ thread counts, and exact performance parity with KING is not a product goal.
 
 A difference remains in scope when it changes a supported command's accepted input,
 relationship result, report contents, output-file set or documented console contract.
-Examples include sparse-panel fallback behavior, map-order validation and the remaining
-measured segment or `build.log` differences. Those are tracked in [PARITY.md](PARITY.md) and
-the GitHub issue tracker and remain work even though the excluded analyses above do not.
+Examples include a segment acceptance-gate counterexample, rare `HomIBS0` ties,
+the data-derived sparse PO/FS cutoff, `MI_Removal`, and unusual reconstruction pedigrees.
+Those held-out differences are tracked in [PARITY.md](PARITY.md) and GitHub issue #3 and
+remain work even though all 480 captured cases pass and the excluded analyses above do not
+count as product defects.

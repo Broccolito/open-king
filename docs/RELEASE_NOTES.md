@@ -12,7 +12,7 @@ king -b study.bed --related --prefix study
 
 ## Parity
 
-**477 of the 480 captured reference invocations reproduce byte-identically.** "Byte
+**All 480 captured reference invocations reproduce byte-identically.** "Byte
 -identical" means the whole invocation — every output file, every column, plus stdout,
 stderr and exit status.
 
@@ -47,17 +47,15 @@ differential fuzz of 10,000 random command lines against the reference.
 
 ### Known gaps
 
-Three cases, all on the largest test dataset, and none of them a wrong estimate:
+There are no known differences in the captured suite. The former two-stage screen and
+primary `build.log` failures are resolved.
 
-1. **The two-stage screen's stdout line.** `--related --degree 2` reports a different
-   count of screened pairs. **No output file is affected** — `.kin0`'s rows come from the
-   exhaustive re-estimate that follows the screen and are byte-correct at every degree,
-   and every pair the reference's screen drops falls below the reporting threshold
-   anyway. Four rounds of measurement have ruled out the obvious mechanisms; see
-   `docs/research/22-screen.md`.
-2. **`build.log`.** Every line emitted is byte-identical, but the file is a subsequence:
-   some lines the reference prints are still missing.
-3. **`--related --degree 2` stdout** on one dataset, for the same reason as (1).
+Held-out testing remains intentionally separate from the headline. Safe Rust does not
+emulate KING's uninitialized exact-multiple-of-64 segment tail read, and rare constructed
+shapes still expose a segment acceptance-gate counterexample, exact `HomIBS0` tie differences,
+the still-unknown data-derived sparse PO/FS cutoff, an approximate `MI_Removal` predicate,
+and unusual pedigree-reconstruction residuals. See `docs/PARITY.md` and issue #3 for
+quantified evidence.
 
 `docs/PARITY.md` is the authoritative matrix and measures every gap.
 

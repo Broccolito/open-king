@@ -29,9 +29,9 @@ is missing → [OUTPUTS: empty, header-only, truncated, absent](OUTPUTS.md#empty
 
 | page | contents |
 | --- | --- |
-| [`PARITY.md`](PARITY.md) | **The authoritative claim.** 477 of 480 captured reference invocations byte-identical; the analysis × dataset matrix, the per-file and per-row scorecards, every remaining gap sized, and the labelled limitations — including the divergences the test corpus cannot see (§4.6, §5.10–§5.12) |
+| [`PARITY.md`](PARITY.md) | **The authoritative claim.** 480 of 480 captured reference invocations byte-identical; the analysis × dataset matrix, per-file and per-row scorecards, and labelled held-out limitations (§4.6, §5.10–§5.12) |
 | [`RELEASE_NOTES.md`](RELEASE_NOTES.md) | what changed in this release |
-| [`CONTINUATION.md`](CONTINUATION.md) | the handoff brief: what the three failing cases are, what has been excluded, and what is worth doing next |
+| [`CONTINUATION.md`](CONTINUATION.md) | the handoff brief: completed milestones, deliberate exclusions, and the remaining held-out work |
 | [`SCOPE.md`](SCOPE.md) | the product boundary that separates deliberate exclusions from supported-core parity defects |
 
 ## If you want to work on it

@@ -854,10 +854,10 @@ always prints `m`.
 Where `m <= 32768` there is no subsetting and `<d>` is exactly the number of
 between-family pairs whose kinship exceeds `2^-(degree + 2)` — `bigish` truncated to 32 768
 markers prints 18 at degree 1 and 50 at degree 2, and its own `.kin0` holds 18 and 50 pairs
-over `2^-3` and `2^-4`. Above that the subset matters and **which 32 768 markers is
-unresolved**: the reference prints 18 and 36 on the full 50 000-marker `bigish`, while the
-first 32 768 markers give 18 and 50, the last give 22 and 46, evenly spaced give 21 and 50,
-and the 32 768 highest-MAF give 23 and 45. No candidate reproduces both degrees.
+over `2^-3` and `2^-4`. Above that the reference uses the derived dense screening path now
+implemented in open-king: full `bigish` prints 18 and 36, and both captured invocations are
+byte-identical. The negative experiments and the final discriminating rule are preserved in
+[`22-screen.md`](research/22-screen.md) and [PARITY.md §5.7](PARITY.md).
 
 The `Final Stage … <c> … confirmed` and `<c> … identified` counts are the same number: the
 between-family summary table's total, which tallies `InfType` over the `.kin0` rows and

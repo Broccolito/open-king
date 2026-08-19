@@ -161,40 +161,32 @@ compatibility, but requesting one is a fatal error before any input file is open
 
 ## Parity, honestly
 
-**478 of the 480 captured reference invocations are byte-identical** — every output file,
-plus stdout, stderr and exit status. [`docs/PARITY.md`](docs/PARITY.md) is the authoritative
-statement: the full analysis × dataset matrix, per-file and per-row scorecards, and a labelled
-limitations section. Everything here is a summary of it.
+**All 480 captured reference invocations are byte-identical** — every output file, plus
+stdout, stderr and exit status. The run compares 876 output files; eight documented files
+whose reference bytes are host-unstable are excluded symmetrically. [`docs/PARITY.md`](docs/PARITY.md)
+is the authoritative statement and labels the held-out differences the 480-case corpus
+cannot exercise.
 
 Byte-identical everywhere the corpus produces them: `--kinship` (including the X pass),
 `--duplicate`, `--ibs`, `--unrelated`, `--bysample`, `--bySNP`, `--autoQC`, `--cluster`,
-`--ibdseg` and `--related` at all three captured `--seglength` floors — 30 of the 31 output
-files this project writes.
-
-**The two failing cases, and their blast radius:**
-
-| cases | what differs | does it affect an output file? |
-| ---: | --- | --- |
-| 2 | one stdout line — `--related`'s two-stage screening count on the 200-sample dataset (`36` vs `50`) | **No.** `.kin`, `.kin0` and `.seg` are byte-identical; the rows come from the exhaustive re-estimate below that line |
+`--ibdseg`, `--related`, and `--build` at every captured shape and reporting floor — all 31
+output-file families the project writes.
 
 `--build` is now byte-identical on the primary `bigish` case, including stdout and all
 four reconstruction files. The implementation covers FS0/FS1/FS2, PO.S orientation,
 AV.FS/AV.HS/HS.UN2, and KING/libStatGen's unstable sibling order.
 
-**Differences the corpus cannot see** cost no case but a user can still hit them. The
-`--related` path now detects a marker panel too sparse for the segment caller and switches to
-the reference's short, kinship-only output. The same fallback now drives `--unrelated`,
-`--cluster` and `--build`: every file from those three analyses is byte-identical on the
-held-out sparse fixture. The shared two-stage screen still admits two extra between-family
-`--related` candidates (17 rather than 15), so its console summary and `.kin0` row set are
-not yet exact. The A1-major input gate, unsorted-map rejection and case-insensitive sample-ID
-validation are implemented and have focused differential probes. These are measured in
-[`docs/PARITY.md`](docs/PARITY.md) §5.10–§5.12 and §4.6; case-only sample-ID collisions are
-now rejected like KING. The independent 24-fileset segment battery is **68/72** whole-run
-exact with **0 extra and 0 missing rows** across 6,713 reference rows. Its four value
-differences occur only on exact-40,000-marker inputs and are KING's uninitialised
-multiple-of-64 tail read; 39,999- and 40,001-marker controls are exact, so safe Rust does
-not emulate that undefined behavior.
+**Differences the corpus cannot see** cost no case but remain part of the claim. The sparse
+kinship-only fallback, screen, 100 Mb floor, conditional `splitped.txt`, map/A1 gates,
+case-insensitive IDs, and permissive nonstandard `SEX` parsing all have focused regressions.
+The independent 24-fileset segment battery is **68/72** whole-run exact with **0 extra and
+0 missing rows** across 6,713 reference rows. Its four value differences occur only on
+exact-40,000-marker inputs and are KING's uninitialised multiple-of-64 tail read;
+39,999- and 40,001-marker controls are exact, so safe Rust does not emulate that undefined
+behavior. Rare held-out differences in a segment acceptance gate, the unknown data-derived
+sparse PO/FS cutoff, `HomIBS0` tie rendering, `MI_Removal`, and unusual pedigree
+reconstruction shapes remain quantified under
+[issue #3](https://github.com/Broccolito/open-king/issues/3) and in `docs/PARITY.md`.
 
 Every number above is measured against **one** reference build: KING 2.3.2, Mach-O arm64,
 macOS. KING's segment algorithm is unpublished and its release notes record repeated changes
@@ -210,20 +202,16 @@ python3 tests/parity/run_parity.py --impl target/release/king -q
 ```
 
 ```
-[parity] 480 case(s), impl=/Users/wgu/Desktop/open-king/target/release/king, jobs=8
-FAIL  core/bigish__related_degree2                stdout!=
-FAIL  ibdseg/bigish__related_degree2_ibdseg       stdout!=
-
-parity: 478 PASS, 2 FAIL, 480 total
+[parity] 480 case(s), impl=target/release/king, jobs=8
+parity: 480 PASS, 0 FAIL, 480 total (876 output file(s) byte-compared, 8 diff-excluded)
 ```
 
-(The three `FAIL` rows can arrive in any order — cases run in parallel — and the wall-clock
-figure varies.) To diff the two binaries on your own data instead, recipe 12 of
+To diff the two binaries on your own data instead, recipe 12 of
 [`docs/COOKBOOK.md`](docs/COOKBOOK.md) has the procedure and the console normalizer it needs.
 
-`cargo test --workspace` is 330 tests. CI replays all 480 captures against a committed
-baseline on every push and fails on any difference **in either direction**, so an unrecorded
-improvement is a failure too.
+All workspace tests pass. CI replays all 480 captures against a committed baseline on every
+push and fails on any difference **in either direction**, so an unrecorded improvement is a
+failure too.
 
 ## Documentation
 
