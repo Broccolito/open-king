@@ -956,8 +956,10 @@ Pairwise relatedness inside families that `--cluster` newly merged. Fifteen tab-
 columns — the 14-column `--related` `.kin0` set, reorganised: one `FID` (the new cluster
 ID), both IIDs, and a `Sex1`/`Sex2` pair no other file carries.
 
-**Written when** `--cluster` actually merges at least two families. A run that merges
-nothing writes only `allsegs.txt`. Merging requires ≥ 100 samples.
+**Written when** `--cluster` actually merges at least two families *and* the map yields an
+informative IBD segment. A run that merges nothing writes only `allsegs.txt`. On the
+kinship-only sparse fallback, `updateids.txt` still records the merge but `cluster.kin` and
+`allsegs.txt` are absent. Merging requires ≥ 100 samples.
 
 ```bash
 king -b /tmp/kingdocs/bigish.bed --cluster --cpus 4
@@ -1543,7 +1545,7 @@ Four distinguishable states, and the difference matters when you script around t
 | `build.log` | tiny dataset (< 10 samples) | nothing reconstructed | — |
 | `updateparents.txt` | tiny dataset | nothing reconstructed | — |
 | `updateids.txt` | no cluster merge (announced anyway by `--build`) | — | — |
-| `cluster.kin` | no cluster merge | — | — |
+| `cluster.kin` | no cluster merge, or no informative IBD segment | — | — |
 | `_autoQC_updatesex.txt` | no sample has `.fam` sex `0` | — | — |
 | `allsegs.txt` | the map yields no usable segment | — | — |
 

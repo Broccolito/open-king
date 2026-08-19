@@ -1370,7 +1370,7 @@ parity case** — every one of them needs an input shape the 480 captures do not
 all three are visible to a user, which is why they are recorded rather than left in a
 transcript. §5.10 and §5.11 remain the older, independently measured set.
 
-**1. The "no informative IBD segments" fallback is partially implemented.** Any panel too
+**1. The "no informative IBD segments" fallback is implemented; the shared screen still differs.** Any panel too
 sparse for the segment caller lands on it, which on a 200-sample fileset means roughly
 12 500 markers genome-wide.
 
@@ -1395,10 +1395,15 @@ signature. open-king now takes that path for `--related`, including the short he
 kinship-based within-family error/summary rules and the screened between-family row shape.
 The remaining two-row difference is confined to the already-localised screen: the Rust
 screen admits `BF01/B01_C2–BF02/B02_F` and `BF13/B13_C2–BF14/B14_F`; no shared row differs.
-The fallback remains missing on `--unrelated` / `--cluster` / `--build`, where the reference
-additionally prints `Cutoff value for IBS0 between FS and PO is set at 0.0050`. On
-`--ibdseg`, both binaries now print the PLINK sorting note after `No informative IBD
-segments.` and write only `splitped.txt`.
+The same fallback now runs through `--unrelated`, `--cluster` and `--build`. On the held-out
+fixture, both unrelated selection files are byte-identical; `--cluster` writes the exact
+`updateids.txt` and correctly omits its segment-only `cluster.kin`; and `--build` writes
+byte-identical `build.log`, `updateids.txt` and `updateparents.txt`. The console's inferred
+relationship split is exact for full siblings (3), but reports 14 rather than 12
+second-degree pairs because of the same two extra screen candidates. Both binaries print
+`Cutoff value for IBS0 between FS and PO is set at 0.0050`. `tests/parity/probes/sparse_fallback.py`
+checks all five analysis paths and every artifact. On `--ibdseg`, both binaries print the
+PLINK sorting note after `No informative IBD segments.` and write only `splitped.txt`.
 
 A second held-out shape found the adjacent non-empty case: at 99,999,999 bp of usable map,
 the reference prints `Segments too short.` and takes the same short kinship-only `--related`

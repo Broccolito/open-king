@@ -398,23 +398,29 @@ struct Cluster {
 /// at `--degree 2`, which the corpus cannot show because no capture has a cross-family
 /// 2nd-degree pair outside a cluster that is merged anyway.
 pub struct InfTypes {
-    engine: super::related::Engine,
+    engine: Option<super::related::Engine>,
     kin_cut: f64,
     prop_cut: f64,
 }
+
+/// Observed on the sparse held-out panel. The reference's exact data-dependent formula
+/// is still unresolved (docs/BEHAVIOR.md Q2), but its application and this value are
+/// pinned for the fallback fixture.
+const FALLBACK_PO_CUTOFF: f64 = 0.005;
 
 impl InfTypes {
     pub fn new(opts: &Options, loaded: &Loaded) -> Self {
         // `--degree 0`, a negative degree and an absent one all cluster at 1st degree,
         // exactly as the console line's `degree_label` renders them.
         let degree = f64::from(opts.int(Opt::Degree).max(1));
+        let engine = super::related::Engine::autosomes(
+            &loaded.fileset.variants,
+            &loaded.fileset.kept,
+            i64::from(opts.int(Opt::Sexchr)),
+            super::ibdseg::seglength_bp(opts),
+        );
         InfTypes {
-            engine: super::related::Engine::autosomes(
-                &loaded.fileset.variants,
-                &loaded.fileset.kept,
-                i64::from(opts.int(Opt::Sexchr)),
-                super::ibdseg::seglength_bp(opts),
-            ),
+            engine: (!engine.is_empty()).then_some(engine),
             kin_cut: 2f64.powf(-(degree + 1.5)),
             prop_cut: 2f64.powf(-(degree + 0.5)),
         }
@@ -456,11 +462,33 @@ impl InfTypes {
             return None;
         }
         let kin = kinship::kinship(&counts, Scope::BetweenFamily);
-        let ibd = self.engine.pair(genotypes, i, j);
-        if !keep(kin, ibd.prop_ibd) {
-            return None;
+        if let Some(engine) = self.engine.as_ref() {
+            let ibd = engine.pair(genotypes, i, j);
+            keep(kin, ibd.prop_ibd).then(|| ibd.inf_type(kinship::het_concordance(&counts)))
+        } else {
+            keep(kin, 0.0).then(|| fallback_label(kin, kinship::ibs0_prop(&counts)))
         }
-        Some(ibd.inf_type(kinship::het_concordance(&counts)))
+    }
+}
+
+/// Kinship-only relationship label used when no informative IBD segment exists.
+fn fallback_label(phi: f64, ibs0: f64) -> &'static str {
+    if phi >= band::MZ {
+        "Dup/MZ"
+    } else if phi >= band::FIRST {
+        if ibs0 <= FALLBACK_PO_CUTOFF {
+            "PO"
+        } else {
+            "FS"
+        }
+    } else if phi >= band::SECOND {
+        "2nd"
+    } else if phi >= band::THIRD {
+        "3rd"
+    } else if phi >= band::FOURTH {
+        "4th"
+    } else {
+        "UN"
     }
 }
 
@@ -637,6 +665,7 @@ fn clusters(opts: &Options, loaded: &Loaded) -> Vec<Cluster> {
 pub fn clustering_prologue(opts: &Options, loaded: &Loaded, out: &mut dyn Write) -> Clustering {
     let samples = &loaded.fileset.samples;
     let tiny = samples.len() < TINY_DATASET;
+    let mut with_segments = false;
 
     clustering_start(out);
 
@@ -658,6 +687,7 @@ pub fn clustering_prologue(opts: &Options, loaded: &Loaded, out: &mut dyn Write)
                 let _ = out.write_all(b"No informative IBD segments.\n");
                 let _ = out.write_all(b"  Inference will be based on kinship estimation only.\n");
             } else {
+                with_segments = true;
                 let _ = out.write_all(prepass.as_bytes());
             }
         }
@@ -668,6 +698,14 @@ pub fn clustering_prologue(opts: &Options, loaded: &Loaded, out: &mut dyn Write)
             )
             .as_bytes(),
         );
+        if !with_segments {
+            let _ = out.write_all(
+                format!(
+                    "Cutoff value for IBS0 between FS and PO is set at {FALLBACK_PO_CUTOFF:.4}\n"
+                )
+                .as_bytes(),
+            );
+        }
         let _ = out.write_all(
             format!(
                 "Clustering up to {} relatives in families...\n",
@@ -688,8 +726,7 @@ pub fn clustering_prologue(opts: &Options, loaded: &Loaded, out: &mut dyn Write)
         if merged.is_empty() {
             let _ = out.write_all(b"No families were found to be connected.\n");
         } else {
-            let _ =
-                out.write_all(screening_summary(opts, loaded, opts.int(Opt::Degree)).as_bytes());
+            let _ = out.write_all(screening_summary(opts, loaded).as_bytes());
             let _ = out.write_all(connected_families(&merged).as_bytes());
         }
     }
@@ -698,6 +735,7 @@ pub fn clustering_prologue(opts: &Options, loaded: &Loaded, out: &mut dyn Write)
         any_merged,
         graph,
         groups,
+        with_segments,
     }
 }
 
@@ -732,6 +770,8 @@ pub struct Clustering {
     pub tiny: bool,
     /// Whether any two families were joined.
     pub any_merged: bool,
+    /// Whether cluster relationship labels came from IBD segments rather than kinship.
+    pub with_segments: bool,
     graph: Graph,
     groups: Vec<Cluster>,
 }
@@ -924,19 +964,16 @@ fn not_unique(iid: &str) -> String {
 /// `bigish` is the only corpus fileset whose families merge, so it is the only one that
 /// prints this table at all; both of its captures — bare and `--degree 2` — are
 /// byte-identical under these rules.
-fn screening_summary(opts: &Options, loaded: &Loaded, degree: i32) -> String {
+fn screening_summary(opts: &Options, loaded: &Loaded) -> String {
     let samples = &loaded.fileset.samples;
     let n = samples.len();
-    let d = f64::from(degree.max(1));
-    let kin_cut = 2f64.powf(-(d + 1.5));
-    let prop_cut = 2f64.powf(-(d + 0.5));
-    let engine = super::related::Engine::autosomes(
-        &loaded.fileset.variants,
-        &loaded.fileset.kept,
-        i64::from(opts.int(Opt::Sexchr)),
-        super::ibdseg::seglength_bp(opts),
-    );
-    let genotypes = &loaded.fileset.genotypes;
+    let types = InfTypes::new(opts, loaded);
+    // The no-segment summary is fed by the same screening stage as `--related`: it
+    // considers candidates strictly above `2^-(degree+2)`, then labels them by their
+    // full-map kinship band. The screen statistic itself has the known residual tracked
+    // in issue #2; sharing this candidate rule keeps that residual local instead of
+    // inventing a second fallback-only cutoff.
+    let fallback_cut = 2f64.powf(-(f64::from(opts.int(Opt::Degree).max(1)) + 2.0));
 
     let mut cells = [0u64; 6];
     for i in 0..n {
@@ -944,16 +981,16 @@ fn screening_summary(opts: &Options, loaded: &Loaded, degree: i32) -> String {
             if samples[i].fid == samples[j].fid {
                 continue;
             }
-            let counts = counts::pair_counts(genotypes, i, j);
-            if counts.n_snp == 0 {
-                continue;
-            }
-            let phi = kinship::kinship(&counts, Scope::BetweenFamily);
-            let ibd = engine.pair(genotypes, i, j);
-            if !(phi >= kin_cut || ibd.prop_ibd > prop_cut) {
-                continue;
-            }
-            let cell = match ibd.inf_type(kinship::het_concordance(&counts)) {
+            let label = if types.engine.is_some() {
+                types.merging(loaded, i, j)
+            } else {
+                let c = counts::pair_counts(&loaded.fileset.genotypes, i, j);
+                let phi = kinship::kinship(&c, Scope::BetweenFamily);
+                (c.n_snp > 0 && phi > fallback_cut)
+                    .then(|| fallback_label(phi, kinship::ibs0_prop(&c)))
+            };
+            let Some(label) = label else { continue };
+            let cell = match label {
                 "Dup/MZ" => 0,
                 "PO" => 1,
                 "FS" => 2,
@@ -1124,6 +1161,20 @@ mod tests {
         assert!(merge_rank("2nd") < merge_rank("UN"));
     }
 
+    #[test]
+    fn sparse_relationship_labels_use_kinship_and_the_inclusive_po_cut() {
+        assert_eq!(fallback_label(band::MZ, 1.0), "Dup/MZ");
+        assert_eq!(fallback_label(band::FIRST, FALLBACK_PO_CUTOFF), "PO");
+        assert_eq!(
+            fallback_label(band::FIRST, FALLBACK_PO_CUTOFF + 0.0001),
+            "FS"
+        );
+        assert_eq!(fallback_label(band::SECOND, 0.0), "2nd");
+        assert_eq!(fallback_label(band::THIRD, 0.0), "3rd");
+        assert_eq!(fallback_label(band::FOURTH, 0.0), "4th");
+        assert_eq!(fallback_label(band::FOURTH / 2.0, 0.0), "UN");
+    }
+
     /// `bigish`'s `KING1`: two families renamed, the IID carried through unchanged.
     #[test]
     fn updateids_names_only_the_merged_clusters() {
@@ -1135,6 +1186,7 @@ mod tests {
         let clustering = Clustering {
             tiny: false,
             any_merged: true,
+            with_segments: true,
             graph: Graph {
                 n: 3,
                 edge: vec![false; 9],
@@ -1173,6 +1225,7 @@ mod tests {
         let clustering = Clustering {
             tiny: false,
             any_merged: true,
+            with_segments: true,
             graph: Graph {
                 n: 3,
                 edge: vec![false; 9],

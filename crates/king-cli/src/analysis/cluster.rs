@@ -91,12 +91,23 @@ pub fn run(opts: &Options, loaded: &Loaded, out: &mut dyn Write) {
     let _ =
         out.write_all(format!("Update-ID information is saved in file {ids_path}\n\n").as_bytes());
 
+    // The kinship-only fallback clusters and renames families, but KING does not emit a
+    // segment-column `cluster.kin` table when no segment engine exists.
+    if !clustering.with_segments {
+        write_end(out);
+        return;
+    }
+
     let kin_path = out_path(opts, "cluster.kin");
     let _ = std::fs::write(&kin_path, cluster_kin(opts, loaded, &clustering));
     let _ = out.write_all(
         format!("Pair-wise relatedness in newly clustered families saved in {kin_path}.\n")
             .as_bytes(),
     );
+    write_end(out);
+}
+
+fn write_end(out: &mut dyn Write) {
     let _ = out.write_all(
         format!(
             "KING cluster analysis ends at {}\n",

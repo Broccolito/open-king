@@ -771,8 +771,9 @@ An alternative list of 116 to-be-removed individuals saved in file kingunrelated
 #### `--cluster`
 
 *Switch, default off.* Merges families connected by inferred relatedness and reports the
-pairs inside the merged clusters. Writes `<p>allsegs.txt` always, and `<p>cluster.kin` plus
-`<p>updateids.txt` when families actually merge:
+pairs inside the merged clusters. Writes `<p>allsegs.txt` when the map has usable segments
+and `<p>updateids.txt` when families actually merge. `<p>cluster.kin` additionally requires
+usable segments, because its relationship columns are segment-derived:
 
 ```
 $ king -b bigish.bed --cluster   -> kingallsegs.txt kingcluster.kin kingupdateids.txt
@@ -1437,14 +1438,17 @@ driving the command line can hit.
 shape the 480 captures do not contain. PARITY.md §4.6, §5.10, §5.11 and §5.12 enumerate the
 known set; these are the ones a command line can reach:
 
-* **The sparse-map fallback is only partly complete.** On a panel too thin for the segment
+* **The sparse-map fallback is implemented, with one shared screening residual.** On a panel too thin for the segment
   caller (roughly under 12 500 markers at 200 samples), `--related` now prints
   `No informative IBD segments.`, switches to the reference's 12-column `.kin` and infers
   relationships from kinship alone. Its held-out comparison is byte-exact within families
   and on every shared between-family row; the known screen residual admits two extra
-  cross-family candidates. `--unrelated`, `--cluster` and `--build` do not yet take the
-  corresponding kinship-only clustering path. Check for the `usable for IBD segment
-  analysis` line before trusting any segment column
+  cross-family candidates. `--unrelated`, `--cluster` and `--build` now take the same
+  kinship-only clustering path; both unrelated lists, `updateids.txt`, `updateparents.txt`
+  and `build.log` are byte-identical, and `--cluster` correctly omits its segment-only
+  `cluster.kin`. Their only observed sparse-console difference is the same 17-versus-15
+  screen count. Check for the `usable for IBD segment analysis` line before trusting any
+  segment column
   ([PARITY.md §5.12](PARITY.md#512-three-divergences-found-while-writing-the-user-documentation)).
 * **Unsorted `.bim` maps are rejected for segment work.** Both binaries emit the same
   `Positions unsorted: …` / `Chromosomes unsorted: …` diagnostic and suppress the same

@@ -147,10 +147,12 @@ files this project writes.
 
 **Differences the corpus cannot see** cost no case but a user can still hit them. The
 `--related` path now detects a marker panel too sparse for the segment caller and switches to
-the reference's short, kinship-only output, but that fallback is not yet complete for
-`--unrelated`, `--cluster` and `--build`. The A1-major input gate, unsorted-map rejection
-and case-insensitive sample-ID validation are implemented and have focused differential
-probes. These are measured in
+the reference's short, kinship-only output. The same fallback now drives `--unrelated`,
+`--cluster` and `--build`: every file from those three analyses is byte-identical on the
+held-out sparse fixture. The shared two-stage screen still admits two extra between-family
+`--related` candidates (17 rather than 15), so its console summary and `.kin0` row set are
+not yet exact. The A1-major input gate, unsorted-map rejection and case-insensitive sample-ID
+validation are implemented and have focused differential probes. These are measured in
 [`docs/PARITY.md`](docs/PARITY.md) §5.10–§5.12 and §4.6; case-only sample-ID collisions are
 now rejected like KING.
 

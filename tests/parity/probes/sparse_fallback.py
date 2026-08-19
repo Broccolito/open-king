@@ -11,6 +11,11 @@ from pathlib import Path
 TIME = re.compile(rb"[A-Z][a-z]{2} [A-Z][a-z]{2} [ 0-9][0-9] [0-9:]{8} [0-9]{4}")
 PROGRESS = re.compile(rb"(?:[0-9]+%\r)+")
 COUNT_LINE = re.compile(rb"^  (?:Stages 1&2|Final Stage).*$", re.MULTILINE)
+SUMMARY_TOTAL = re.compile(
+    rb"^Relationship summary \(total relatives: 0 by pedigree, [0-9]+ by inference\)$",
+    re.MULTILINE,
+)
+SUMMARY_ROW = re.compile(rb"^  Inference\t.*$", re.MULTILINE)
 
 
 def thin_bigish(golden: Path, destination: Path) -> Path:
@@ -60,7 +65,11 @@ def run(binary: Path, prefix: Path, analysis: str, work: Path):
 
 def normalized(stdout: bytes, omit_counts: bool = False) -> bytes:
     text = TIME.sub(b"<TIME>", PROGRESS.sub(b"", stdout))
-    return COUNT_LINE.sub(b"<SCREEN-COUNT>", text) if omit_counts else text
+    if omit_counts:
+        text = COUNT_LINE.sub(b"<SCREEN-COUNT>", text)
+        text = SUMMARY_TOTAL.sub(b"<SCREEN-SUMMARY-TOTAL>", text)
+        text = SUMMARY_ROW.sub(b"<SCREEN-SUMMARY-ROW>", text)
+    return text
 
 
 def rows(data: bytes):
@@ -115,6 +124,23 @@ def check_ibdseg(ref, impl) -> None:
         fail("sparse ibdseg console differs after time/progress normalization")
 
 
+def check_clustering(analysis, ref, impl) -> None:
+    if ref[0] != 0 or impl[0] != 0 or ref[2] or impl[2]:
+        fail(f"unexpected {analysis} exit/stderr: ref={ref[:3]!r}, impl={impl[:3]!r}")
+    if ref[3] != impl[3]:
+        names = sorted(set(ref[3]) | set(impl[3]))
+        changed = [name for name in names if ref[3].get(name) != impl[3].get(name)]
+        fail(f"{analysis} fallback artifacts differ: {changed}")
+    if normalized(ref[1], omit_counts=True) != normalized(impl[1], omit_counts=True):
+        fail(f"{analysis} console differs outside the localized screen summary")
+    if b"15 by inference" not in ref[1] or b"17 by inference" not in impl[1]:
+        fail(f"{analysis} did not preserve the expected 15-vs-17 screen residual")
+    if b"\t0\t0\t3\t12\t0\t0" not in ref[1]:
+        fail(f"{analysis} reference fallback labels changed")
+    if b"\t0\t0\t3\t14\t0\t0" not in impl[1]:
+        fail(f"{analysis} implementation fallback labels changed")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--ref", type=Path, required=True)
@@ -128,17 +154,27 @@ def main() -> int:
         root = Path(tmp)
         prefix = thin_bigish(golden, root)
         results = {}
-        for analysis in ("--related", "--ibdseg"):
+        for analysis in ("--related", "--ibdseg", "--unrelated", "--cluster", "--build"):
             for label, binary in (("ref", ref_binary), ("impl", impl_binary)):
                 work = root / f"{label}-{analysis[2:]}"
                 work.mkdir()
                 results[label, analysis] = run(binary, prefix, analysis, work)
         check_related(results["ref", "--related"], results["impl", "--related"])
         check_ibdseg(results["ref", "--ibdseg"], results["impl", "--ibdseg"])
+        for analysis in ("--unrelated", "--cluster", "--build"):
+            check_clustering(
+                analysis,
+                results["ref", analysis],
+                results["impl", analysis],
+            )
 
     print("PASS --related: 574-line .kin exact; 15 shared .kin0 rows exact")
     print("KNOWN SCREEN RESIDUAL --related: 2 extra candidates (17 vs 15)")
     print("PASS --ibdseg: console and splitped exact")
+    print("PASS --unrelated: both selection files exact")
+    print("PASS --cluster: updateids exact; no segment-only cluster.kin")
+    print("PASS --build: build.log, updateids and updateparents exact")
+    print("KNOWN SCREEN RESIDUAL clustering summaries: 17 vs 15 (3 FS exact, 14 vs 12 2nd)")
     return 0
 
 
