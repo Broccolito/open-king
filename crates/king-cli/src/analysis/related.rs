@@ -805,26 +805,26 @@ fn between_family(
         .map(|c| est::kinship(c, Scope::BetweenFamily))
         .collect();
 
-    // The screening stage estimates on a marker subset; every other stage uses the whole
-    // map. Below `SCREEN_SNPS` markers the two coincide and the prefix is skipped.
+    // The screening stage estimates on KING's informativeness-ranked marker subset;
+    // every other stage uses the whole map.
     let screen_snps = genotypes.n_variants.min(SCREEN_SNPS);
-    let screen_kinships = match screening_planes(genotypes, screen_snps) {
-        None => kinships.clone(),
-        Some(prefix) => counts::all_pairs(&prefix, &pairs)
-            .iter()
-            .map(|c| est::kinship(c, Scope::BetweenFamily))
-            .collect(),
+    let screen_candidates = if screening {
+        screening_candidates(genotypes, &pairs, degree)
+    } else {
+        Vec::new()
     };
-    let detected = detected_pairs(
-        if screening {
-            &screen_kinships
+    let detected = if screening {
+        if samples.len() < SCREEN_MIN_SAMPLES {
+            0
         } else {
-            &kinships
-        },
-        samples.len(),
-        degree,
-        screening,
-    );
+            screen_candidates
+                .iter()
+                .filter(|&&candidate| candidate)
+                .count()
+        }
+    } else {
+        detected_pairs(&kinships, samples.len(), degree, false)
+    };
     if detected == 0 {
         write(
             out,
@@ -850,7 +850,7 @@ fn between_family(
         let report = if engine.is_some() {
             kinship >= kin_cut || ibd.prop_ibd > prop_cut
         } else if screening {
-            screen_kinships[pair_index] > screen_cutoff(degree)
+            screen_candidates[pair_index]
         } else {
             kinship >= kin_cut
         };
@@ -947,21 +947,23 @@ fn effective_degree(opts: &Options) -> i32 {
 ///   goes on to write a `.kin0` at degree 3 on the strength of a single 0.0254 pair that
 ///   the 0.04419 reporting threshold then rejects, leaving the file header-only.
 ///
-/// # Known gap
+/// # Resolved screen reconstruction
 ///
-/// The screening count is exact only while `m <= 32768`; above it the reference screens
-/// on something this does not model, and this counts on the map's first 32 768 markers.
-/// It reproduces `bigish` at degree 1 (18) but not at degree 2 (50 against the
-/// reference's 36) — the one stdout line in the corpus that `--related` still gets wrong.
+/// This was the final corpus gap: the old implementation screened on a map prefix and
+/// reported 50 degree-2 candidates on `bigish`, where KING reports 36. Disassembly of
+/// `ConvertLGtoSLG`, libStatGen `QuickIndex::Sort`, and the two degree-specific outlined
+/// screening loops resolved it. [`screening_candidates`] now owns that production path;
+/// this helper remains for the exhaustive degree-3+ flow and boundary tests.
 ///
 /// Full record: **`docs/research/22-screen.md`**, instruments
 /// `docs/research/fixtures/screendeflate.py` and `screenfold.py` (`facts` on each
 /// re-measures everything below; `screencanvas.py` and `screenweight.py` are the two
 /// earlier rigs they build on). The headline is that the reference's screen is **not the
 /// kinship over any subset of markers** — and not a merge of them into 32 768 slots
-/// either, nor any function whatever of the markers the budget keeps. The placeholder
-/// below cannot be repaired by choosing a better subset, and neither can anything else of
-/// that shape.
+/// either, nor any function whatever of the markers the budget keeps. Those conclusions
+/// were correct for the tested candidate rankings, but the missing detail was KING's
+/// genotype-class score and unstable tie order; the historical falsification record is
+/// retained because it prevents simpler, plausible wrong replacements.
 ///
 /// ## The law the screen obeys
 ///
@@ -1118,12 +1120,9 @@ fn effective_degree(opts: &Options) -> i32 {
 /// their information deserves. `--noscreen`, new in 2.3.2 and advertised for `--related`,
 /// prints the identical line and is a no-op on this path.
 ///
-/// Landing the affine law with a fitted `R` would reproduce `bigish` and nothing else, so
-/// it is deliberately not landed. The consequence is contained: the count reaches stdout
-/// and nothing else. `.kin0`'s row set comes from the exhaustive re-estimate below and is
-/// byte-correct at every degree, including on the two `bigish` cases whose stdout this
-/// line spoils — the 14 pairs the reference's screen drops all sit below the 0.08839
-/// reporting threshold, so no reported row depends on it.
+/// No fitted affine law was landed. The resolved implementation transcribes the ranked
+/// panel, progressive homozygote/IBS0 gates, robust comparison, and degree-1 tail-bit
+/// behavior directly; the corpus and the held-out sparse fallback now both match exactly.
 fn detected_pairs(kinships: &[f64], n_samples: usize, degree: i32, screening: bool) -> usize {
     if screening && n_samples < SCREEN_MIN_SAMPLES {
         return 0;
@@ -1141,50 +1140,233 @@ fn screen_cutoff(degree: i32) -> f64 {
     2f64.powf(-(f64::from(degree) + 2.0))
 }
 
-/// The bit planes the screening stage estimates on: the first `snps` markers.
-///
-/// `None` when the whole map is already that short, which is every corpus dataset but
-/// `bigish`. `snps` is always a multiple of 64 there, so the truncation lands on a word
-/// boundary and no tail masking is needed; the general case masks anyway rather than
-/// leave a `Genotypes` that breaks its own clean-tail contract.
-///
-/// The reference calls them "a subset of informative SNPs"; this takes the map's own
-/// prefix, and **that is a placeholder, not a finding**. Clone-canvas runs against the
-/// reference ([`detected_pairs`], `docs/research/fixtures/screencanvas.py`) accept a
-/// clone window lying entirely past marker 32 768 — where this prefix estimate reads
-/// 0.0020 — at the same true kinship as one at the head of the map, so the reference's
-/// subset is not a prefix, a stride or a word decimation, and its screening statistic
-/// moves with the *other samples'* genotypes, which no fixed marker choice can do. It is
-/// not a subset at all: `screenfold.py separation` holds a candidate kept set's genotypes
-/// bit-identical, leaving every pair's kinship over it unchanged to the last bit, and the
-/// reference's count still falls from 46 to 37 as the *discarded* markers gain MAF. The
-/// prefix is kept only because it is the cheapest subset that reproduces the printed
-/// count at degree 1 on every map tried; swapping it for the whole map would trade the
-/// degree-1 case (18, correct today) for no gain at degree 2 (47 against 36).
-fn screening_planes(g: &Genotypes, snps: usize) -> Option<Genotypes> {
-    if snps >= g.n_variants {
-        return None;
+pub(crate) fn screening_candidates(
+    genotypes: &Genotypes,
+    pairs: &[(usize, usize)],
+    degree: i32,
+) -> Vec<bool> {
+    if genotypes.n_samples < SCREEN_MIN_SAMPLES {
+        return vec![false; pairs.len()];
     }
+    let screen = informative_screen(genotypes, genotypes.n_variants.min(SCREEN_SNPS));
+    pairs
+        .iter()
+        .map(|&(i, j)| screening_candidate(&screen, i, j, degree))
+        .collect()
+}
+
+/// KING's compact, informativeness-ranked screening panel.
+///
+/// `KingEngine::ConvertLGtoSLG` counts the three called genotype classes at every
+/// marker and assigns this score, where `N` is the sample count:
+///
+/// ```text
+/// max(0.096 N, min(H, 4 AA aa / H, 2 p(1-p) N_called))
+/// ```
+///
+/// `H` is the observed heterozygote count and `p = (AA + H/2) / N_called`.
+/// Monomorphic markers receive `-4`. The reference then applies libStatGen's unstable
+/// `QuickIndex` and copies the highest-scoring `snps` markers in descending score order.
+/// The `H` term is load-bearing: omitting that cap gives 34 candidates on `bigish`, while
+/// the reference and this implementation both give 36.
+fn informative_screen(g: &Genotypes, snps: usize) -> Genotypes {
+    let floor = 0.096 * g.n_samples as f64;
+    let mut scores = Vec::with_capacity(g.n_variants);
+    for marker in 0..g.n_variants {
+        let word = marker / 64;
+        let mask = 1u64 << (marker % 64);
+        let (mut hom_a1, mut het, mut hom_a2) = (0u32, 0u32, 0u32);
+        for sample in 0..g.n_samples {
+            match (
+                g.plane0[sample][word] & mask != 0,
+                g.plane1[sample][word] & mask != 0,
+            ) {
+                (true, true) => hom_a1 += 1,
+                (false, true) => het += 1,
+                (true, false) => hom_a2 += 1,
+                (false, false) => {}
+            }
+        }
+        let score = if (hom_a1 == 0 || hom_a2 == 0) && het == 0 {
+            -4.0
+        } else if f64::from(het) <= floor {
+            floor
+        } else {
+            let called = hom_a1 + het + hom_a2;
+            let p = (f64::from(hom_a1) + 0.5 * f64::from(het)) / f64::from(called);
+            let hwe = 2.0 * p * (f64::from(hom_a2) + 0.5 * f64::from(het));
+            let balance = 4.0 * f64::from(hom_a1) * f64::from(hom_a2) / f64::from(het);
+            floor.max(f64::from(het).min(hwe).min(balance))
+        };
+        scores.push(score);
+    }
+
+    let mut order: Vec<usize> = (0..g.n_variants).collect();
+    unstable_screen_sort(&mut order, &scores);
+    order.reverse();
+    order.truncate(snps);
+
     let words = snps.div_ceil(64);
-    let tail = snps % 64;
-    let cut = |plane: &[Vec<u64>]| -> Vec<Vec<u64>> {
-        plane
-            .iter()
-            .map(|s| {
-                let mut w = s[..words].to_vec();
-                if tail != 0 {
-                    w[words - 1] &= (1u64 << tail) - 1;
-                }
-                w
-            })
-            .collect()
-    };
-    Some(Genotypes {
-        plane0: cut(&g.plane0),
-        plane1: cut(&g.plane1),
+    let mut plane0 = vec![vec![0u64; words]; g.n_samples];
+    let mut plane1 = vec![vec![0u64; words]; g.n_samples];
+    for (out_marker, &in_marker) in order.iter().enumerate() {
+        let in_word = in_marker / 64;
+        let in_mask = 1u64 << (in_marker % 64);
+        let out_word = out_marker / 64;
+        let out_mask = 1u64 << (out_marker % 64);
+        for sample in 0..g.n_samples {
+            if g.plane0[sample][in_word] & in_mask != 0 {
+                plane0[sample][out_word] |= out_mask;
+            }
+            if g.plane1[sample][in_word] & in_mask != 0 {
+                plane1[sample][out_word] |= out_mask;
+            }
+        }
+    }
+    Genotypes {
+        plane0,
+        plane1,
         n_samples: g.n_samples,
         n_variants: snps,
-    })
+    }
+}
+
+/// libStatGen's `QuickIndex::Sort`, including its equal-score instability.
+fn unstable_screen_sort(order: &mut [usize], scores: &[f64]) {
+    if order.len() <= 1 {
+        return;
+    }
+    let before = |a: usize, b: usize| scores[a] < scores[b];
+    let mut stack = Vec::new();
+    let (mut left, mut right) = (0usize, order.len() - 1);
+    loop {
+        while right > left {
+            let (pivot, mut scan_left, mut scan_right);
+            if right - left > 7 {
+                let middle = (right + left) / 2;
+                if before(order[middle], order[left]) {
+                    order.swap(middle, left);
+                }
+                if before(order[right], order[left]) {
+                    order.swap(right, left);
+                }
+                if before(order[right], order[middle]) {
+                    order.swap(right, middle);
+                }
+                pivot = right - 1;
+                order.swap(middle, pivot);
+                scan_left = left + 1;
+                scan_right = right - 2;
+            } else {
+                pivot = right;
+                scan_left = left;
+                scan_right = right - 1;
+            }
+            loop {
+                while scan_left < right && before(order[scan_left], order[pivot]) {
+                    scan_left += 1;
+                }
+                while scan_right > left && before(order[pivot], order[scan_right]) {
+                    scan_right -= 1;
+                }
+                if scan_left >= scan_right {
+                    break;
+                }
+                order.swap(scan_left, scan_right);
+                if scan_left < right {
+                    scan_left += 1;
+                }
+                if scan_right > left {
+                    scan_right -= 1;
+                }
+            }
+            order.swap(pivot, scan_left);
+            let (left_size, right_size) = (scan_left - left, right - scan_left);
+            if left_size > right_size {
+                stack.push((left, scan_left - 1));
+                if right_size != 0 {
+                    left = scan_left + 1;
+                } else {
+                    break;
+                }
+            } else {
+                stack.push((scan_left + 1, right));
+                if left_size != 0 {
+                    right = scan_left - 1;
+                } else {
+                    break;
+                }
+            }
+        }
+        if let Some((next_left, next_right)) = stack.pop() {
+            left = next_left;
+            right = next_right;
+        } else {
+            break;
+        }
+    }
+}
+
+/// The degree-1/2 candidate predicate over the ranked panel.
+///
+/// Degree 2 progressively rejects pairs by homozygote/IBS0 ratios after 1/16, 1/8,
+/// 1/4, and all of the panel. Degree 1 uses 1,024-marker steps through 4,096 markers,
+/// then a final robust comparison whose IBS1 reconstruction counts the unused bits in
+/// the last word as missing. The literal factors and tail adjustment come from the two
+/// `ScreenCloseRelativesInSubset64Bit` outlined loops.
+fn screening_candidate(g: &Genotypes, i: usize, j: usize, degree: i32) -> bool {
+    let words = g.words_per_sample();
+    let gates: &[(usize, f64)] = if degree == 1 {
+        &[(16, 0.5), (32, 0.4), (48, 0.375), (usize::MAX, 0.35)]
+    } else {
+        &[
+            (words >> 4, 0.5),
+            (words >> 3, 0.475),
+            (words >> 2, 0.45),
+            (words, 0.375),
+        ]
+    };
+    for &(requested_end, factor) in gates {
+        let end = requested_end.min(words);
+        if end == 0 {
+            continue;
+        }
+        let (hom_hom, ibs0) = screen_hom_ibs0(g, i, j, end);
+        if factor * f64::from(hom_hom) <= f64::from(ibs0) {
+            return false;
+        }
+    }
+    let pair_counts = counts::pair_counts(g, i, j);
+    let kinship = if degree == 1 {
+        degree_one_screen_kinship(&pair_counts, words * 64 - g.n_variants)
+    } else {
+        est::kinship(&pair_counts, Scope::BetweenFamily)
+    };
+    kinship > screen_cutoff(degree)
+}
+
+fn degree_one_screen_kinship(pair_counts: &PairCounts, padding: usize) -> f64 {
+    let mut kinship = est::kinship(pair_counts, Scope::BetweenFamily);
+    if pair_counts.het_i != 0 && pair_counts.het_j != 0 {
+        // The degree-1 outline treats the zeroed tail of its final 64-bit word as
+        // missing calls while reconstructing IBS1. Each unused marker contributes four
+        // to that numerator, reducing robust kinship by `padding / min(N_Het1,N_Het2)`.
+        // This is observable on the 12,500-marker held-out panel (44 tail bits) and
+        // disappears on the 32,768-marker corpus panel, exactly as in KING 2.3.2.
+        kinship -= padding as f64 / f64::from(pair_counts.het_i.min(pair_counts.het_j));
+    }
+    kinship
+}
+
+fn screen_hom_ibs0(g: &Genotypes, i: usize, j: usize, end_words: usize) -> (u32, u32) {
+    let mut hom_hom = 0;
+    let mut ibs0 = 0;
+    for word in 0..end_words {
+        let both_hom = g.plane0[i][word] & g.plane0[j][word];
+        hom_hom += both_hom.count_ones();
+        ibs0 += (both_hom & (g.plane1[i][word] ^ g.plane1[j][word])).count_ones();
+    }
+    (hom_hom, ibs0)
 }
 
 /// Sample indices the between-family stage drops, the same screen `--kinship` applies.
@@ -1581,6 +1763,23 @@ mod tests {
     fn the_screening_cutoffs_are_the_printed_ones() {
         assert_eq!(f(screen_cutoff(1), 4), "0.1250");
         assert_eq!(f(screen_cutoff(2), 4), "0.0625");
+    }
+
+    #[test]
+    fn degree_one_screen_counts_the_unused_tail_as_missing() {
+        // Held-out thin4 pair B01_C2/B02_F. Whole-panel robust kinship is barely above
+        // 0.125, but KING's 44 unused tail bits lower its screen value below the cut.
+        let counts = PairCounts {
+            het_i: 4356,
+            het_j: 4317,
+            het_het: 1925,
+            ibs0: 413,
+            ..PairCounts::default()
+        };
+        let raw = est::kinship(&counts, Scope::BetweenFamily);
+        assert!(raw > screen_cutoff(1));
+        assert!(degree_one_screen_kinship(&counts, 44) < screen_cutoff(1));
+        assert_eq!(degree_one_screen_kinship(&counts, 0), raw);
     }
 
     #[test]

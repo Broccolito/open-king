@@ -102,7 +102,7 @@ PASS core/bigish__ibs
 PASS core/bigish__kinship
 PASS core/bigish__related
 PASS core/bigish__related_degree1
-FAIL core/bigish__related_degree2 | stdout!=
+PASS core/bigish__related_degree2
 PASS core/bigish__related_degree3
 PASS core/bigish__related_degree4
 PASS core/dups__duplicate
@@ -202,7 +202,7 @@ PASS ibdseg/bigish__ibdseg
 PASS ibdseg/bigish__ibdseg_degree2
 PASS ibdseg/bigish__ibdseg_seglength10
 PASS ibdseg/bigish__ibdseg_seglength5
-FAIL ibdseg/bigish__related_degree2_ibdseg | stdout!=
+PASS ibdseg/bigish__related_degree2_ibdseg
 PASS ibdseg/dups__ibdseg
 PASS ibdseg/dups__ibdseg_degree2
 PASS ibdseg/dups__ibdseg_seglength10

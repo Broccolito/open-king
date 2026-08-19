@@ -1021,37 +1021,44 @@ fn screening_summary(opts: &Options, loaded: &Loaded) -> String {
     let types = InfTypes::new(opts, loaded);
     // The no-segment summary is fed by the same screening stage as `--related`: it
     // considers candidates strictly above `2^-(degree+2)`, then labels them by their
-    // full-map kinship band. The screen statistic itself has the known residual tracked
-    // in issue #2; sharing this candidate rule keeps that residual local instead of
-    // inventing a second fallback-only cutoff.
+    // full-map kinship band. Sharing the exact ranked-panel implementation keeps the
+    // fallback summary identical to `--related`, including its degree-1 tail-bit rule.
     let fallback_cut = 2f64.powf(-(f64::from(opts.int(Opt::Degree).max(1)) + 2.0));
 
+    let pairs: Vec<(usize, usize)> = (0..n)
+        .flat_map(|i| (i + 1..n).map(move |j| (i, j)))
+        .filter(|&(i, j)| samples[i].fid != samples[j].fid)
+        .collect();
+    let degree = opts.int(Opt::Degree).max(1);
+    let screened = (types.engine.is_none() && degree <= 2)
+        .then(|| super::related::screening_candidates(&loaded.fileset.genotypes, &pairs, degree));
+
     let mut cells = [0u64; 6];
-    for i in 0..n {
-        for j in i + 1..n {
-            if samples[i].fid == samples[j].fid {
-                continue;
-            }
-            let label = if types.engine.is_some() {
-                types.merging(loaded, i, j)
-            } else {
+    for (pair_index, &(i, j)) in pairs.iter().enumerate() {
+        let label = if types.engine.is_some() {
+            types.merging(loaded, i, j)
+        } else if let Some(candidates) = screened.as_ref() {
+            candidates[pair_index].then(|| {
                 let c = counts::pair_counts(&loaded.fileset.genotypes, i, j);
                 let phi = kinship::kinship(&c, Scope::BetweenFamily);
-                (c.n_snp > 0 && phi > fallback_cut)
-                    .then(|| fallback_label(phi, kinship::ibs0_prop(&c)))
-            };
-            let Some(label) = label else { continue };
-            let cell = match label {
-                "Dup/MZ" => 0,
-                "PO" => 1,
-                "FS" => 2,
-                "2nd" => 3,
-                "3rd" => 4,
-                // `4th` and `UN` are the table's `OTHER`: neither printed nor totalled.
-                _ => continue,
-            };
-            cells[cell] += 1;
-        }
+                fallback_label(phi, kinship::ibs0_prop(&c))
+            })
+        } else {
+            let c = counts::pair_counts(&loaded.fileset.genotypes, i, j);
+            let phi = kinship::kinship(&c, Scope::BetweenFamily);
+            (c.n_snp > 0 && phi > fallback_cut).then(|| fallback_label(phi, kinship::ibs0_prop(&c)))
+        };
+        let Some(label) = label else { continue };
+        let cell = match label {
+            "Dup/MZ" => 0,
+            "PO" => 1,
+            "FS" => 2,
+            "2nd" => 3,
+            "3rd" => 4,
+            // `4th` and `UN` are the table's `OTHER`: neither printed nor totalled.
+            _ => continue,
+        };
+        cells[cell] += 1;
     }
     let total: u64 = cells.iter().sum();
     let [mz, po, fs, second, third, fourth] = cells;

@@ -1,4 +1,15 @@
-# 22 — the `--related` screening count
+# 22 — the `--related` screening count (resolved)
+
+> **Resolution, 2026-08-18.** The black-box campaign below accurately falsified many
+> plausible screens but drew the wrong final conclusion because it did not have KING's
+> marker score or its unstable tie order. A later arm64 disassembly established the
+> complete mechanism: `ConvertLGtoSLG` ranks markers by genotype-class informativeness
+> with libStatGen `QuickIndex::Sort`; degree-specific outlined loops apply progressive
+> homozygote/IBS0 gates and robust-kinship comparisons. Degree 1 additionally counts the
+> unused bits in its last packed word while reconstructing IBS1. The implementation now
+> matches all **480/480** captures and the held-out 12,500-marker sparse fixture exactly.
+> Sections 0–21 are retained as a historical falsification record; §22 supersedes their
+> open-mechanism conclusions.
 
 The one stdout line the corpus still gets wrong, on two cases (`core/bigish__related_degree2`
 and `ibdseg/bigish__related_degree2_ibdseg`):
@@ -611,7 +622,41 @@ against 36). Nothing about that changed this round, and nothing should until a r
 re-estimate that follows the screen and are byte-correct at every degree, and the 14 pairs
 the reference's screen drops all sit below the 0.08839 reporting threshold.
 
-Harness: **477 / 480 byte-identical, self-check 480 / 480** — unchanged.
+Harness at the end of that historical round: **477 / 480 byte-identical, self-check
+480 / 480**. See §22 for the resolved result.
+
+## 22. Resolution from the executable
+
+The missing pieces were recovered from KING 2.3.2's arm64 symbols
+`KingEngine::ConvertLGtoSLG`, `QuickIndex::Sort`, and
+`Engine::ScreenCloseRelativesInSubset64Bit`:
+
+1. For every marker, let `A`, `H`, and `C` be the counts of A1 homozygotes,
+   heterozygotes, and A2 homozygotes; `p = (A + H/2) / (A+H+C)`. Monomorphic markers
+   score `-4`; otherwise the score is
+   `max(0.096N, min(H, 4AC/H, 2p(1-p)N_called))`.
+2. libStatGen's unstable quicksort orders markers by that score. The screen packs the
+   highest-scoring `min(m,32768)` markers in descending order. Reproducing its equal-key
+   instability is necessary; a stable sort changes the selected boundary.
+3. Degree 2 applies homozygote/IBS0 gates after 1/16, 1/8, 1/4, and all of the packed
+   panel, with factors `0.5`, `0.475`, `0.45`, and `0.375`, then requires robust
+   between-family kinship above `0.0625`.
+4. Degree 1 applies corresponding gates after 1,024, 2,048, 3,072, and 4,096 markers,
+   with factors `0.5`, `0.4`, `0.375`, and `0.35`, then requires robust kinship above
+   `0.125`. Its final IBS1 reconstruction treats the unused bits in the last 64-bit word
+   as missing, lowering the comparison by
+   `padding / min(N_Het1,N_Het2)`. On the held-out 12,500-marker panel, 44 unused bits
+   remove exactly the two candidates KING removes (17 to 15); on the 32,768-marker
+   corpus panel the adjustment is zero.
+
+Differential evidence after landing the transcription:
+
+```text
+parity: 480 PASS, 0 FAIL, 480 total
+held-out sparse fallback: console, .kin, .kin0, unrelated, cluster, and build exact
+```
+
+This is a mechanism-derived implementation, not the rejected fitted affine law.
 
 ---
 ---
