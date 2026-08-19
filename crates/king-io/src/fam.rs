@@ -26,14 +26,60 @@ pub const N_FIELDS: usize = 6;
 
 /// Parse a `SEX` field.
 ///
-/// PLINK writes `1` for male and `2` for female. Everything else — `0`, `-9`, `M`, `F`,
-/// an empty field — is "unknown" and becomes `0`, matching PLINK's own leniency here.
+/// PLINK normally writes `1` for male and `2` for female, but KING's reader is much more
+/// permissive. A leading `F`/`f` or `2` is female; a leading `M`/`m` is male; otherwise a
+/// C-style numeric prefix is male unless it is zero or `-9`. Everything else is unknown.
+///
+/// This odd rule is measured over 43 spellings in `docs/PARITY.md` §5.11. It means, for
+/// example, that `2x` is female, `+2` and `02` are male, and `M`/`F` are accepted.
 pub fn parse_sex(field: &str) -> u8 {
-    match field {
-        "1" => 1,
-        "2" => 2,
+    match field.as_bytes().first().map(u8::to_ascii_lowercase) {
+        Some(b'f' | b'2') => return 2,
+        Some(b'm') => return 1,
+        _ => {}
+    }
+    match numeric_prefix(field) {
+        Some(value) if value != 0.0 && value != -9.0 => 1,
         _ => 0,
     }
+}
+
+/// The longest ordinary decimal prefix, with C `atof`'s incomplete-exponent behavior.
+fn numeric_prefix(field: &str) -> Option<f64> {
+    let bytes = field.as_bytes();
+    let mut end = usize::from(matches!(bytes.first(), Some(b'+' | b'-')));
+    let mut digits = 0usize;
+    while bytes.get(end).is_some_and(u8::is_ascii_digit) {
+        end += 1;
+        digits += 1;
+    }
+    if bytes.get(end) == Some(&b'.') {
+        end += 1;
+        while bytes.get(end).is_some_and(u8::is_ascii_digit) {
+            end += 1;
+            digits += 1;
+        }
+    }
+    if digits == 0 {
+        return None;
+    }
+    if matches!(bytes.get(end), Some(b'e' | b'E')) {
+        let exponent = end;
+        let mut cursor = end + 1;
+        if matches!(bytes.get(cursor), Some(b'+' | b'-')) {
+            cursor += 1;
+        }
+        let start = cursor;
+        while bytes.get(cursor).is_some_and(u8::is_ascii_digit) {
+            cursor += 1;
+        }
+        if cursor > start {
+            end = cursor;
+        } else {
+            end = exponent;
+        }
+    }
+    field[..end].parse().ok()
 }
 
 /// Read and parse a `.fam` file.
@@ -210,12 +256,23 @@ fam2\ts3\t0\t0\t0\t2
     }
 
     #[test]
-    fn unrecognised_sex_becomes_zero() {
-        for field in ["0", "-9", "M", "F", "3", "", "01", " 1"] {
-            assert_eq!(parse_sex(field), 0, "sex field {field:?}");
+    fn permissive_sex_parser_matches_all_measured_reference_classes() {
+        for field in [
+            "0", "00", "0.0", "-0", "-9", "-9.0", "x", "?", "NA", "na", "b2", "", " 1",
+        ] {
+            assert_eq!(parse_sex(field), 0, "unknown sex field {field:?}");
         }
-        assert_eq!(parse_sex("1"), 1);
-        assert_eq!(parse_sex("2"), 2);
+        for field in [
+            "1", "-1", "-2", "3", "9", "10", "12", "02", "002", "0002", "007", "+2", "1.9", "1e0",
+            "M", "m", "male", "MALE",
+        ] {
+            assert_eq!(parse_sex(field), 1, "male sex field {field:?}");
+        }
+        for field in [
+            "2", "20", "21", "22", "2.5", "2.9", "2x", "20x", "2e0", "F", "f", "female", "FEMALE",
+        ] {
+            assert_eq!(parse_sex(field), 2, "female sex field {field:?}");
+        }
     }
 
     #[test]
