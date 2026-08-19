@@ -468,6 +468,34 @@ impl Segments {
             s.prop_ibd(self.denom),
         )
     }
+
+    /// The pair's reported IBD intervals, with usable segments laid end to end.
+    ///
+    /// Chromosome coordinates restart in a PLINK map, while pedigree reconstruction's
+    /// `Join3/Join2` intersects calls across the whole autosomal genome.  Giving every
+    /// usable segment a disjoint synthetic coordinate range preserves every call length
+    /// and makes those intersections well-defined without allowing two chromosomes to
+    /// overlap accidentally.
+    pub fn reported_intervals(&self, loaded: &Loaded, i: usize, j: usize) -> Vec<(i64, i64)> {
+        let mut out = Vec::new();
+        let mut cursor = 0i64;
+        for &seg in &self.segs {
+            if seg.words() == 0 {
+                continue;
+            }
+            let scan = ibdseg::Scan::new(&loaded.fileset.genotypes, i, j, seg);
+            let ibd2 = scan.ibd2(&self.pos, self.seglen, true);
+            let ibd1 = scan.ibd1(&self.pos, self.seglen, true);
+            let shift = cursor - self.pos[seg.lo];
+            out.extend(
+                super::build::reported_intervals(&self.pos, &ibd1, &ibd2, self.seglen)
+                    .into_iter()
+                    .map(|(lo, hi)| (lo + shift, hi + shift)),
+            );
+            cursor += self.pos[seg.hi] - self.pos[seg.lo] + 1;
+        }
+        out
+    }
 }
 
 /// Samples per block in the `<prefix>.seg` row order — see [`seg_pair_order`].

@@ -6,7 +6,7 @@ PASS apps/admixed__cluster
 PASS apps/admixed__unrelated
 PASS apps/admixed__unrelated_degree2
 PASS apps/bigish__autoQC
-FAIL apps/bigish__build | stdout!=; kingbuild.log!=(num)
+PASS apps/bigish__build
 PASS apps/bigish__bySNP
 PASS apps/bigish__bysample
 PASS apps/bigish__cluster

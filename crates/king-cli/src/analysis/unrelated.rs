@@ -442,7 +442,28 @@ impl InfTypes {
     /// builder keeps the plain 1st-degree band edge it was pinned on
     /// (`docs/research/fixtures/clusternum.py dump threequarter`).
     pub fn first_degree(&self, loaded: &Loaded, i: usize, j: usize) -> Option<&'static str> {
-        self.labelled(loaded, i, j, |kin, _| kin > band::FIRST)
+        if loaded.fileset.samples[i].fid == loaded.fileset.samples[j].fid {
+            // The pedigree supplies ordinary within-family PO/FS edges. Genotypes enter
+            // this reconstruction pass only to remove an inferred duplicate first.
+            self.genotype_label(loaded, i, j, Scope::WithinFamily, |kin, _| {
+                kin > band::FIRST
+            })
+            .filter(|label| *label == "Dup/MZ")
+        } else {
+            self.genotype_label(loaded, i, j, Scope::BetweenFamily, |kin, _| {
+                kin > band::FIRST
+            })
+        }
+    }
+
+    /// The inferred relationship label without a degree/reporting gate.
+    ///
+    /// Reconstruction uses this for candidate avuncular and half-sib checks after the
+    /// families have already been clustered.  The pair must still come from distinct
+    /// original FIDs: within-family relationships are pedigree declarations, not
+    /// between-family inferences.
+    pub fn inferred(&self, loaded: &Loaded, i: usize, j: usize) -> Option<&'static str> {
+        self.labelled(loaded, i, j, |_, _| true)
     }
 
     fn labelled(
@@ -456,12 +477,23 @@ impl InfTypes {
         if samples[i].fid == samples[j].fid {
             return None;
         }
+        self.genotype_label(loaded, i, j, Scope::BetweenFamily, keep)
+    }
+
+    fn genotype_label(
+        &self,
+        loaded: &Loaded,
+        i: usize,
+        j: usize,
+        scope: Scope,
+        keep: impl Fn(f64, f64) -> bool,
+    ) -> Option<&'static str> {
         let genotypes = &loaded.fileset.genotypes;
         let counts = counts::pair_counts(genotypes, i, j);
         if counts.n_snp == 0 {
             return None;
         }
-        let kin = kinship::kinship(&counts, Scope::BetweenFamily);
+        let kin = kinship::kinship(&counts, scope);
         if let Some(engine) = self.engine.as_ref() {
             let ibd = engine.pair(genotypes, i, j);
             keep(kin, ibd.prop_ibd).then(|| ibd.inf_type(kinship::het_concordance(&counts)))
@@ -533,7 +565,7 @@ fn merge_rank(inf_type: &str) -> u8 {
 ///   `QBB,QBC,QBA` and not the file order `QBA,QBB,QBC`;
 /// * when the queue joins two clusters that already exist, the earlier-created one
 ///   absorbs the later, taking its families onto the end of its list.
-fn clusters(opts: &Options, loaded: &Loaded) -> Vec<Cluster> {
+fn clusters(opts: &Options, loaded: &Loaded) -> (Vec<Cluster>, Vec<(usize, usize)>) {
     let samples = &loaded.fileset.samples;
     let n = samples.len();
     let mut fids: Vec<String> = Vec::new();
@@ -544,19 +576,25 @@ fn clusters(opts: &Options, loaded: &Loaded) -> Vec<Cluster> {
     }
 
     // The joining pairs, in scan order, each tagged with the type that queues it.
-    let mut queue: Vec<(u8, usize, usize)> = Vec::new();
+    let mut queue: Vec<(u8, usize, usize, usize, usize)> = Vec::new();
     if n >= CLUSTERING_MIN_SAMPLES {
         let of = |fid: &str| fids.iter().position(|f| f == fid).unwrap_or(0);
         let types = InfTypes::new(opts, loaded);
         for i in 0..n {
             for j in i + 1..n {
                 if let Some(t) = types.merging(loaded, i, j) {
-                    queue.push((merge_rank(t), of(&samples[i].fid), of(&samples[j].fid)));
+                    queue.push((
+                        merge_rank(t),
+                        of(&samples[i].fid),
+                        of(&samples[j].fid),
+                        i,
+                        j,
+                    ));
                 }
             }
         }
         // Stable, so the `i < j` scan order survives inside one relationship type.
-        queue.sort_by_key(|&(rank, _, _)| rank);
+        queue.sort_by_key(|&(rank, _, _, _, _)| rank);
     }
 
     // Staged union-find over family indices: `owner[f]` is the cluster holding family `f`,
@@ -564,22 +602,27 @@ fn clusters(opts: &Options, loaded: &Loaded) -> Vec<Cluster> {
     // order.
     let mut owner: Vec<Option<usize>> = vec![None; fids.len()];
     let mut built: Vec<Option<Vec<usize>>> = Vec::new();
-    for (_, a, b) in queue {
+    let mut joining_pairs = Vec::new();
+    for (_, a, b, i, j) in queue {
         match (owner[a], owner[b]) {
             (None, None) => {
+                joining_pairs.push((i, j));
                 owner[a] = Some(built.len());
                 owner[b] = Some(built.len());
                 built.push(Some(vec![a, b]));
             }
             (Some(c), None) => {
+                joining_pairs.push((i, j));
                 owner[b] = Some(c);
                 built[c].as_mut().expect("live cluster").push(b);
             }
             (None, Some(c)) => {
+                joining_pairs.push((i, j));
                 owner[a] = Some(c);
                 built[c].as_mut().expect("live cluster").push(a);
             }
             (Some(c1), Some(c2)) if c1 != c2 => {
+                joining_pairs.push((i, j));
                 let (keep, drop) = (c1.min(c2), c1.max(c2));
                 let moved = built[drop].take().expect("live cluster");
                 for &f in &moved {
@@ -631,7 +674,7 @@ fn clusters(opts: &Options, loaded: &Loaded) -> Vec<Cluster> {
         })
         .collect();
     out.sort_by(|a, b| king_id_cmp(a.key.as_bytes(), b.key.as_bytes()));
-    out
+    (out, joining_pairs)
 }
 
 // ---------------------------------------------------------------------------
@@ -717,7 +760,7 @@ pub fn clustering_prologue(opts: &Options, loaded: &Loaded, out: &mut dyn Write)
     }
 
     let graph = Graph::build(loaded, !tiny);
-    let groups = clusters(opts, loaded);
+    let (groups, joining_pairs) = clusters(opts, loaded);
     let mut any_merged = false;
 
     if !tiny {
@@ -736,6 +779,7 @@ pub fn clustering_prologue(opts: &Options, loaded: &Loaded, out: &mut dyn Write)
         graph,
         groups,
         with_segments,
+        joining_pairs,
     }
 }
 
@@ -774,9 +818,16 @@ pub struct Clustering {
     pub with_segments: bool,
     graph: Graph,
     groups: Vec<Cluster>,
+    joining_pairs: Vec<(usize, usize)>,
 }
 
 impl Clustering {
+    /// Whether this cross-family pair was the edge that actually joined two components.
+    pub fn is_joining_pair(&self, i: usize, j: usize) -> bool {
+        self.joining_pairs
+            .iter()
+            .any(|&(a, b)| (a == i && b == j) || (a == j && b == i))
+    }
     /// The clusters that absorbed more than one family, in the order the console table
     /// lists them: `(KING<k>, its members in ID order)`.
     ///
@@ -1191,6 +1242,7 @@ mod tests {
                 n: 3,
                 edge: vec![false; 9],
             },
+            joining_pairs: vec![(0, 1)],
             groups: vec![
                 Cluster {
                     key: "KING1".to_string(),
@@ -1230,6 +1282,7 @@ mod tests {
                 n: 3,
                 edge: vec![false; 9],
             },
+            joining_pairs: Vec::new(),
             groups: (0..3)
                 .map(|k| Cluster {
                     key: format!("KING{}", k + 1),

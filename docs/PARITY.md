@@ -33,15 +33,14 @@ quoted**, so any claim here can be re-run rather than taken on trust.
 > No cross-build or cross-platform differential has been run. That is a gap in the
 > evidence, stated as one, not a claim that none exists.
 
-> **Headline: 477 of the 480 captured reference invocations are byte-identical (99.4 %).**
+> **Headline: 478 of the 480 captured reference invocations are byte-identical (99.6 %).**
 > The harness self-check — the reference replayed against its own captures — is **480/480**.
 >
-> **Every one of the 3 that are not** is one of two named causes, and neither is new:
+> **Both cases that are not** have one named cause:
 >
 > | cases | cause | where |
 > | ---: | --- | --- |
 > | 2 | `--related`'s two-stage screening count on stdout — one line, one integer; every output file in both cases is byte-identical | §5.7 |
-> | 1 | `--build`'s `<prefix>build.log` — its `RULE` half lands, its `INFERENCE` half does not | §6.2 |
 >
 > **The segment engine is no longer one of them.** `<prefix>.seg` is byte-identical in
 > **all 50** captures that write it, at every captured reporting floor.
@@ -137,7 +136,7 @@ quoted**, so any claim here can be re-run rather than taken on trust.
 cd /path/to/open-king
 cargo build --release
 
-# pass/fail for all 480 cases  -> "477 PASS, 3 FAIL, 480 total"
+# pass/fail for all 480 cases  -> "478 PASS, 2 FAIL, 480 total"
 python3 tests/parity/run_parity.py --impl ./target/release/king
 
 # the same, as a regression gate: compare per case AND per output file against the
@@ -194,7 +193,7 @@ Measured on the tree this document describes:
 
 | command | result |
 | --- | --- |
-| `run_parity.py --impl target/release/king` | **477 PASS, 3 FAIL, 480 total**, 876 output files byte-compared, 8 diff-excluded |
+| `run_parity.py --impl target/release/king` | **478 PASS, 2 FAIL, 480 total**, 876 output files byte-compared, 8 diff-excluded |
 | `run_parity.py --impl target/release/king --baseline` | `baseline: MATCH (480 case(s))` |
 | `run_parity.py --impl <reference>` | **480 PASS, 0 FAIL**, 876 files byte-compared — the normalization is complete and the goldens are self-consistent |
 | `probes/degree_filter.py --ref <reference>` | 38 298 cases, **0 false-keep, 0 false-drop** |
@@ -213,7 +212,7 @@ Measured on the tree this document describes:
 | `docs/research/fixtures/oosseg.py --ref <reference>` | **out of sample**, 24 fresh filesets × 3 floors on 8 unused seeds: **68 / 72** runs byte-identical, **4 of 6 713 rows** value-differing — 0 extra, 0 missing; all four are the deliberate exact-64 safety divergence (§4.6) |
 | `tests/parity/probes/segment_residuals.py --ref <reference> --impl target/release/king` | merged IBD1 and IBD2 calls both feed the >10 Mb pair filter; 39 999/40 001-marker controls exact; exactly four expected value divergences at 40 000 markers (§4.6) |
 | `tests/parity/fit/seg18.py` | `18-…`'s own numbers, unchanged: committed `exact 747  ibd1 982  ibd2 896  MAE 0.000067`; retired overlap rule `709 / 826 / 896` |
-| `docs/research/fixtures/buildlog.py rules` | **out of sample**, the `--build` log's rule half over 59 held-out pedigree shapes: **53 match, 6 differ** — 2 out-of-scope `<FID>-><IID>` renamings, 3 sibship member order, 1 the unimplemented `PO.S` branch (§6.2) |
+| full cached `--build` research replay | **277 / 347** logs byte-identical; another **52** have the same distinct lines and differ only in repetition/count residue; of 18 semantic-or-stale residuals, 2 are truncated debugger artifacts and 2 are deliberately excluded `<FID>-><IID>` renaming shapes (§6.2) |
 | `docs/research/fixtures/build_shapes.py` | **out of sample**, `updateparents.txt` + the console tail over 20 held-out merge shapes: **18 OK, 0 MISMATCH, 2 skipped** (the renaming shapes) |
 | `docs/research/fixtures/clusternum.py score` | **out of sample**, the merge queue over 19 discriminating shapes: queue **19/19** and our binary **19/19**, against family order 7, size 7, largest-kinship 11 (§6.2) |
 | `docs/research/fixtures/avscore.py 1 work/*` | **out of sample**, `Join3/Join2` over **297** captured `AV.FS` lines from ~120 filesets: **296 exact** at `%.3lf` on the *reported*-segment reading, against **13** on the raw-call reading it replaces; the miss is the reference's own `2.555` (§6.2) |
@@ -257,13 +256,13 @@ plus stdout, stderr and exit status.
 | `--autoQC` | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **13/13** |
 | `--unrelated` | **2/2** | **2/2** | **2/2** | **2/2** | **2/2** | **2/2** | **2/2** | **2/2** | **2/2** | **2/2** | **2/2** | **2/2** | **2/2** | **26/26** |
 | `--cluster` | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **13/13** |
-| `--build` | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | 0/1 | 12/13 |
+| `--build` | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **13/13** |
 | `--related` | **5/5** | **5/5** | **5/5** | **5/5** | **5/5** | **5/5** | **5/5** | **5/5** | **5/5** | **5/5** | **5/5** | **5/5** | 4/5 | 64/65 |
 | `--ibdseg` | **4/4** | **4/4** | **4/4** | **4/4** | **4/4** | **4/4** | **4/4** | **4/4** | **4/4** | **4/4** | **4/4** | **4/4** | **4/4** | **52/52** |
 | `--related --ibdseg` | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | 0/1 | 12/13 |
 | `--ibs` | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **1/1** | **13/13** |
 | flag plumbing + error probes (`params`) | \- | \- | \- | \- | \- | \- | \- | \- | \- | \- | \- | \- | \- | **220/220** |
-| | | | | | | | | | | | | | | **477/480** |
+| | | | | | | | | | | | | | | **478/480** |
 
 The `params` group is 220 invocations that exercise the command-line surface rather than one
 dataset: every `--prefix` shape, `--cpus`, `--sexchr`, `--degree`, `--minConc`,
@@ -313,19 +312,11 @@ accuracy — not the narrower denominator §4 uses. `<prefix>` stands for `king`
 | `<prefix>.kin` | 201 | **all** | 12 804 | 0 | **100 %** |
 | `<prefix>cluster.kin` | 1 | **all** | 165 | 0 | **100 %** |
 | `<prefix>.seg` | 50 | **all** | 4 172 | 0 | **100 %** |
-| `<prefix>build.log` | 8 | 7 | 18 | 12 | 33 %, §6.2 |
-
-(`<prefix>build.log`'s 6 matching rows are its header and `RULE` lines, byte-identical; the
-12 that differ are its `INFERENCE` half and the blank lines that separate it, which are not
-written at all. Our file is a **strict subsequence** of the reference's — every line present
-is byte-exact and only deletions remain, which `diff` confirms as three pure-insertion
-hunks. `measure_gaps.py` prints `17 of 19 reference row(s) differ` for the same file: it
-aligns text rows positionally rather than by an identifier, so a deletion shifts everything
-after it. The 6/12 split above is the byte-diff's, and it is the one to quote.)
+| `<prefix>build.log` | 8 | **all 8** | 18 | 0 | **100 %**, §6.2 |
 | `<prefix>X.seg` | 2 | **all 2** | 28 | 0 | **100 %**, §6.1 |
 
-**One file in the whole project differs anywhere**, and it is one this project only
-partly writes. Everything above it — including `<prefix>.seg`, which carried 12 differing
+**No compared output file differs anywhere in the 480-case corpus.** Everything above —
+including `<prefix>.seg`, which carried 12 differing
 rows in the previous revision of this table, and the entire 16-column `--related` layer,
 which had 450 differing `.kin` rows and 28 `.kin0` rows two campaigns ago and 16
 `cluster.kin` rows one campaign ago — is now byte-identical in **every** case that produces
@@ -340,9 +331,9 @@ table. What that does **not** say is that the caller is exactly right in general
 corpus can no longer tell. §4.6 is the out-of-sample measurement that can, and it is not
 clean.
 
-**stdout, stderr and exit status.** 477 of the 480 cases match stdout byte-for-byte after
-the normalization of §7. **3 cases differ on stdout**, and two of them differ on *nothing
-else* — the only cases in the suite that fail on console output alone. Every case in the
+**stdout, stderr and exit status.** 478 of the 480 cases match stdout byte-for-byte after
+the normalization of §7. **2 cases differ on stdout**, and they differ on *nothing else*.
+Every case in the
 suite matches **stderr** and **exit status**:
 
 | cases | stdout line that differs | cause |
@@ -1484,9 +1475,27 @@ acceptance gate disagrees about (§5.11).
 
 ### 6.2 `--build` on `bigish`
 
-`apps/bigish__build` writes **6 of the 18 lines** the reference writes into
-`kingbuild.log`, all six byte-identical — 243 of its 806 bytes. The other 12 `--build`
-datasets are byte-identical because they need no reconstruction rules at all.
+`apps/bigish__build` is now **byte-identical across stdout and all four compared output
+files**. Its `kingbuild.log` contains all 18 reference lines (806 bytes), including the
+inference block and blank-line layout. The other 12 captured `--build` datasets remain
+byte-identical.
+
+The implementation now includes FS2, PO.S orientation and synthetic-parent consumption,
+AV.FS/AV.HS/HS.UN2, reported-segment `Join3/Join2`, the verdict dead band, and the exact
+internal sibling order. That last order is not a hash table: the KING 2.3.2 binary uses
+libStatGen's unstable `QuickSort` first by `(FID, IID)` and then by
+`(FID, father, mother)`, leaving a deterministic swap residue among equal-parent siblings.
+
+The cached research replay is **277 / 347** byte-exact. Another **52** logs contain the
+same distinct lines and differ only in repetition/count residue from the reference's
+unstable inference loop. Of the remaining 18, two reference logs were truncated during a
+debugger probe and two require the deliberately excluded cross-FID `<FID>-><IID>` rename.
+The remaining rare constructed-pedigree residuals stay recorded here; they do not affect
+the now-passing 480-case corpus claim.
+
+The remainder of this section records the derivation history. Intermediate scores and
+open-question wording below are superseded by the current status above, but are retained
+as evidence for the triggers and counterexamples that led to the implementation.
 
 `kingupdateparents.txt` **is written and byte-identical**, and so is `kingupdateids.txt`.
 The two are in **different orders**, which is a thing this section previously had wrong

@@ -905,11 +905,32 @@ pub fn build_rule_fs2(key: &str, first: &[&str], second: &[&str]) -> String {
     )
 }
 
+/// The parent-offspring reconstruction line that opens the PO portion of a family log.
+pub fn build_reconstruct_po(a: &str, b: &str) -> String {
+    format!("  Reconstruct parent-offspring pair ({a}, {b})...\n")
+}
+
+/// The three follow-up lines emitted when a reconstructed sibship orients a PO pair.
+pub fn build_rule_po_s(
+    key: &str,
+    parent: &str,
+    child: &str,
+    parent_role: &str,
+    created: &str,
+    created_role: &str,
+) -> String {
+    format!(
+        "  {parent}'s sibship is used to determine the parent/offspring\n\
+         \x20 Family {key} RULE PO.S: {parent} is now {parent_role} of {child}\n\
+         \x20   {created} is created as {child}'s {created_role}.\n"
+    )
+}
+
 /// `  Family KING1 INFERENCE AV.FS: B02_F is uncle of B01_C2 and B01_C3, Join3/Join2=0.778`.
 ///
 /// Raised for a candidate `R` inferred 2nd-degree to both named members of a sibship. The
-/// two named are the sibship's **first two members in its internal order** — the same order
-/// `RULE FS1` and `RULE FS2` print, and the one thing about this line still unidentified.
+/// two named are the sibship's **first two members in its internal order** — the same
+/// libStatGen-derived order `RULE FS1` and `RULE FS2` print.
 ///
 /// `verdict` comes from [`crate::analysis::build::av_verdict`], which returns `None` when
 /// the ratio falls in the dead band `[0.85, 0.90]`; there the reference prints no line at
@@ -997,6 +1018,16 @@ mod build_log_tests {
         assert_eq!(
             build_rule_fs2("KING1", &["K_C1", "K_C2"], &["K_C4", "K_C3"]),
             "  Family KING1 RULE FS2: Sibship (K_C1 K_C2) and sibship (K_C4 K_C3) are combined\n"
+        );
+        assert_eq!(
+            build_reconstruct_po("RBA_F", "RBC_F"),
+            "  Reconstruct parent-offspring pair (RBA_F, RBC_F)...\n"
+        );
+        assert_eq!(
+            build_rule_po_s("KING1", "RBA_F", "RBC_F", "father", "3", "mother"),
+            "  RBA_F's sibship is used to determine the parent/offspring\n\
+             \x20 Family KING1 RULE PO.S: RBA_F is now father of RBC_F\n\
+             \x20   3 is created as RBC_F's mother.\n"
         );
     }
 }

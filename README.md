@@ -128,7 +128,7 @@ assert on expected output files rather than exit status alone.
 
 ## Parity, honestly
 
-**477 of the 480 captured reference invocations are byte-identical** — every output file,
+**478 of the 480 captured reference invocations are byte-identical** — every output file,
 plus stdout, stderr and exit status. [`docs/PARITY.md`](docs/PARITY.md) is the authoritative
 statement: the full analysis × dataset matrix, per-file and per-row scorecards, and a labelled
 limitations section. Everything here is a summary of it.
@@ -138,12 +138,15 @@ Byte-identical everywhere the corpus produces them: `--kinship` (including the X
 `--ibdseg` and `--related` at all three captured `--seglength` floors — 30 of the 31 output
 files this project writes.
 
-**The three failing cases, and their blast radius:**
+**The two failing cases, and their blast radius:**
 
 | cases | what differs | does it affect an output file? |
 | ---: | --- | --- |
 | 2 | one stdout line — `--related`'s two-stage screening count on the 200-sample dataset (`36` vs `50`) | **No.** `.kin`, `.kin0` and `.seg` are byte-identical; the rows come from the exhaustive re-estimate below that line |
-| 1 | `<prefix>build.log`'s `INFERENCE` half | **Yes, that one file.** Its header and `RULE` lines are byte-identical and the file is a strict subsequence of the reference's. `--build`'s `updateids.txt` and `updateparents.txt` are byte-identical |
+
+`--build` is now byte-identical on the primary `bigish` case, including stdout and all
+four reconstruction files. The implementation covers FS0/FS1/FS2, PO.S orientation,
+AV.FS/AV.HS/HS.UN2, and KING/libStatGen's unstable sibling order.
 
 **Differences the corpus cannot see** cost no case but a user can still hit them. The
 `--related` path now detects a marker panel too sparse for the segment caller and switches to
@@ -175,11 +178,10 @@ python3 tests/parity/run_parity.py --impl target/release/king -q
 
 ```
 [parity] 480 case(s), impl=/Users/wgu/Desktop/open-king/target/release/king, jobs=8
-FAIL  apps/bigish__build                          stdout!=; kingbuild.log!=(num)
 FAIL  core/bigish__related_degree2                stdout!=
 FAIL  ibdseg/bigish__related_degree2_ibdseg       stdout!=
 
-parity: 477 PASS, 3 FAIL, 480 total (2.1s wall, 876 output file(s) byte-compared, 8 diff-excluded)
+parity: 478 PASS, 2 FAIL, 480 total
 ```
 
 (The three `FAIL` rows can arrive in any order — cases run in parallel — and the wall-clock
