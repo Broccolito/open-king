@@ -13,6 +13,12 @@ pub mod counts;
 pub mod ibdseg;
 pub mod infer;
 pub mod kinship;
+pub mod report;
+
+pub use report::{
+    Bundle, BundleError, PairStatistics, PoThreshold, RelatedPair, RelatednessOptions,
+    RelatednessReport, SegmentStatistics,
+};
 
 /// Raw pairwise genotype counts for one pair of samples.
 ///

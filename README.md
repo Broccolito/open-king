@@ -95,6 +95,40 @@ Sample identity is the `(FID, IID)` pair under ASCII case-folding. For example, 
 `a_f` in the same family collide and the fileset is rejected, matching KING. Make those
 keys case-insensitively unique before running an analysis.
 
+## Rust library API
+
+`king-core` also exposes the relatedness engine as owned Rust data. `Bundle::from_plink`
+loads and validates a PLINK1 fileset; `Bundle::relatedness` returns every unordered pair's
+exact counts, estimators, pedigree expectations, relationship class, and optional IBD
+segment metrics without invoking the CLI or parsing a report:
+
+```rust
+use king_core::{Bundle, BundleError, RelatednessOptions};
+
+fn main() -> Result<(), BundleError> {
+    let bundle = Bundle::from_plink("cohort.bed")?;
+    let report = bundle.relatedness(&RelatednessOptions::default());
+
+    for pair in &report.pairs {
+        let first = &report.samples[pair.first];
+        let second = &report.samples[pair.second];
+        println!(
+            "{}/{} {}/{} {:.6} {}",
+            first.fid,
+            first.iid,
+            second.fid,
+            second.iid,
+            pair.statistics.kinship,
+            pair.relationship.label(),
+        );
+    }
+    Ok(())
+}
+```
+
+See [`docs/API.md`](docs/API.md) for field semantics, validation, calibration, and the
+cost of all-pairs segment scanning.
+
 ## The analyses
 
 One or more of these must be given, or nothing is computed. Full reference, including all 46

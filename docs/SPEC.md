@@ -204,9 +204,11 @@ contract rather than a KING console-parity claim.
 
 ### 1.5 Library-first shape
 
-The CLI is a parity harness, not the product. The crate exposes a typed API
-(`Bundle -> RelatednessReport`) and the `king`-compatible CLI is a thin `bin/` on top. Every
-number in every output file must be reachable from the API without going through text.
+The CLI is a parity harness, not the product. `king-core` exposes the relatedness engine as
+the typed, owned `Bundle -> RelatednessReport` flow documented in [API.md](API.md). Exact
+pair counts, estimators, pedigree expectations, relationship classes, and raw/normalized
+segment metrics are reachable without going through text. The `king`-compatible CLI shares
+the same kernels and owns reference-specific formatting and row/file selection.
 
 ---
 
