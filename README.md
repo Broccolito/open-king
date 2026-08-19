@@ -122,9 +122,8 @@ as a guaranteed Rayon thread cap.
 **Deliberately excluded:** `--pca`, `--mds`, `--roh`, `--makeGRM`, `--plink`, `--lmm`,
 `--tdt`, `--gdt`, `--risk`, R plotting and comma-separated multi-fileset merging are not
 part of this minimal relatedness package. Their parser spellings are retained for banner
-compatibility but do not run an analysis. See [the product-scope contract](docs/SCOPE.md)
-and use a dedicated tool for those workflows. Until unsupported-option diagnostics land,
-assert on expected output files rather than exit status alone.
+compatibility, but requesting one is a fatal error before any input file is opened. See
+[the product-scope contract](docs/SCOPE.md) and use a dedicated tool for those workflows.
 
 ## Parity, honestly
 

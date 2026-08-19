@@ -214,6 +214,19 @@ pub fn fatal_block(message: &str) -> String {
     format!("\nFATAL ERROR - \n{message}\n\n")
 }
 
+/// Fatal diagnostic for a recognized compatibility spelling outside the supported
+/// product scope. This is intentionally an open-king contract, not an attempt to copy
+/// KING's behavior for analysis families this package does not implement.
+pub fn unsupported_product_scope(requests: &[String]) -> String {
+    format!(
+        "open-king's minimal relatedness product does not implement: {}.\n\
+Supported analyses: --related, --duplicate, --kinship, --ibdseg, --ibs, --unrelated, \
+--cluster, --build, --bysample, --bySNP, and --autoQC.\n\
+See docs/SCOPE.md for the product-scope contract.",
+        requests.join(", ")
+    )
+}
+
 /// The A1-orientation fatal raised at the start of analyses that depend on minor-A1.
 pub fn a1_major_fatal(percent: f64) -> String {
     format!(

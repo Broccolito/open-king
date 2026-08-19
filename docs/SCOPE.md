@@ -32,9 +32,12 @@ minimal package:
 * R-based plotting: `--rplot`, `--pngplot`, `--rpath`; and
 * KING's comma-separated multi-fileset merge mode.
 
-Their associated parameters are accepted only to preserve KING 2.3.2's parser and banner
-surface. They do not enable an analysis. Use a dedicated population-structure, association,
-ROH, plotting or fileset-merging tool before or after open-king as appropriate.
+Their spellings remain in the parser and banner to preserve KING 2.3.2's recognizable
+command-line surface. The executable rejects an excluded analysis, its associated parameter,
+or comma-separated input with exit status 1 before opening any input file. This prevents a
+requested workflow from appearing to succeed without producing its promised output. Use a
+dedicated population-structure, association, ROH, plotting or fileset-merging tool before or
+after open-king as appropriate.
 
 These exclusions are product boundaries, not defects in the supported relatedness core.
 They must not be counted as relatedness-parity failures. A future expansion requires an

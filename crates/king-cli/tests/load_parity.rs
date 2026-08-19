@@ -365,14 +365,12 @@ fn fails_before_loading_when_the_bed_is_missing() {
     );
 }
 
-/// `--risk --model` skips the `.bed` probe and fails on the `.fam` instead.
-///
-/// The reference's own inconsistency, kept because it is observable: the same missing
-/// fileset reports a different file depending on the analysis.
+/// The parser/loader preserves KING's `--risk --model` probe quirk (unit-tested in
+/// `load.rs`), but the executable's product-scope gate now rejects this excluded analysis
+/// before that reference path can open any file.
 #[test]
-fn risk_with_a_model_skips_the_bed_probe() {
+fn excluded_risk_is_rejected_before_the_loader_probe_quirk() {
     let s = Scratch::new("risk");
-    std::fs::write(s.path("m.txt"), "model\n").expect("write model");
     assert_fatal(
         &s,
         &args(&[
@@ -383,8 +381,11 @@ fn risk_with_a_model_skips_the_bed_probe() {
             &s.path("m.txt"),
         ]),
         concat!(
-            "Loading genotype data in PLINK binary format...\n",
-            "\nFATAL ERROR - \nPedigree file <DIR>/gone.fam cannot be opened\n\n",
+            "\nFATAL ERROR - \n",
+            "open-king's minimal relatedness product does not implement: --risk, --model.\n",
+            "Supported analyses: --related, --duplicate, --kinship, --ibdseg, --ibs, ",
+            "--unrelated, --cluster, --build, --bysample, --bySNP, and --autoQC.\n",
+            "See docs/SCOPE.md for the product-scope contract.\n\n",
         ),
     );
 }

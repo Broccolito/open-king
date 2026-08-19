@@ -6,13 +6,14 @@
 //!  1. banner and the "parameters in effect" block;
 //!  2. the WARNING block, if the command line had problems — parsing never aborts;
 //!  3. FATAL ERROR if no `-b` fileset was named, and nothing else is printed;
-//!  4. either the "please specify an analysis" notice (no analysis requested) or the
+//!  4. open-king product-scope validation for deliberately excluded analysis families;
+//!  5. either the "please specify an analysis" notice (no analysis requested) or the
 //!     "will run separately" line (more than one);
-//!  5. `KING starts at <time>`;
-//!  6. the analysis-parameter checks, in this order: `--maxP`, `--sexchr`,
+//!  6. `KING starts at <time>`;
+//!  7. the analysis-parameter checks, in this order: `--maxP`, `--sexchr`,
 //!     `--seglength`, `--minConc`, `--risk`/`--model`;
-//!  7. FATAL ERROR if the `.bed` cannot be opened;
-//!  8. the analyses themselves.
+//!  8. FATAL ERROR if the `.bed` cannot be opened;
+//!  9. the analyses themselves.
 //!
 //! Everything goes to stdout; the reference writes nothing to stderr, and neither do we.
 //! Every exit here is status 1, which is what the reference returns for all four
@@ -35,6 +36,11 @@ fn main() {
 
     if opts.bed.is_empty() {
         fatal(console::GENOTYPE_FILES_REQUIRED);
+    }
+
+    let unsupported = opts.unsupported_requests();
+    if !unsupported.is_empty() {
+        fatal(&console::unsupported_product_scope(&unsupported));
     }
 
     if !opts.any_analysis() {
@@ -98,9 +104,9 @@ fn main() {
     // `console::options_in_effect`, then its body — so a `--kinship --ibs` run will
     // show the preamble twice and a `--build` run not at all.
     //
-    // SEAM: `--kinship`, `--ibs` and `--duplicate` are implemented. Every other analysis
-    // still falls through to the bare preamble, which is as far as the loader's own
-    // obligation reaches.
+    // Deliberately excluded analyses cannot reach this dispatch: product-scope validation
+    // above rejects them before the input is opened. Every supported analysis is owned by
+    // one of the passes below.
     // ------------------------------------------------------------------
 
     let mut ran = false;

@@ -1304,7 +1304,7 @@ Measured, on the corpus:
 | `king` | 1 |
 | `king -b multifam.bed --kinship` | 0 |
 | `king -b multifam.bed` (no analysis) | 0 |
-| `king -b multifam.bed --pca` (unimplemented analysis) | 0 |
+| `king -b multifam.bed --pca` (excluded analysis) | 1 |
 | `king --xyz -b multifam.bed --kinship` (bad option) | 0 |
 | `king -b nosuch.bed --kinship` | 1 |
 | `king -b multifam.bed --kinship --sexchr 1` | 1 |
@@ -1316,8 +1316,9 @@ Two things a shell script must not infer from the exit status:
 
 * **A bad option is not an error.** `--xyz` warns and the run proceeds, exit 0. Grep the
   warning block if you need to catch typos in CI.
-* **An unimplemented analysis is not an error either.** `--pca` exits 0 having written
-  nothing. Check for the output files you expect, not for the status.
+* **An excluded product-scope request is an error.** `--pca`, its associated parameters,
+  and every other entry in §8 exit 1 before the input is opened. This is a deliberate
+  open-king safety contract, not reference-console parity.
 
 The fatal messages, in the order they can fire:
 
@@ -1351,54 +1352,29 @@ of the supported core; see [SCOPE.md](SCOPE.md).
 `--pca` · `--mds` · `--roh` · `--lmm` · `--tdt` · `--gdt` · `--risk` · `--makeGRM` ·
 `--plink` · `--rplot` · `--pngplot` · `--rpath` · multi-dataset input
 
-Their twelve parameters do nothing either: `--projection`, `--pcs`, `--trait`,
+Their associated parameters are rejected too: `--projection`, `--pcs`, `--trait`,
 `--covariate`, `--model`, `--prevalence`, `--noflip`, `--invnorm`, `--phefile`, `--covfile`,
-`--prunedsnp`, `--rpath`. So does `--maxP`, except that it is still range-checked and a bad
-value is still fatal.
+`--prunedsnp`, `--rpath`, and `--maxP`.
 
-**What "does nothing" means, measured.** Each was run alone on `multifam` in an empty
-directory against both binaries:
+The parser continues to recognize and echo these names for a familiar KING surface. After
+the banner, open-king emits one fatal block naming every excluded request, exits 1, and does
+not print `KING starts at`, probe the input, or write an output file. For example:
 
-| flag | KING 2.3.2 | open-king |
-| --- | --- | --- |
-| `--pca` | exit 0, `kingpc.txt` | exit 0, **no files** |
-| `--mds` | exit 0, `king_Dist.txt` `kingpc.txt` | exit 0, **no files** |
-| `--roh` | exit 0, `king.roh` `kingallsegs.txt` | exit 0, **no files** |
-| `--makeGRM` | exit 139 (crash on this fileset) | exit 0, **no files** |
-| `--plink` | exit 0, `king.kin` `kingallsegs.txt` | exit 0, **no files** |
-| `--tdt` | exit 0, no files | exit 0, no files |
-| `--gdt` | exit 134 (abort), `king_gdt.txt` | exit 0, **no files** |
-| `--lmm` | exit 1 | exit 0, **no files** |
-| `--rplot` | exit 0, `king_pedplot.R` `king_pedplot.Rout` `kingsplitped.txt` | exit 0, **no files** |
-
-The run is otherwise normal: the banner prints, the fileset loads, timestamps appear, and
-the process exits 0 having written nothing. **It does not yet tell you the excluded analysis
-was skipped.** If you are scripting against open-king, assert on the expected output files.
-
-Those twelve parameters are genuinely inert, not merely undocumented. A `--kinship
---ibdseg` run on `multifam` with all twelve supplied produces byte-identical files to the
-same run without them — five files, same md5s:
-
-`n2`'s run adds `--projection 5 --pcs 10 --trait T --covariate C --model m.txt --prevalence
-0.1 --noflip --invnorm --phefile a.txt --covfile b.txt --prunedsnp p.txt --rpath /usr/bin`;
-`n1`'s does not:
-
+```text
+FATAL ERROR -
+open-king's minimal relatedness product does not implement: --pca.
+Supported analyses: --related, --duplicate, --kinship, --ibdseg, --ibs, --unrelated, --cluster, --build, --bysample, --bySNP, and --autoQC.
+See docs/SCOPE.md for the product-scope contract.
 ```
-$ diff <(cd n1 && md5 -q *) <(cd n2 && md5 -q *) && echo identical
-identical
-```
-
-Note that the three file-valued ones are never opened: `a.txt`, `b.txt` and `p.txt` do not
-exist and the run does not care.
 
 **Multi-dataset input** — the reference accepts `-b a.bed,b.bed` (and comma-separated
-`--fam`/`--bim`) and merges the filesets. open-king treats the whole string as one filename:
+`--fam`/`--bim`) and merges the filesets. open-king rejects this form before file lookup:
 
 ```
 $ king -b multifam.bed,dups.bed --kinship          # open-king, exit 1
 
-FATAL ERROR - 
-Genotype file multifam.bed,dups.bed cannot be opened
+FATAL ERROR -
+open-king's minimal relatedness product does not implement: comma-separated multi-fileset input.
 
 $ king -b multifam.bed,dups.bed --kinship          # KING 2.3.2
 Read in PLINK bim files

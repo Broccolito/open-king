@@ -333,6 +333,11 @@ pub struct Options {
     /// prints a double whenever it is non-zero **or** was explicitly given, which is why
     /// `--maxP 0` prints `[0.00]` while an untouched `--maxP` prints nothing at all.
     touched: [bool; Opt::COUNT],
+    /// Whether an option spelling was recognized at least once, even when its final
+    /// value is false/zero or it had no following value. This is separate from
+    /// `touched`: compatibility parsing still follows KING's toggle/value quirks, while
+    /// product-scope validation must never silently ignore an explicitly named option.
+    provided: [bool; Opt::COUNT],
     overlap: Overlap,
 }
 
@@ -345,6 +350,7 @@ impl Default for Options {
             doubles: [0.0; Opt::COUNT],
             strings: vec![String::new(); Opt::COUNT],
             touched: [false; Opt::COUNT],
+            provided: [false; Opt::COUNT],
             overlap: Overlap::new(0.80),
         };
         o.ints[Opt::Sexchr as usize] = 23;
@@ -394,6 +400,56 @@ impl Options {
     /// Whether a double option consumed an explicit value; see [`Options::touched`].
     pub fn was_given(&self, o: Opt) -> bool {
         self.touched[o as usize]
+    }
+
+    /// Product-scope requests that this minimal relatedness package deliberately does
+    /// not implement, in stable documentation order.
+    ///
+    /// The parser still recognizes these spellings so its banner, abbreviations and
+    /// warnings remain compatible with KING. The executable uses this list to reject
+    /// them before opening an input file, rather than completing successfully without
+    /// producing the requested analysis.
+    pub fn unsupported_requests(&self) -> Vec<String> {
+        const EXCLUDED: &[Opt] = &[
+            Opt::Pca,
+            Opt::Mds,
+            Opt::Roh,
+            Opt::MakeGrm,
+            Opt::Lmm,
+            Opt::Tdt,
+            Opt::Gdt,
+            Opt::Risk,
+            Opt::Plink,
+            Opt::Rplot,
+            Opt::Pngplot,
+            Opt::Rpath,
+            Opt::Projection,
+            Opt::Pcs,
+            Opt::Trait,
+            Opt::Covariate,
+            Opt::MaxP,
+            Opt::Invnorm,
+            Opt::Model,
+            Opt::Prevalence,
+            Opt::Noflip,
+            Opt::Phefile,
+            Opt::Covfile,
+            Opt::Prunedsnp,
+        ];
+
+        let mut requests: Vec<String> = EXCLUDED
+            .iter()
+            .filter(|&&o| self.provided[o as usize])
+            .map(|o| format!("--{}", o.name()))
+            .collect();
+
+        if self.bed.contains(',')
+            || self.string(Opt::Fam).contains(',')
+            || self.string(Opt::Bim).contains(',')
+        {
+            requests.push("comma-separated multi-fileset input".to_string());
+        }
+        requests
     }
 
     /// Whether any option that counts as an analysis was requested.
@@ -684,6 +740,7 @@ fn apply_long(
         }
         Match::Found(opt) => opt,
     };
+    options.provided[opt as usize] = true;
 
     match opt.kind() {
         // Flags never consume a value; a value left behind is warned about on its own
@@ -1140,5 +1197,45 @@ mod tests {
                 .analyses_in_effect(),
             vec!["--related", "--ibs"]
         );
+    }
+
+    #[test]
+    fn excluded_product_scope_is_detected_even_when_parser_values_look_inert() {
+        let o = parse_str(&["--pca", "--pca", "--pcs", "0", "--maxP", "--model"]).options;
+        assert!(
+            !o.flag(Opt::Pca),
+            "repeated flags retain KING's toggle quirk"
+        );
+        assert_eq!(o.int(Opt::Pcs), 0);
+        assert!(!o.was_given(Opt::MaxP));
+        assert_eq!(
+            o.unsupported_requests(),
+            ["--pca", "--pcs", "--maxP", "--model"]
+        );
+
+        let supported = parse_str(&[
+            "-b",
+            "cohort.bed",
+            "--kinship",
+            "--degree",
+            "2",
+            "--cpus",
+            "4",
+        ]);
+        assert!(supported.options.unsupported_requests().is_empty());
+    }
+
+    #[test]
+    fn comma_separated_input_is_an_explicit_product_scope_boundary() {
+        for args in [
+            vec!["-b", "a.bed,b.bed", "--kinship"],
+            vec!["-b", "a.bed", "--fam", "a.fam,b.fam", "--kinship"],
+            vec!["-b", "a.bed", "--bim", "a.bim,b.bim", "--kinship"],
+        ] {
+            assert_eq!(
+                parse_str(&args).options.unsupported_requests(),
+                ["comma-separated multi-fileset input"]
+            );
+        }
     }
 }

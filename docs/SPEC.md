@@ -151,10 +151,11 @@ Tier-2 usable-segment rule.
 
 ### 1.3 Deliberately excluded product surface
 
-Accepted on the command line so the banner and parser remain compatible, but not implemented
-by this minimal relatedness/QC package. [SCOPE.md](SCOPE.md) is the binding product-scope
-statement. Clear unsupported-option diagnostics are desirable, but implementing these
-analysis families is not a parity requirement for the supported core.
+Recognized by the parser so the banner and parse surface remain compatible, but rejected by
+the executable with a product-scope fatal before any input is opened. These analysis families
+are not implemented by this minimal relatedness/QC package. [SCOPE.md](SCOPE.md) is the
+binding product-scope statement, and their rejection is deliberately an open-king safety
+contract rather than a KING console-parity claim.
 
 * **Analyses:** `--makeGRM`, `--roh`, `--pca`, `--mds`, `--lmm`, `--tdt`, `--gdt`,
   `--risk`, `--invnorm`, `--plink`.
