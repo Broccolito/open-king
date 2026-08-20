@@ -94,10 +94,11 @@
         <h2 id="why-open-king">Why open-king</h2>
 
         <p>
-          open-king computes KING 2.3.2's results and writes them byte for byte, so the
-          choice between the two is not a choice about the numbers. It turns on the
-          license, what has to be installed, whether two runs of one command agree, and
-          what a run costs.
+          On its supported surface open-king computes KING 2.3.2's results and writes
+          them byte for byte, across all 480 captured invocations. The choice between the
+          two therefore turns on the license, what has to be installed, whether two runs
+          of one command agree, and what a run costs. Where the numbers do differ is
+          measured and listed on the <a href="parity.html">parity page</a>.
         </p>
 
         <div class="table-wrap">
@@ -153,17 +154,19 @@
               <tr>
                 <th scope="row">Speed</th>
                 <td>
-                  Faster in 72 of the 80 corpus cells, median 3.7x. Adding the 24
-                  synthetic cells at 200 to 800 samples, where it is faster in none
-                  of them, makes that 72 of 104 and median 3.5x. A trio takes
-                  0.004 s against 0.015 s. On 800 samples and 100,000 markers the
-                  counting analyses are level: <code>--kinship</code> 1.43 CPU
-                  seconds against 1.53, <code>--ibs</code> 1.77 against 1.95. The
-                  five segment-driven analyses are 7x to 55x slower at that size,
-                  and the gap grows with sample count: <code>--ibdseg</code> 5.13
-                  CPU seconds against 0.74 and <code>--unrelated</code> 19.92
-                  against 0.36, with <code>--related</code>, <code>--build</code>
-                  and <code>--cluster</code> between them. That is tracked as
+                  Faster on wall time in 72 of the 80 corpus cells, median 3.7x.
+                  Adding the 24 synthetic cells at 200 to 800 samples, where it is
+                  slower on wall time in every one, makes that 72 of 104 and median
+                  3.5x. A trio takes 0.004 s against 0.015 s. On 800 samples and
+                  100,000 markers the two counting analyses are level on CPU work:
+                  <code>--kinship</code> 1.43 CPU seconds against 1.53,
+                  <code>--ibs</code> 1.77 against 1.95. The other six cost 5x to 55x
+                  more CPU at that size, and the gap grows with sample count:
+                  <code>--duplicate</code> 1.29 CPU seconds against 0.25,
+                  <code>--ibdseg</code> 5.13 against 0.74, <code>--unrelated</code>
+                  19.92 against 0.36, with <code>--related</code>,
+                  <code>--build</code> and <code>--cluster</code> between them. That
+                  is tracked as
                   issue #12 and reported in full on the
                   <a href="benchmarks.html">benchmarks page</a>.
                 </td>
@@ -395,8 +398,9 @@ BF01	B01_F	BF02	B02_C1	50000	0.1560	0.0299	0.2873	0.2261	0.1368	0.5684	0.0000	0.
           leaves behind. Which files appear depends on the data: the
           <code>X</code> files need X-chromosome markers in the map,
           <code>.kin0</code> needs a between-family pair, and
-          <code>--duplicate</code> writes no <code>.con</code> at all when no pair
-          clears the concordance cut. On the 200-sample <code>bigish.bed</code>,
+          <code>--duplicate</code> writes a header-only <code>.con</code>
+          when no pair clears the concordance cut below 100 samples, and no
+          <code>.con</code> at all at 100 samples or more. On the 200-sample <code>bigish.bed</code>,
           <code>--kinship</code> writes two of its four files and
           <code>--autoQC</code> three of its four; on <code>sexchr.bed</code> both
           write the full set. The condition for each file is on the outputs page,

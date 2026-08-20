@@ -213,15 +213,15 @@
           <div class="chart-scroll">
             <svg class="chart" viewBox="0 0 700 758" role="img" aria-labelledby="cpu-title cpu-desc">
               <title id="cpu-title">CPU seconds by analysis on 800 samples</title>
-              <desc id="cpu-desc">Grouped bars comparing total CPU seconds for open-king and KING 2.3.2 across eight analyses on the synth_l fileset. Values are printed beside each bar. The counting analyses are close; the segment-driven ones are not.</desc>
+              <desc id="cpu-desc">Grouped bars comparing total CPU seconds for open-king and KING 2.3.2 across eight analyses on the synth_l fileset. Values are printed beside each bar. The two counting analyses differ by less than 0.2 s; the other six cost open-king 5 to 55 times more CPU.</desc>
               <line x1="149" y1="2" x2="149" y2="744" stroke="var(--chart-axis)" stroke-width="1"/>
               <text class="chart-group-label" x="0" y="18" fill="var(--fg)">--kinship</text>
               <text class="chart-bar-label" x="142" y="45" text-anchor="end" fill="var(--chart-label)">open-king</text>
               <rect x="150" y="30" width="27" height="20" fill="var(--chart-a)"/>
               <text class="chart-value" x="185" y="45" fill="var(--chart-value)">1.43 s</text>
               <text class="chart-bar-label" x="142" y="71" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
-              <rect x="150" y="56" width="28" height="20" fill="var(--chart-b)"/>
-              <text class="chart-value" x="186" y="71" fill="var(--chart-value)">1.52 s</text>
+              <rect x="150" y="56" width="29" height="20" fill="var(--chart-b)"/>
+              <text class="chart-value" x="187" y="71" fill="var(--chart-value)">1.53 s</text>
               <text class="chart-group-label" x="0" y="112" fill="var(--fg)">--ibs</text>
               <text class="chart-bar-label" x="142" y="139" text-anchor="end" fill="var(--chart-label)">open-king</text>
               <rect x="150" y="124" width="33" height="20" fill="var(--chart-a)"/>
@@ -234,8 +234,8 @@
               <rect x="150" y="218" width="24" height="20" fill="var(--chart-a)"/>
               <text class="chart-value" x="182" y="233" fill="var(--chart-value)">1.29 s</text>
               <text class="chart-bar-label" x="142" y="259" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
-              <rect x="150" y="244" width="4" height="20" fill="var(--chart-b)"/>
-              <text class="chart-value" x="162" y="259" fill="var(--chart-value)">0.24 s</text>
+              <rect x="150" y="244" width="5" height="20" fill="var(--chart-b)"/>
+              <text class="chart-value" x="163" y="259" fill="var(--chart-value)">0.25 s</text>
               <text class="chart-group-label" x="0" y="300" fill="var(--fg)">--ibdseg</text>
               <text class="chart-bar-label" x="142" y="327" text-anchor="end" fill="var(--chart-label)">open-king</text>
               <rect x="150" y="312" width="96" height="20" fill="var(--chart-a)"/>
@@ -275,7 +275,7 @@
           </div>
           <figcaption>
             Total CPU seconds per analysis on 800 samples. The first two pairs are level. The
-            rest are not.
+            other six cost open-king 5x to 55x more.
           </figcaption>
         </figure>
 
@@ -291,9 +291,9 @@
               </tr>
             </thead>
             <tbody>
-              <tr><th scope="row"><code>--kinship</code></th><td class="num">1.43 s</td><td class="num">1.52 s</td><td class="num">0.9x</td><td>identical</td></tr>
-              <tr><th scope="row"><code>--ibs</code></th><td class="num">1.77 s</td><td class="num">1.95 s</td><td class="num">0.9x</td><td>identical</td></tr>
-              <tr><th scope="row"><code>--duplicate</code></th><td class="num">1.29 s</td><td class="num">0.24 s</td><td class="num">5x</td><td>identical</td></tr>
+              <tr><th scope="row"><code>--kinship</code></th><td class="num">1.43 s</td><td class="num">1.53 s</td><td class="num">0.9x</td><td>identical</td></tr>
+              <tr><th scope="row"><code>--ibs</code></th><td class="num">1.77 s</td><td class="num">1.95 s</td><td class="num">0.9x</td><td>see below</td></tr>
+              <tr><th scope="row"><code>--duplicate</code></th><td class="num">1.29 s</td><td class="num">0.25 s</td><td class="num">5x</td><td>identical</td></tr>
               <tr><th scope="row"><code>--ibdseg</code></th><td class="num">5.13 s</td><td class="num">0.74 s</td><td class="num">7x</td><td>identical</td></tr>
               <tr><th scope="row"><code>--related</code></th><td class="num">11.12 s</td><td class="num">0.38 s</td><td class="num">29x</td><td>identical</td></tr>
               <tr><th scope="row"><code>--cluster</code></th><td class="num">19.76 s</td><td class="num">0.36 s</td><td class="num">55x</td><td>see below</td></tr>
@@ -355,7 +355,7 @@
 
         <p>
           A constant factor would be a footnote. This is not a constant factor: the ratio is
-          12x at 200 samples, 34x at 400 and 116x at 800. Extrapolating the same curve puts a
+          12x at 200 samples, 35x at 400 and 116x at 800. Extrapolating the same curve puts a
           few thousand samples in the tens of minutes for open-king against seconds for KING.
           For a cohort of that size, the difference decides whether the program is usable.
         </p>
@@ -418,16 +418,18 @@
               <tr><th scope="row"><code>--kinship</code></th><td>matched</td><td class="num">0.306 s</td><td class="num">1.64</td><td class="num">0.176 s</td><td class="num">2.46</td></tr>
               <tr><th scope="row"><code>--kinship</code></th><td>single</td><td class="num">0.305 s</td><td class="num">1.58</td><td class="num">0.424 s</td><td class="num">1.00</td></tr>
               <tr><th scope="row"><code>--ibdseg</code></th><td>default</td><td class="num">1.359 s</td><td class="num">1.00</td><td class="num">0.120 s</td><td class="num">2.27</td></tr>
+              <tr><th scope="row"><code>--ibdseg</code></th><td>matched</td><td class="num">1.448 s</td><td class="num">0.99</td><td class="num">0.184 s</td><td class="num">1.67</td></tr>
               <tr><th scope="row"><code>--ibdseg</code></th><td>single</td><td class="num">1.469 s</td><td class="num">0.96</td><td class="num">0.264 s</td><td class="num">0.99</td></tr>
               <tr><th scope="row"><code>--cluster</code></th><td>default</td><td class="num">5.039 s</td><td class="num">1.00</td><td class="num">0.129 s</td><td class="num">1.86</td></tr>
+              <tr><th scope="row"><code>--cluster</code></th><td>matched</td><td class="num">5.105 s</td><td class="num">1.00</td><td class="num">0.139 s</td><td class="num">1.54</td></tr>
               <tr><th scope="row"><code>--cluster</code></th><td>single</td><td class="num">5.097 s</td><td class="num">0.99</td><td class="num">0.204 s</td><td class="num">0.98</td></tr>
             </tbody>
           </table>
         </div>
 
         <p>
-          KING obeys the flag: its cores busy falls to 1.00 at <code>--cpus 1</code>.
-          open-king barely moves, 1.64 to 1.58, which is what
+          KING obeys the flag: its cores busy falls to 1.00, 0.99 and 0.98 at
+          <code>--cpus 1</code>. open-king barely moves, 1.64 to 1.58, which is what
           <a href="usage.html#cpus">the option reference</a> and
           <a href="https://github.com/Broccolito/open-king/blob/main/docs/SCOPE.md">SCOPE.md</a>
           already say: <code>--cpus</code> is accepted and echoed and is not a strict worker
@@ -500,9 +502,13 @@
         </div>
 
         <p>
-          The first two are single-row differences of a kind the
+          Every row is quoted from the 200-sample fileset except <code>.ibs0</code>, whose
+          319,600 pairs make it the 800-sample one. The first two are single-row differences
+          of a kind the
           <a href="parity.html#held-out-differences">held-out list</a> already tracks. The last three are
-          pedigree reconstruction, and they are much larger here than the corpus suggests,
+          pedigree reconstruction, and they recur at 400 and 800 samples, roughly doubling
+          each time: 112, 232 and 462 differing <code>updateparents.txt</code> lines. They are
+          much larger here than the corpus suggests,
           because these filesets declare no parents at all and put every relationship through
           reconstruction. The full account, with the determinism control, is in
           <a href="https://github.com/Broccolito/open-king/issues/11">issue 11</a>.

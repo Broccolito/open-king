@@ -477,7 +477,7 @@
         </p>
 
         <div class="code-block code-block--plain">
-<pre><code>72 runs, 6 713 reference rows   -&gt;   68 byte-identical
+<pre><code>72 runs, 6,713 reference rows   -&gt;   68 byte-identical
 rows: 0 extra, 0 missing, 4 value-differing</code></pre>
         </div>
 
@@ -609,10 +609,13 @@ rows: 0 extra, 0 missing, 4 value-differing</code></pre>
           Rayon's worker threads. Computed files are deterministic across thread counts, so the
           option changes run time and not results, and reproducing KING's thread scheduling is
           not a parity target. Run times are on the
-          <a href="benchmarks.html">benchmarks page</a>: open-king finishes first in 72 of
-          the 80 golden-corpus cells, median 3.7x, and on 800 samples the counting analyses
-          stay level with KING while the segment-driven ones cost between 7 and 55 times more
-          CPU, with the gap widening as the cohort grows. That is tracked as
+          <a href="benchmarks.html">benchmarks page</a>, which measures 104 cells: open-king
+          finishes first in 72 of the 80 golden-corpus cells, median 3.7x, and in none of the
+          24 synthetic cells at 200, 400 and 800 samples. On 800 samples the two counting
+          analyses stay level in CPU seconds, <code>--kinship</code> 1.43 against KING's 1.53,
+          while the other six cost 5 to 55 times more, from <code>--duplicate</code> at 1.29
+          CPU seconds against 0.25 to <code>--unrelated</code> at 19.92 against 0.36. The gap
+          widens as the cohort grows. That is tracked as
           <a href="https://github.com/Broccolito/open-king/issues/12">issue&nbsp;#12</a>.
           Separately, <code>&lt;prefix&gt;.segments.gz</code> is documented in KING's manual, but the 2.3.2
           build ships without zlib in its segment writer and writes no such file on any

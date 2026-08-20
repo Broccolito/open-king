@@ -497,10 +497,18 @@ run.2026X.kin0</code></pre>
               <tr><td class="num">13</td><th scope="row"><code>IBD2Seg</code></th><td>Proportion shared IBD2.</td><td><code>%.4f</code></td></tr>
               <tr><td class="num">14</td><th scope="row"><code>PropIBD</code></th><td><code>IBD2Seg + IBD1Seg/2</code> at full precision.</td><td><code>%.4f</code></td></tr>
               <tr><td class="num">15</td><th scope="row"><code>InfType</code></th><td>Inferred relationship.</td><td>text</td></tr>
-              <tr><td class="num">16</td><th scope="row"><code>Error</code></th><td>Grade. Under <code>--related</code> this compares labels, not kinships.</td><td>shortest round trip</td></tr>
+              <tr><td class="num">16</td><th scope="row"><code>Error</code></th><td>Grade, on a rule that splits by <code>InfType</code>. <code>2nd</code>, <code>3rd</code> and <code>4th</code> are scored numerically, on <code>PropIBD / 2</code> against <code>Phi</code> in the bands <code>--kinship</code> uses. Every other label is all or nothing: <code>0</code> when <code>InfType</code> equals the pedigree's own label, <code>1</code> when it does not.</td><td>shortest round trip</td></tr>
             </tbody>
           </table>
         </div>
+
+        <p>
+          The split is visible in the numbers, so do not read <code>Error</code> as a label
+          match. A 200-sample <code>--related</code> run writes 573 <code>.kin</code> rows,
+          three of which score <code>0.5</code> while <code>InfType</code> disagrees with
+          the pedigree's label. Comparing labels can only return <code>0</code> or
+          <code>1</code>.
+        </p>
 
         <p>
           Columns 1 to 8 are the <code>--kinship</code> set. In <code>.kin</code> the
@@ -801,8 +809,11 @@ run.2026X.kin0</code></pre>
         </div>
 
         <p>
-          Rows are filtered. A pair appears only if it has at least one segment longer than
-          10 Mb, and only segments above the <code>--seglength</code> floor are counted.
+          Rows are filtered. A pair appears only if it has at least one segment of 10 Mb or
+          more, and only segments above the <code>--seglength</code> floor are counted. The
+          console announces that filter as <code>&gt;10Mb</code> and the comparison behind
+          it is inclusive, so a longest segment of exactly 10 Mb is reported and not
+          dropped.
         </p>
 
         <div class="note">
@@ -1133,7 +1144,7 @@ run.2026X.kin0</code></pre>
         </div>
 
         <p>
-          Four header variants were observed by running <code>--bysample</code> over all 12
+          Four header variants were observed by running <code>--bysample</code> over all 13
           golden filesets.
         </p>
 
@@ -1147,7 +1158,7 @@ run.2026X.kin0</code></pre>
               </tr>
             </thead>
             <tbody>
-              <tr><td class="num">8</td><td><code>FID IID FA MO SEX N_SNP Missing Heterozygosity</code></td><td><code>pair</code>, <code>unrelated</code></td></tr>
+              <tr><td class="num">8</td><td><code>FID IID FA MO SEX N_SNP Missing Heterozygosity</code></td><td><code>pair</code>, <code>singleton</code>, <code>unrelated</code></td></tr>
               <tr><td class="num">12</td><td><code>... N_pair N_MIp Err_MIp MI_Removal</code></td><td><code>dups</code>, which has PO pairs but no trio</td></tr>
               <tr><td class="num">15</td><td><code>... N_pair N_MIp Err_MIp N_trio N_MIt Err_MIt MI_Removal</code></td><td><code>trio</code>, <code>nuclear</code>, <code>missing</code>, <code>monomorphic</code>, <code>threegen</code>, <code>multifam</code>, <code>admixed</code>, <code>bigish</code></td></tr>
               <tr><td class="num">21</td><td><code>... N_xSNP xHeterozygosity N_ySNP N_yHetero N_mtSNP N_mtHetero N_pair ... MI_Removal</code></td><td><code>sexchr</code></td></tr>
@@ -1212,7 +1223,7 @@ run.2026X.kin0</code></pre>
           Y rows carry no trio statistics and MT rows carry neither PO nor trio statistics.
           Those cells print a bare <code>0</code> rather than <code>0.0000</code>, which a
           strict fixed-format parser will notice. All three documented header variants were
-          observed across the 12 golden filesets.
+          observed across the 13 golden filesets.
         </p>
 
         <div class="table-wrap">
@@ -1225,7 +1236,7 @@ run.2026X.kin0</code></pre>
               </tr>
             </thead>
             <tbody>
-              <tr><td class="num">11</td><td>ends at <code>CallRate</code></td><td><code>pair</code>, <code>unrelated</code></td></tr>
+              <tr><td class="num">11</td><td>ends at <code>CallRate</code></td><td><code>pair</code>, <code>singleton</code>, <code>unrelated</code></td></tr>
               <tr><td class="num">16</td><td><code>... N_PO N_HomPO N_errPO Err_InPO Err_InHomPO</code></td><td><code>dups</code></td></tr>
               <tr><td class="num">21</td><td><code>... N_trio N_HetOff N_errTrio Err_InTrio Err_InHetTrio</code></td><td>the other nine</td></tr>
             </tbody>
