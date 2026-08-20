@@ -69,21 +69,30 @@ startup banner, the tail of a marker array that is an exact multiple of 64, and 
 carried by `--noscreen`, whose effect consequently differs between two builds of the same
 KING source. Those are documented in [`docs/PARITY.md`](docs/PARITY.md) §5.2, §5.3 and §5.13.
 
-### It is faster on the filesets most studies actually run
+### Where it is faster
 
-On the ten reference datasets, open-king finishes first in 72 of 80 measured cells, at a
-median of 3.7 times. On a trio it is 0.004 s against 0.020 s. Peak memory is 3.8 MB against
-8.6 MB. Small runs are dominated by process startup, and open-king starts faster and holds
-less.
+The benchmark measures 104 cells, eight analyses across thirteen filesets. On the ten
+reference datasets, open-king finishes first in 72 of those 80 corpus cells, at a median of
+3.7 times. On a trio it is 0.004 s against 0.015 s. Peak memory is 3.8 MB against 8.6 MB.
+Small runs are dominated by process startup, and open-king starts faster and holds less.
 
-At cohort scale the picture divides. Counting analyses stay level: on 800 samples and
-100,000 markers, `--kinship` costs 1.43 CPU seconds against KING's 1.52, and `--ibs` 1.77
-against 1.95. Analyses that build IBD segments cost more, and the gap grows with sample
-count. That is measured, tracked as
-[issue #12](https://github.com/Broccolito/open-king/issues/12), and reported in full on the
+At cohort scale the picture divides. The remaining 24 cells are three synthetic cohorts of
+200, 400 and 800 samples at 100,000 markers. Counting analyses stay level: on 800 samples,
+`--kinship` costs 1.43 CPU seconds against KING's 1.53, and `--ibs` 1.77 against 1.95.
+Analyses that build IBD segments do not stay level, and the gap grows with sample count. At
+those same 800 samples, in CPU seconds, open-king against KING: `--ibdseg` 5.13 against 0.74,
+`--related` 11.12 against 0.38, `--build` 20.34 against 0.46, `--cluster` 19.76 against 0.36,
+`--unrelated` 19.92 against 0.36. That is 7 to 55 times more CPU on the segment work. It is
+measured, tracked as [issue #12](https://github.com/Broccolito/open-king/issues/12), and
+reported in full on the
 [benchmarks page](https://broccolito.github.io/open-king/benchmarks.html) rather than
-averaged away. If your work is `--kinship`, `--ibs` or `--duplicate` on any cohort, or any
-analysis on a few hundred samples, open-king is the faster of the two today.
+averaged away.
+
+The line falls between the two. On the nine corpus filesets of 40 samples or fewer, open-king
+wins all 72 cells. The eight it loses are the whole of `bigish`, at 200 samples, and from 200
+samples up KING has the lower wall clock in all 32 cells measured, `--duplicate` included at
+1.29 CPU seconds against 0.25. `--kinship` and `--ibs` are the two that stay level on CPU
+work at every size tested.
 
 ### It is a library as well as a program
 

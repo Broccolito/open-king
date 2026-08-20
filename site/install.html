@@ -486,22 +486,35 @@ Genotype files are required. e.g.,
 
         <h3 id="run-the-tests">Run the tests</h3>
 
+        <p>
+          Generate the genotype corpus first. The filesets are not committed, and a test in
+          <code>open-king-core</code> opens
+          <code>tests/parity/golden/multifam.bed</code> directly
+          (<code>report.rs</code>, <code>plink_entrypoint_matches_a_reference_row_without_text_roundtrip</code>),
+          so on a fresh clone <code>cargo test</code> fails until that file exists. Note the
+          output directory: it is <code>tests/parity/golden</code> here, not the
+          <code>tests/parity/work/data</code> the parity runner defaults to.
+        </p>
+
         <div class="code-block">
-<pre><code>cargo test --workspace</code></pre>
+<pre><code>python3 tests/parity/generate_corpus.py --outdir tests/parity/golden
+cargo test --workspace</code></pre>
         </div>
 
         <p>
-          The suite is 355 tests. <code>.github/workflows/ci.yml</code> runs the same command
-          on Linux, macOS and Windows for every push to <code>main</code> and every pull
-          request, and runs the 480-case parity suite beside it on Linux.
+          The suite is 355 tests. <code>.github/workflows/ci.yml</code> runs those two
+          commands in that order on Linux, macOS and Windows for every push to
+          <code>main</code> and every pull request, and runs the 480-case parity suite beside
+          it on Linux.
         </p>
 
         <div class="note">
           <p class="note-title">Unverified</p>
           <p>
-            This command was not run while the source notes were written, because another
-            process held the cargo build lock. It is read directly out of
-            <code>.github/workflows/release.yml</code>, where it is the first gate in the
+            <code>cargo test --workspace</code> was not run while the source notes were
+            written, because another process held the cargo build lock. The command and the
+            generation step before it are read directly out of
+            <code>.github/workflows/release.yml</code>, where they are the first gate in the
             release workflow.
           </p>
         </div>
@@ -521,8 +534,9 @@ python3 tests/parity/run_parity.py --impl ./target/release/open-king -q --baseli
         </div>
 
         <p>
-          Generation was measured at 4.2 s wall, 11 MB, 13 datasets, exit 0. Two notes about
-          where the data goes, both read out of <code>tests/parity/run_parity.py</code>:
+          Generation was measured at 4.2 s wall, exit 0, 13 datasets, 40 files totalling
+          10.3 MB. Two notes about where the data goes, both read out of
+          <code>tests/parity/run_parity.py</code>:
         </p>
 
         <ul>
@@ -883,7 +897,7 @@ $ echo $?
               </tr>
               <tr>
                 <th scope="row">No network access</th>
-                <td>the dependency graph in <code>Cargo.lock</code> is <code>flate2</code>, <code>rayon</code>, <code>miniz_oxide</code>, <code>crc32fast</code>, <code>crossbeam-*</code>, <code>either</code>, <code>adler2</code>, <code>cfg-if</code>, <code>simd-adler32</code>; no HTTP or socket crate, and no <code>std::net</code> reference in <code>crates/</code></td>
+                <td><code>Cargo.lock</code> holds the workspace's own three crates and twelve other packages: <code>flate2</code>, <code>rayon-*</code>, <code>miniz_oxide</code>, <code>crc32fast</code>, <code>crossbeam-*</code>, <code>either</code>, <code>adler2</code>, <code>cfg-if</code>, <code>simd-adler32</code>. No HTTP or socket crate, and no <code>std::net</code> reference in <code>crates/</code></td>
               </tr>
               <tr>
                 <th scope="row">No unsafe code</th>
@@ -891,11 +905,11 @@ $ echo $?
               </tr>
               <tr>
                 <th scope="row">No config file</th>
-                <td>nothing is read from <code>$HOME</code> or <code>/etc</code></td>
+                <td>nothing is read from <code>$HOME</code>, and the only <code>/etc</code> read is <code>/etc/localtime</code>, for the timestamp offset</td>
               </tr>
               <tr>
                 <th scope="row">One environment variable read</th>
-                <td><code>TZ</code>, in <code>console.rs</code>, only to format the <code>KING starts at …</code> timestamps</td>
+                <td><code>TZ</code>, in <code>console.rs</code>, only to format the <code>KING starts at …</code> timestamps. It selects the zoneinfo file: a zone name is read from <code>/usr/share/zoneinfo</code>, an absolute path is read as given, and anything unset or unreadable falls back to <code>/etc/localtime</code>, then to UTC</td>
               </tr>
             </tbody>
           </table>

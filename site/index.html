@@ -91,34 +91,13 @@
           than a report to parse.
         </p>
 
-        <h2 id="provenance-and-license">Provenance and license</h2>
-
-        <p>
-          open-king is not affiliated with, endorsed by, or derived from the source code of
-          the original KING program by Wei-Min Chen and colleagues. It was written from the
-          published algorithm descriptions, the publicly documented file formats, and
-          black-box observation of the reference binary. No KING source code was read or
-          copied.
-        </p>
-
-        <p>
-          open-king's own code is MIT licensed. That covers this code only and makes no
-          claim about the original KING, which its authors license separately.
-        </p>
-
-        <p>
-          Credit for KING itself belongs to Wei-Min Chen and colleagues at the University
-          of Virginia, whose program
-          <a href="https://www.kingrelatedness.com/">kingrelatedness.com</a> this project
-          reimplements and measures itself against.
-        </p>
-
         <h2 id="why-open-king">Why open-king</h2>
 
         <p>
-          open-king computes KING 2.3.2's results, so the choice between the two turns
-          on the license, what has to be installed, whether two runs of the same command
-          agree, and what a run costs.
+          open-king computes KING 2.3.2's results and writes them byte for byte, so the
+          choice between the two is not a choice about the numbers. It turns on the
+          license, what has to be installed, whether two runs of one command agree, and
+          what a run costs.
         </p>
 
         <div class="table-wrap">
@@ -161,20 +140,37 @@
                 </td>
               </tr>
               <tr>
+                <th scope="row">Memory safety</th>
+                <td>
+                  Safe Rust does not read uninitialized memory. KING does, in three
+                  measured places: its startup banner, the tail of a marker array whose
+                  length is an exact multiple of 64, and the value carried by
+                  <code>--noscreen</code>, whose effect therefore differs between two
+                  builds of the same KING source. The controls that isolate each one are
+                  on the <a href="parity.html#safety-divergence">parity page</a>.
+                </td>
+              </tr>
+              <tr>
                 <th scope="row">Speed</th>
                 <td>
-                  Faster in 72 of 80 measured cells, median 3.7x. A trio takes 0.004 s
-                  against 0.020 s. On 800 samples and 100,000 markers the counting
-                  analyses are level: <code>--kinship</code> 1.43 CPU seconds against
-                  1.52, <code>--ibs</code> 1.77 against 1.95. Segment-driven analyses
-                  cost more, and the gap grows with sample count; that is tracked as
+                  Faster in 72 of the 80 corpus cells, median 3.7x. Adding the 24
+                  synthetic cells at 200 to 800 samples, where it is faster in none
+                  of them, makes that 72 of 104 and median 3.5x. A trio takes
+                  0.004 s against 0.015 s. On 800 samples and 100,000 markers the
+                  counting analyses are level: <code>--kinship</code> 1.43 CPU
+                  seconds against 1.53, <code>--ibs</code> 1.77 against 1.95. The
+                  five segment-driven analyses are 7x to 55x slower at that size,
+                  and the gap grows with sample count: <code>--ibdseg</code> 5.13
+                  CPU seconds against 0.74 and <code>--unrelated</code> 19.92
+                  against 0.36, with <code>--related</code>, <code>--build</code>
+                  and <code>--cluster</code> between them. That is tracked as
                   issue #12 and reported in full on the
                   <a href="benchmarks.html">benchmarks page</a>.
                 </td>
               </tr>
               <tr>
-                <th scope="row">Memory</th>
-                <td>Peak resident set on a trio: 3.8 MB against 8.6 MB.</td>
+                <th scope="row">Peak memory</th>
+                <td>Resident set on a trio: 3.8 MB against 8.6 MB.</td>
               </tr>
             </tbody>
           </table>
@@ -182,10 +178,32 @@
 
         <p>
           Every figure above was measured on one host against one reference build:
-          KING 2.3.2, Mach-O arm64, macOS. The 480-case differential suite behind the
-          parity claim is committed to the repository, needs no reference binary, runs
-          in about two seconds, and runs in CI on Linux, macOS and Windows on every
-          push, so the comparison can be repeated rather than taken on trust.
+          KING 2.3.2, Mach-O arm64, macOS. Behind the parity claim are 355 Rust tests
+          and a committed 480-case differential suite that needs no reference binary,
+          runs in about two seconds, and runs in CI on Linux, macOS and Windows on
+          every push, so the comparison can be repeated rather than taken on trust.
+        </p>
+
+        <h2 id="provenance-and-license">Provenance and license</h2>
+
+        <p>
+          open-king is not affiliated with, endorsed by, or derived from the source code of
+          the original KING program by Wei-Min Chen and colleagues. It was written from the
+          published algorithm descriptions, the publicly documented file formats, and
+          black-box observation of the reference binary. No KING source code was read or
+          copied.
+        </p>
+
+        <p>
+          open-king's own code is MIT licensed. That covers this code only and makes no
+          claim about the original KING, which its authors license separately.
+        </p>
+
+        <p>
+          Credit for KING itself belongs to Wei-Min Chen and colleagues at the University
+          of Virginia, whose program
+          <a href="https://www.kingrelatedness.com/">kingrelatedness.com</a> this project
+          reimplements and measures itself against.
         </p>
 
         <h2 id="quick-start">Quick start</h2>
@@ -193,7 +211,7 @@
         <p>
           Each release is a zip holding one file, the executable. The two macOS builds
           are signed with a Developer ID certificate and notarized by Apple, so they run
-          out of the archive:
+          out of the archive with no Gatekeeper warning:
         </p>
 
         <div class="code-block">
@@ -373,6 +391,20 @@ BF01	B01_F	BF02	B02_C1	50000	0.1560	0.0299	0.2873	0.2261	0.1368	0.5684	0.0000	0.
         </div>
 
         <p>
+          The Writes column is what an analysis can produce, not what every run
+          leaves behind. Which files appear depends on the data: the
+          <code>X</code> files need X-chromosome markers in the map,
+          <code>.kin0</code> needs a between-family pair, and
+          <code>--duplicate</code> writes no <code>.con</code> at all when no pair
+          clears the concordance cut. On the 200-sample <code>bigish.bed</code>,
+          <code>--kinship</code> writes two of its four files and
+          <code>--autoQC</code> three of its four; on <code>sexchr.bed</code> both
+          write the full set. The condition for each file is on the outputs page,
+          under <a href="outputs.html#empty-header-only-absent">Empty, header-only,
+          absent</a>.
+        </p>
+
+        <p>
           The common modifiers are <code>--degree</code>, <code>--prefix</code>,
           <code>--seglength</code>, <code>--minConc</code> and <code>--cpus</code>.
           <code>--cpus</code> is accepted and echoed in the console text, but it does not
@@ -449,9 +481,10 @@ BF01	B01_F	BF02	B02_C1	50000	0.1560	0.0299	0.2873	0.2261	0.1368	0.5684	0.0000	0.
         </p>
 
         <p>
-          Differences the 480-case corpus cannot exercise cost no case but remain part of
-          the claim. The <a href="parity.html">parity page</a> names them and gives the
-          per-analysis breakdown.
+          Some differences fall outside what the 480-case corpus exercises. They cost
+          no case, and they are still part of the claim. The
+          <a href="parity.html">parity page</a> names them and gives the per-analysis
+          breakdown.
         </p>
 
         <h2 id="where-to-go-next">Where to go next</h2>

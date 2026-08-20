@@ -73,7 +73,7 @@
           One invocation reads one PLINK1 fileset and runs one or more analyses over it.
           This page lists every option open-king accepts, what each one changes, and the
           parser behaviour that the flag name does not reveal. Every number and every
-          quoted console line below was produced by running the binary.
+          quoted console line below was produced by running open-king.
         </p>
 
         <h2 id="synopsis">Synopsis</h2>
@@ -90,7 +90,7 @@
           having written nothing.
         </p>
 
-        <p>The surface, counted from the binary:</p>
+        <p>The surface, counted from the executable:</p>
 
         <ul>
           <li>46 long options plus one short option <code>-b</code> (case variant
@@ -105,10 +105,11 @@
 
         <p>
           Examples on this page assume <code>open-king</code> is on the path and that the
-          working directory holds the fileset being named. Analyses are switches, so
-          repeating one turns it back off: <code>--related --related</code> leaves
-          <code>--related</code> off and the run falls through to the "please specify"
-          notice at exit 0 with no files.
+          working directory holds the fileset being named. If the executable has not been
+          moved onto the path yet, write <code>./open-king</code> instead; nothing else
+          changes. Analyses are switches, so repeating one turns it back off:
+          <code>--related --related</code> leaves <code>--related</code> off and the run
+          falls through to the "please specify" notice at exit 0 with no files.
         </p>
 
         <p>
@@ -672,7 +673,7 @@ open-king -b sexchr.bed --kinship --degree 2 -&gt; king.kin king.kin0</code></pr
         </div>
 
         <p>
-          The single-family truncation is reproduced reference behaviour.
+          The single-family truncation reproduces reference behaviour.
           <code>open-king -b nuclear.bed --kinship</code>, 6 samples under one FID, leaves a
           zero-byte <code>king.kin</code>.
         </p>
@@ -1011,7 +1012,7 @@ KING ends at Wed Aug 19 19:35:51 2026</code></pre>
             The console prints
             <code>Update-ID information is saved in file &lt;p&gt;updateids.txt</code>
             whether or not the file was written. On <code>multifam</code> the line appears
-            and no such file exists. This is reproduced reference behaviour, so a script
+            and no such file exists. This reproduces reference behaviour, so a script
             that greps the console for the filename will look for a file that is not there.
             Test for the file instead.
           </p>
@@ -1627,8 +1628,9 @@ Auto-QC step 3: Apply SNP call rate filter 90.0% on 5232 SNPs (in 3 samples)
           <code>--cpus</code> changes no printed digit:
           <code>multifam --kinship</code> at <code>--cpus 1</code> and <code>--cpus 16</code>
           gives identical md5s for both <code>.kin</code> and <code>.kin0</code>.
-          Repetition is stable too: twelve runs of <code>sexchr --kinship</code> produced
-          one distinct checksum for <code>kingX.kin0</code>.
+          Repeated runs agree. Twelve runs of <code>sexchr --kinship</code> produced one
+          distinct checksum for <code>kingX.kin0</code>; twelve runs of KING 2.3.2 produced
+          two, because it appends from several threads to one unlocked file handle.
         </p>
 
         <h3 id="sexchr"><code>--sexchr</code></h3>

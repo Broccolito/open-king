@@ -128,7 +128,7 @@ run.2026X.kin0</code></pre>
         </div>
 
         <p>
-          Three shapes are worth noticing in that listing. The <code>allsegs.txt</code> and
+          Three shapes in that listing are easy to miss. The <code>allsegs.txt</code> and
           <code>splitped.txt</code> suffixes carry no leading dot, so <code>--prefix
           study</code> gives <code>studyallsegs.txt</code>. The X suffixes carry no leading
           dot either, which is why <code>run.2026</code> produces
@@ -397,7 +397,7 @@ run.2026X.kin0</code></pre>
         </div>
 
         <p>
-          The block sizes were fixed by regenerating each candidate order against a
+          The block sizes were determined by regenerating each candidate order against a
           200-sample run and comparing to the emitted rows.
         </p>
 
@@ -1520,13 +1520,12 @@ SEX	S_DAU1	S_DAU2	2	2	0.3750	0.6464	0.3530	0.6762</code></pre>
         </div>
 
         <div class="note note--warn">
-          <p class="note-title">Unverified by a run</p>
+          <p class="note-title">Where this layout comes from</p>
           <p>
-            The <code>--related</code> layout above was not produced during the inventory
-            pass: no golden fileset combines 100 or more samples with X markers, which is
-            the gate for a <code>--related</code> <code>.kin0</code>. The column list is
-            taken from <code>docs/OUTPUTS.md</code>, which documents a purpose-built
-            104-sample fixture.
+            The column list above is taken from <code>docs/OUTPUTS.md</code>, which
+            documents a purpose-built 104-sample fixture. No golden fileset combines 100 or
+            more samples with X markers, which is the gate for a <code>--related</code>
+            <code>.kin0</code>, so the inventory pass did not produce this layout on disk.
           </p>
         </div>
 

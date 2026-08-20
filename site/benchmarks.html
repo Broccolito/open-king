@@ -72,18 +72,20 @@
         <p class="lede">
           The same analyses, the same inputs, one machine, both programs. open-king is faster
           in 72 of the 80 corpus cells and level with KING on the counting analyses at 800
-          samples. The other six analyses cost more, and the gap grows with the cohort. Both
-          results are below, with the method used to take them.
+          samples. The other six analyses cost 5 to 55 times more CPU at that size, and the
+          gap grows with the cohort. Both results are below, with the method used to take
+          them.
         </p>
 
         <h2 id="summary">The result</h2>
 
         <p>
-          On the golden corpus, which is small, open-king finishes first in 72 of 80 cells,
-          median 3.7x, because at that size the run is mostly process startup. On 800 samples
-          and 100,000 markers the counting analyses stay level with KING on CPU work:
-          <code>--kinship</code> costs 1.43 CPU seconds against KING's 1.52, and
-          <code>--ibs</code> 1.77 against 1.95.
+          On the golden corpus, which is small, open-king finishes first in 72 of those 80
+          cells, median 3.7x, because at that size the run is mostly process startup. Counting
+          the 24 synthetic cells as well, where it is slower in every one, the whole 104-cell
+          matrix is 72 faster at a median of 3.5x. On 800 samples and 100,000 markers the
+          counting analyses stay level with KING on CPU work: <code>--kinship</code> costs
+          1.43 CPU seconds against KING's 1.53, and <code>--ibs</code> 1.77 against 1.95.
         </p>
 
         <p>
@@ -100,7 +102,8 @@
           Output does not change with any of this. Across the whole matrix, 206 of 217 output
           files were byte-identical to KING's. The 11 that were not are listed under
           <a href="#output-agreement">output agreement</a>, and none of them is on a corpus
-          dataset.
+          dataset. Reruns are byte-stable as well: twelve runs on one fileset give one
+          distinct checksum from open-king and two from KING.
         </p>
 
         <p>
@@ -159,10 +162,16 @@
         <h2 id="deployment">Licence and deployment</h2>
 
         <p>
-          The reference binary's launch failure is an obstacle to timing, and it is also a
-          deployment difference. Unlike the timings, it holds whatever the dataset.
-          open-king's macOS binary is 1.1 MB and links one library, the operating system's
-          own:
+          open-king is MIT licensed, so it can be vendored into a pipeline, built into a
+          container image, packaged by a distribution, shipped inside a product, or forked.
+          KING's terms are "Feel free to use KING for your research, but please do not
+          redistribute AND make profits", which leaves each of those uses to be negotiated.
+        </p>
+
+        <p>
+          Deployment differs in the same direction, and unlike a timing it holds at every
+          dataset size. open-king's macOS binary is 1.1 MB and links one library, the
+          operating system's own:
         </p>
 
         <div class="code-block">
@@ -177,26 +186,20 @@
         <p>
           KING's published macOS binary links <code>libstdc++</code>, <code>libgomp</code> and
           <code>libgcc_s</code> from a Homebrew GCC 9 installed under <code>/usr/local</code>,
-          which is where it stops on an arm64 machine. open-king ships prebuilt binaries for
-          macOS arm64, macOS x86_64, Linux x86_64 and Windows x86_64, each a zip holding one
-          file, and needs no compiler and no runtime on any of them.
+          which is where it stops on an arm64 machine: that is the launch failure this page
+          had to work around to get a reference time at all. open-king ships prebuilt binaries
+          for macOS arm64, macOS x86_64, Linux x86_64 and Windows x86_64, each a zip holding
+          one file, and needs no compiler and no runtime on any of them.
         </p>
 
         <p>
-          The two macOS builds are signed with a Developer ID, hardened runtime and secure
-          timestamp, and notarized by Apple, so they run straight out of the archive with no
-          Gatekeeper warning. Apple staples a notarization ticket to app bundles, disk images
-          and installer packages, but not to a bare command-line executable, so the first run
-          checks with Apple online. The <a href="install.html">install page</a> has the
-          download commands and the published checksums.
-        </p>
-
-        <p>
-          The licence differs in the same direction. open-king is MIT, so it can be vendored
-          into a pipeline, built into a container image, packaged by a distribution, shipped
-          inside a product, or forked. KING's terms are "Feel free to use KING for your
-          research, but please do not redistribute AND make profits", which leaves each of
-          those uses to be negotiated.
+          The two macOS builds are signed with a Developer ID certificate, hardened runtime
+          and secure timestamp, and notarized by Apple, so they run straight out of the
+          archive with no Gatekeeper warning. Apple staples a notarization ticket to app
+          bundles, disk images and installer packages, but not to a bare command-line
+          executable, so the first run checks with Apple online. The
+          <a href="install.html">install page</a> has the download commands and the published
+          checksums.
         </p>
 
         <h2 id="cpu-work">CPU work by analysis</h2>
@@ -435,8 +438,8 @@
 
         <p>
           On the ten corpus datasets, the largest of which is 200 samples by 50,000 markers,
-          open-king is faster in 72 of 80 cells, median 3.7x. On <code>trio</code>, three
-          samples, it is 0.004 s against 0.020 s.
+          open-king is faster in 72 of those 80 cells, median 3.7x. On <code>trio</code>,
+          three samples, it is 0.004 s against 0.015 s.
         </p>
 
         <p>

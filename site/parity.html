@@ -224,8 +224,8 @@
           unrecorded improvement. The last of those is deliberate, so that a change which
           fixes a case must also update the file that said it was broken. CI runs it on every
           push to main and on every pull request. The replay needs no reference binary and
-          takes about three seconds; <code>cargo test --workspace</code> runs beside it on
-          Linux, macOS and Windows.
+          takes about two seconds warm and eight cold; the 355-test
+          <code>cargo test --workspace</code> suite runs beside it on Linux, macOS and Windows.
         </p>
 
         <h2 id="the-corpus">The corpus</h2>
@@ -291,9 +291,9 @@
             10,000), <code>sexchr</code> (10, 6,000) and <code>monomorphic</code> (12, 5,000)
             each report the same 14 <code>.seg</code> rows: the within-family pairs of one
             six-person nuclear family. Half of <code>monomorphic</code>'s markers carry no
-            usable information. On these the reference's own segment numbers are nowhere near
-            the pedigree the generator built, so agreeing with the reference there says little
-            about the segment caller.
+            usable information. On these the reference's own segment numbers are far from the
+            pedigree the generator built, so agreement there grades reproduction of the
+            reference and not the accuracy of the segment caller.
           </p>
         </div>
 
@@ -363,16 +363,15 @@
         </p>
 
         <div class="note">
-          <p class="note-title">The limit of a saturated corpus</p>
+          <p class="note-title">Where the corpus stops discriminating</p>
           <p>
             <code>&lt;prefix&gt;.seg</code> is byte-identical in all 50 captures, on all 4,172
             rows, at the default reporting floor and at <code>--seglength 5</code> and
             <code>--seglength 10</code> alike. The primary <code>--ibdseg</code> scorecard is
             982 of 982 rows exact at each of the three floors, with 0 extra and 0 missing
-            pairs. That is a statement about 480 captures of 13 simulated datasets. It is not
-            a proof that the segment caller is right in general, and the corpus can no longer
-            tell the difference: it has stopped grading the caller and become a regression
-            guard. The measurement that still discriminates is the out-of-sample battery
+            pairs. Those figures cover 480 captures of 13 simulated datasets, and on this file
+            the corpus is saturated: it now guards against regression rather than grading the
+            caller. The measurement that still discriminates is the out-of-sample battery
             below, where four rows of 6,713 differ.
           </p>
         </div>
@@ -519,10 +518,10 @@ rows: 0 extra, 0 missing, 4 value-differing</code></pre>
         <h2 id="independent-rebuild">An independently compiled reference</h2>
 
         <p>
-          The goldens carry whatever is specific to the binary that produced them. To test
-          that, KING 2.3.2 was compiled independently from the published source with a
-          different compiler, Homebrew GCC 16 on arm64, and all 480 captured invocations were
-          replayed against that build.
+          A golden records what one binary did, so it could carry something specific to that
+          binary rather than to KING. To test that, KING 2.3.2 was compiled independently from
+          the published source with a different compiler, Homebrew GCC 16 on arm64, and all 480
+          captured invocations were replayed against that build.
         </p>
 
         <p>
@@ -537,8 +536,8 @@ rows: 0 extra, 0 missing, 4 value-differing</code></pre>
           <code>Inference Parameter</code> entry and defeats the runner's normalization of the
           integer. The second is the <code>N CPU cores are used</code> line, which reports the
           host's core count and is not a build property at all. Both lines are ones the replay
-          normalization targets, so the recorded failures show that the normalization did not
-          absorb the cross-build form of them.
+          normalization targets, so those 475 failures record a normalization written for one
+          build's spelling of two console lines, not a difference in computed output.
         </p>
 
         <p>
@@ -579,9 +578,9 @@ rows: 0 extra, 0 missing, 4 value-differing</code></pre>
 
         <p>
           open-king is MIT licensed and implements KING's relatedness workflow, and that
-          workflow is the whole of the product. It does not reproduce every analysis that
-          accumulated in the original executable. The following are outside the product
-          boundary and are not planned for this package.
+          workflow is the whole of the product. It does not reproduce every analysis the
+          original executable carries. The following are outside the product boundary and are
+          not planned for this package.
         </p>
 
         <ul>
@@ -606,10 +605,16 @@ rows: 0 extra, 0 missing, 4 value-differing</code></pre>
 
         <p>
           One computing-scope note. <code>--cpus &lt;n&gt;</code> is accepted, echoed and used
-          in compatibility console text, but it does not currently promise a strict Rayon
-          worker-thread cap. Computed files are deterministic across thread counts, and exact
-          performance parity with KING is not a product goal. Separately,
-          <code>&lt;prefix&gt;.segments.gz</code> is documented in KING's manual, but the 2.3.2
+          in compatibility console text, but it does not currently impose a strict cap on
+          Rayon's worker threads. Computed files are deterministic across thread counts, so the
+          option changes run time and not results, and reproducing KING's thread scheduling is
+          not a parity target. Run times are on the
+          <a href="benchmarks.html">benchmarks page</a>: open-king finishes first in 72 of
+          the 80 golden-corpus cells, median 3.7x, and on 800 samples the counting analyses
+          stay level with KING while the segment-driven ones cost between 7 and 55 times more
+          CPU, with the gap widening as the cohort grows. That is tracked as
+          <a href="https://github.com/Broccolito/open-king/issues/12">issue&nbsp;#12</a>.
+          Separately, <code>&lt;prefix&gt;.segments.gz</code> is documented in KING's manual, but the 2.3.2
           build ships without zlib in its segment writer and writes no such file on any
           invocation in the corpus, so it is not a parity target.
         </p>
