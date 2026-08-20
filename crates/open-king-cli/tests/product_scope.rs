@@ -9,7 +9,7 @@ fn run(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_open-king"))
         .args(args)
         .output()
-        .expect("king binary runs")
+        .expect("open-king binary runs")
 }
 
 #[track_caller]

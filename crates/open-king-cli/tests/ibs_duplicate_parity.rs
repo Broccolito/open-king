@@ -24,7 +24,7 @@ struct Scratch(PathBuf);
 
 impl Scratch {
     fn new(tag: &str) -> Scratch {
-        let dir = std::env::temp_dir().join(format!("king-ibs-{}-{tag}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("open-king-ibs-{}-{tag}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("scratch dir");
         Scratch(dir)
@@ -113,7 +113,7 @@ fn run(scratch: &Scratch, stem: &str, extra: &[&str]) -> String {
         .args(&args)
         .current_dir(&scratch.0)
         .output()
-        .expect("king binary runs");
+        .expect("open-king binary runs");
     assert!(out.stderr.is_empty(), "nothing is written to stderr");
     let stdout = String::from_utf8(out.stdout).expect("stdout is UTF-8");
     let start = stdout

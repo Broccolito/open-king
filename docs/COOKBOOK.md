@@ -1508,7 +1508,10 @@ input is opened, with exit status 1 and a diagnostic that points to the product 
 
 ```
 $ open-king -b /path/that/does/not/exist.bed --pca
-FATAL ERROR - --pca is outside open-king's minimal relatedness/QC product scope.
+FATAL ERROR - 
+open-king's minimal relatedness product does not implement: --pca.
+Supported analyses: --related, --duplicate, --kinship, --ibdseg, --ibs, --unrelated, --cluster, --build, --bysample, --bySNP, and --autoQC.
+See docs/SCOPE.md for the product-scope contract.
 $ echo $?
 1
 ```

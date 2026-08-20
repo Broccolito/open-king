@@ -49,7 +49,7 @@ here.
    and read the outputs. This is the workhorse, and it is what §5 is about.
 
 The IBD-segment algorithm is not published at all — KING's manual says the manuscript is
-"yet to be published" — so every rule in `king-core::ibdseg` was established the third way.
+"yet to be published" — so every rule in `open-king-core::ibdseg` was established the third way.
 `docs/research/` is the log of those experiments; each rule's doc comment names the
 experiment that fixed it.
 
@@ -79,15 +79,15 @@ README.md          the cold-reader entry point; must claim nothing PARITY.md lac
 .github/workflows/ CI: fmt, clippy, test, build on 3 OSes + the parity baseline gate
 
 crates/
-  king-io/        PLINK 1 fileset I/O: .bed / .bim / .fam -> packed bit planes.
+  open-king-io/   PLINK 1 fileset I/O: .bed / .bim / .fam -> packed bit planes.
                   lib.rs states the types; the submodules implement them.
-  king-core/      The estimators, with no I/O and no console.
+  open-king-core/ The estimators, with no I/O and no console.
                   counts.rs   the per-pair counting kernel
                   kinship.rs  the kinship / IBS estimators
                   ibdseg.rs   the IBD-segment engine (usable segments, per-pair
                               calling, aggregation, InfType, the --degree filter)
                   infer.rs    relationship inference from the estimates
-  king-cli/       The command line, the console, and one module per analysis.
+  open-king-cli/  The command line, the console, and one module per analysis.
                   cli.rs      option table + parser (the banner depends on it)
                   console.rs  every line the program prints, C-compatible formatting
                   load.rs     fileset loading, chromosome partition, progress ticks
@@ -281,8 +281,8 @@ Three rules of thumb the tree already follows:
 * **`lib.rs` and `mod.rs` state contracts**; implementations live in submodules. If you
   are adding behaviour, it usually belongs in a submodule, not in the module that
   declares the shape.
-* **`king-core` never prints and never touches the filesystem.** Formatting a number the
-  way C's `printf` would is `king-cli::console`'s job.
+* **`open-king-core` never prints and never touches the filesystem.** Formatting a number the
+  way C's `printf` would is `open-king-cli::console`'s job.
 * **Anything used by exactly one analysis lives in that analysis's module.**
   `analysis/mod.rs` is for what two or more of them share.
 
@@ -324,7 +324,7 @@ The suite needs no reference binary — the goldens are committed and the input 
 regenerates from a seed in about 20 seconds — which is why it can run in CI at all. Only the
 480/480 self-check needs the reference, and that stays a local step. The parity job is
 restricted to Linux: the goldens were captured on macOS and the suite is run there
-constantly, but the full replay has never been checked on Windows (the binary is `king.exe`
+constantly, but the full replay has never been checked on Windows (the binary is `open-king.exe`
 there).
 
 **`.gitattributes` is load-bearing, not housekeeping.** 486 of the goldens contain bare `CR`
@@ -595,7 +595,7 @@ Working backwards from the output, which is the order that keeps you honest:
    that is what they are for.
 2. **Write the module.** `crates/open-king-cli/src/analysis/<flag>.rs`, declared in
    `analysis/mod.rs`. It owns its output files and its console body. Domain logic —
-   anything that computes rather than prints — belongs in `king-core`.
+   anything that computes rather than prints — belongs in `open-king-core`.
 3. **Wire the flag.** Add it to the option table in `cli.rs` if it is not already there
    (many out-of-scope flags are already parsed so the banner stays exact), and to the
    `ANALYSES` list so `Options in effect:` includes it.
@@ -618,7 +618,7 @@ Working backwards from the output, which is the order that keeps you honest:
 
 This section is the one a newcomer cannot reconstruct from the code. The IBD-segment
 algorithm is unpublished, the corpus is 13 noisy datasets, and **every constant in
-`king-core::ibdseg` was measured rather than derived**. These are the instruments that made
+`open-king-core::ibdseg` was measured rather than derived**. These are the instruments that made
 that possible, in increasing order of power — §8.3 is the one to read if you read only one,
 and §8.5 is the one that found the last two rules, which the canvas structurally could not.
 

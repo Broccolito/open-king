@@ -33,7 +33,7 @@ struct Scratch(PathBuf);
 
 impl Scratch {
     fn new(tag: &str) -> Scratch {
-        let dir = std::env::temp_dir().join(format!("king-load-{}-{tag}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("open-king-load-{}-{tag}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("scratch dir");
         Scratch(dir)
@@ -114,7 +114,7 @@ fn load_output(scratch: &Scratch, args: &[&Path]) -> String {
         // scratch directory is removed on drop.
         .current_dir(&scratch.0)
         .output()
-        .expect("king binary runs");
+        .expect("open-king binary runs");
     assert!(
         out.stderr.is_empty(),
         "the reference writes nothing to stderr"

@@ -25,7 +25,7 @@ struct Scratch(PathBuf);
 
 impl Scratch {
     fn new(tag: &str) -> Scratch {
-        let dir = std::env::temp_dir().join(format!("king-qc-{}-{tag}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("open-king-qc-{}-{tag}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("scratch dir");
         Scratch(dir)
@@ -89,7 +89,7 @@ fn run(dir: &Path, stem: &str, args: &[&str]) -> String {
         .arg(&bed)
         .args(args)
         .output()
-        .expect("run king");
+        .expect("run open-king");
     String::from_utf8_lossy(&out.stdout).into_owned()
 }
 
