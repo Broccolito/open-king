@@ -1,0 +1,2259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Commands and options | open-king</title>
+<meta name="description" content="Every open-king command line option: input selection, the eleven analysis flags, shared parameters, parser behaviour, excluded options and exit codes.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Ctext%20x='3'%20y='25'%20font-family='monospace'%20font-size='26'%20fill='%231c5c8c'%3Ek%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+<script>
+  try {
+    var t = localStorage.getItem('open-king-theme');
+    if (t === 'light' || t === 'dark') { document.documentElement.setAttribute('data-theme', t); }
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<div class="shell">
+  <aside class="sidebar" data-nav-open="false">
+    <div class="sidebar-inner">
+      <div class="masthead">
+        <a class="brand" href="index.html">
+          <span class="brand-name">open-king</span>
+          <span class="brand-tag">docs</span>
+        </a>
+        <div class="masthead-actions">
+          <button class="icon-button theme-toggle" type="button" aria-label="Switch theme">
+            <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 12H2M22 12h-2.2M6.3 6.3 4.8 4.8M19.2 19.2l-1.5-1.5M17.7 6.3l1.5-1.5M4.8 19.2l1.5-1.5"/></svg>
+            <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.4A8.4 8.4 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4z"/></svg>
+          </button>
+          <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Show navigation">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <nav class="site-nav" id="site-nav" aria-label="Documentation">
+        <div class="nav-group">
+          <p class="nav-label">Guide</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link" href="index.html">Overview</a></li>
+            <li class="nav-item"><a class="nav-link" href="install.html">Install</a></li>
+            <li class="nav-item"><a class="nav-link" href="usage.html" aria-current="page">Commands and options</a></li>
+            <li class="nav-item"><a class="nav-link" href="outputs.html">Output files</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-label">Verification</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link" href="benchmarks.html">Benchmarks</a></li>
+            <li class="nav-item"><a class="nav-link" href="parity.html">Parity</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-label">Project</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link nav-link--external" href="https://github.com/Broccolito/open-king">Source repository</a></li>
+          </ul>
+        </div>
+      </nav>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <main class="content" id="main">
+      <article class="prose">
+        <p class="eyebrow">Guide</p>
+        <h1>Commands and options</h1>
+
+        <p class="lede">
+          One invocation reads one PLINK1 fileset and runs one or more analyses over it.
+          This page lists every option the binary accepts, what each one changes, and the
+          parser behaviour that the flag name does not reveal. Every number and every
+          quoted console line below was produced by running the binary.
+        </p>
+
+        <h2 id="synopsis">Synopsis</h2>
+
+        <div class="code-block">
+<pre><code>king -b &lt;fileset&gt;.bed [--fam &lt;path&gt;] [--bim &lt;path&gt;] &lt;analysis&gt;... [parameters...]</code></pre>
+        </div>
+
+        <p>
+          Two parts are required. <code>-b</code> names the <code>.bed</code> file; without
+          it the run is fatal at exit status 1 and nothing else happens. At least one
+          analysis flag selects work; with a fileset and no analysis the run loads the data,
+          prints <code>Please specify one of the following 24 options: …</code> and exits 0
+          having written nothing.
+        </p>
+
+        <p>The surface, counted from the binary:</p>
+
+        <ul>
+          <li>46 long options plus one short option <code>-b</code> (case variant
+            <code>-B</code>), 47 spellings in total.</li>
+          <li>Of the long options, 11 select an analysis, 11 modify one, and 24 are
+            recognised by the parser and then rejected as outside the product scope.</li>
+          <li>23 distinct output files, plus one transient probe file.</li>
+          <li>All options are matched case-insensitively by unique prefix, so
+            <code>--rel</code>, <code>--RELATED</code> and <code>--related</code> are the
+            same option.</li>
+        </ul>
+
+        <p>
+          Examples on this page assume <code>king</code> is on the path and that the
+          working directory holds the fileset being named. Analyses are switches, so
+          repeating one turns it back off: <code>--related --related</code> leaves
+          <code>--related</code> off and the run falls through to the "please specify"
+          notice at exit 0 with no files.
+        </p>
+
+        <p>
+          Selecting more than one analysis prints a line naming them, and each runs as its
+          own pass.
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>$ king -b multifam.bed --kinship --ibs --duplicate
+The following analyses will run separately:  --kinship --ibs --duplicate</code></pre>
+        </div>
+
+        <p>
+          <code>--cluster</code> suppresses that line entirely, whatever else was requested.
+          It is absent from <code>king -b multifam.bed --kinship --cluster</code>.
+        </p>
+
+        <h2 id="input-options">Input options</h2>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Option</th>
+                <th scope="col">Value</th>
+                <th scope="col">Default</th>
+                <th scope="col">If omitted</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>-b</code> / <code>-B</code></th>
+                <td>Required. The <code>.bed</code> <strong>file path</strong>, not a stem</td>
+                <td>none</td>
+                <td>Fatal: <code>Genotype files are required. e.g., …</code>, exit 1, nothing else runs</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--fam &lt;path&gt;</code></th>
+                <td>String, used verbatim</td>
+                <td>empty</td>
+                <td>Derived from <code>-b</code> by replacing <code>.bed</code> with <code>.fam</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--bim &lt;path&gt;</code></th>
+                <td>String, used verbatim</td>
+                <td>empty</td>
+                <td>Derived from <code>-b</code> by replacing <code>.bed</code> with <code>.bim</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--prefix &lt;string&gt;</code></th>
+                <td>String, concatenated onto every output name</td>
+                <td><code>king</code></td>
+                <td>Outputs land in the current directory as <code>king*</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          There is no <code>--bed</code>. The <code>.bed</code> path is always exactly the
+          <code>-b</code> token.
+        </p>
+
+        <h3 id="b-option">The <code>-b</code> argument</h3>
+
+        <ul>
+          <li>Attached and separate forms are equivalent. <code>-bmultifam.bed</code> and
+            <code>-b multifam.bed</code> both set
+            <code>Binary File : multifam.bed</code>.</li>
+          <li>The option letter is case-insensitive, so <code>-Bmultifam.bed</code> works.</li>
+          <li>The argument must end in a literal lowercase <code>.bed</code>. A stem is not
+            accepted and neither is <code>UPPER.BED</code>.</li>
+          <li><code>-b</code> followed by a dash-leading token consumes nothing and
+            <strong>clears</strong> the fileset.
+            <code>king -bmultifam.bed -b --kinship</code> exits 1 with
+            <code>Genotype files are required</code>.</li>
+          <li>Only one fileset per run. A comma in the <code>-b</code>, <code>--fam</code>
+            or <code>--bim</code> value is rejected; see
+            <a href="#excluded-options">excluded options</a>.</li>
+        </ul>
+
+        <h3 id="input-probe-order">Input probe order</h3>
+
+        <p>
+          The loader checks the three files in a fixed order. Each failure below was given
+          in isolation, so the first fatal line names the earliest check that the input
+          fails.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide table--zebra">
+            <thead>
+              <tr>
+                <th scope="col">Command</th>
+                <th scope="col" class="num">Exit</th>
+                <th scope="col">First fatal line</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>king -b sub/study.bed --kinship</code></th>
+                <td class="num">1</td>
+                <td><code>Genotype file sub/study.bed cannot be opened</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b plain --kinship</code></th>
+                <td class="num">1</td>
+                <td><code>Please use PLINK binary format as input.</code> (valid bed contents, name has no <code>.bed</code>)</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b UPPER.BED --kinship</code></th>
+                <td class="num">1</td>
+                <td><code>Please use PLINK binary format as input.</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b bad.bed --kinship</code></th>
+                <td class="num">1</td>
+                <td><code>Please use either PLINK or KING binary format as input.</code> (bad magic)</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b g.bed --kinship</code></th>
+                <td class="num">1</td>
+                <td><code>Pedigree file g.fam cannot be opened</code> (no <code>g.fam</code>)</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b multifam.bed --fam nope.fam --kinship</code></th>
+                <td class="num">1</td>
+                <td><code>Pedigree file nope.fam cannot be opened</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b h.bed --kinship</code></th>
+                <td class="num">1</td>
+                <td><code>Map file h.bim cannot be opened</code> (no <code>h.bim</code>)</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b multifam.bed --bim nope.bim --kinship</code></th>
+                <td class="num">1</td>
+                <td><code>Map file nope.bim cannot be opened</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b multifam.bed --fam short.fam --kinship</code></th>
+                <td class="num">1</td>
+                <td><code>short.fam: line 1 has 5 fields, expected 6</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b multifam.bed --fam dup.fam --kinship</code></th>
+                <td class="num">1</td>
+                <td><code>Please correct problems with pedigree structure</code>, preceded by <code>Family FAM1: Person A_F is duplicated</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b multifam.bed --bim nochr.bim --kinship</code></th>
+                <td class="num">1</td>
+                <td><code>No autosome SNPs are available. Please check your map file.</code> (all chr 99)</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b imajor.bed --kinship</code></th>
+                <td class="num">1</td>
+                <td><code>Currently only SNP-major mode can be analyzed.</code> (mode byte 0)</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b trunc.bed --kinship</code></th>
+                <td class="num">1</td>
+                <td><code>Not enough genotypes at the 999th marker</code> (bed cut to 5000 bytes)</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b multifam.bed --kinship --prefix nodir/x</code></th>
+                <td class="num">1</td>
+                <td><code>Cannot open nodir/x$TMP$.ped to write.</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The writability probe on <code>--prefix</code> runs after the <code>.fam</code> is
+          opened and before a single pedigree row is parsed. It creates and removes
+          <code>&lt;prefix&gt;$TMP$.ped</code>.
+        </p>
+
+        <h3 id="file-formats">File format requirements</h3>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Requirement</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>.bed</code></th>
+                <td>PLINK 1 binary, magic <code>0x6c 0x1b</code>, SNP-major (mode byte <code>0x01</code>), at least <code>ceil(N/4) * M</code> genotype bytes</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>.bim</code></th>
+                <td>6 whitespace-separated columns <code>CHR ID CM BP A1 A2</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>.fam</code></th>
+                <td>6 whitespace-separated columns <code>FID IID FA MO SEX PHENO</code>; <code>(FID, IID)</code> unique under ASCII case folding</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="enforced-input-properties">Two enforced input properties</h3>
+
+        <p>
+          <strong>A1 must be the minor allele.</strong> Flipping every homozygote call in
+          <code>multifam.bed</code> produces a fatal:
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>$ king -b major.bed --ibs
+FATAL ERROR -
+Too many first alleles as the major allele (~98.2%). Please use plink1.9 --make-bed to regenerate the genotype data again.</code></pre>
+        </div>
+
+        <p>
+          Three analyses are exempt and exit 0 on that same fileset:
+          <code>--kinship</code>, <code>--duplicate</code> and <code>--autoQC</code>. The
+          other eight abort at exit 1: <code>--related</code>, <code>--ibs</code>,
+          <code>--ibdseg</code>, <code>--bysample</code>, <code>--bySNP</code>,
+          <code>--unrelated</code>, <code>--cluster</code> and <code>--build</code>. Some
+          files are written before the abort.
+          <code>--ibs</code>, <code>--related</code>, <code>--bysample</code>,
+          <code>--bySNP</code>, <code>--unrelated</code>, <code>--cluster</code> and
+          <code>--build</code> leave <code>&lt;prefix&gt;allsegs.txt</code> behind;
+          <code>--ibdseg</code> leaves <code>&lt;prefix&gt;allsegs.txt</code> and
+          <code>&lt;prefix&gt;splitped.txt</code>.
+        </p>
+
+        <p>
+          <strong>The <code>.bim</code> must be sorted by
+          <code>(chromosome, position)</code> ascending</strong> for any segment work. An
+          unsorted map is not fatal. The run exits 0, reports the offending pair of markers,
+          and suppresses the segment outputs.
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>$ king -b unsortedpos.bed --ibdseg          # exit 0, only kingsplitped.txt written
+Positions unsorted: rs1_1009689 at 65904473, rs1_1055261 at 65851170.
+  Note chromosomal positions can be sorted conveniently using other tools such as PLINK.
+
+$ king -b unsortedchr.bed --ibdseg          # exit 0, only kingsplitped.txt written
+Chromosomes unsorted: rs22_14205438 on chr 22, rs21_1002722 on chr 21.
+  Note chromosomal positions can be sorted conveniently using other tools such as PLINK.</code></pre>
+        </div>
+
+        <h3 id="chromosome-classification">Chromosome classification</h3>
+
+        <p>
+          At <code>--sexchr 23</code>, the default. Numeric codes are re-partitioned by
+          <code>--sexchr</code>; the alphabetic spellings <code>X</code>, <code>Y</code>,
+          <code>XY</code> and <code>MT</code> are classified by name and never move.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Code</th>
+                <th scope="col">Class</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>1</code>..<code>22</code></th>
+                <td>Autosome</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>25</code>, <code>XY</code></th>
+                <td>Autosome, pooled into the autosome total</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>23</code>, <code>X</code></th>
+                <td>X chromosome</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>24</code>, <code>Y</code></th>
+                <td>Y chromosome, excluded from relatedness</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>26</code>, <code>MT</code></th>
+                <td>Mitochondrial, excluded from relatedness</td>
+              </tr>
+              <tr>
+                <th scope="row">anything else</th>
+                <td>Dropped at map load, reported as <code>N other SNPs are removed.</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The <code>sexchr</code> fileset carries 2000 markers on chr 1, 2000 on chr 2,
+          1500 on 23, 300 on 24, 150 on 25 and 50 on 26. It loads like this:
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>$ king -b sexchr.bed --kinship
+  Genotype data consist of 4150 autosome SNPs (including 150 XY SNPs), 1500 X-chromosome SNPs, 300 Y-chromosome SNPs, 50 mitochondrial SNPs
+  PLINK maps loaded: 6000 SNPs</code></pre>
+        </div>
+
+        <h2 id="analyses">The analyses</h2>
+
+        <p>
+          Eleven analyses are implemented. Each section below gives what the flag computes,
+          the exact output file set with <code>--prefix</code> written as <code>&lt;p&gt;</code>
+          (default <code>king</code>), the parameters that modify it, and a runnable example.
+        </p>
+
+        <h3 id="related"><code>--related</code></h3>
+
+        <p>
+          Kinship for every pair, IBD segments for the close ones, and an inferred
+          relationship label. It reports up to degree 1 by default, and it is the only
+          analysis with a non-zero default degree.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Written when</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;.kin</code></th>
+                <td>At least one family has 2 or more members. 16 columns</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;.kin0</code></th>
+                <td>The between-family stage confirms a candidate. At degree 1 or 2 that stage also requires N &gt;= 100. 14 columns</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;allsegs.txt</code></th>
+                <td>The map yields at least one usable segment</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;X.kin</code></th>
+                <td>The X map yields a usable segment. 9 columns, segment layout, different from <code>--kinship</code>'s <code>X.kin</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;X.kin0</code></th>
+                <td>A <code>.kin0</code> was written and the X map has a usable segment</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Modified by <code>--degree</code>, <code>--seglength</code>, <code>--cpus</code>,
+          <code>--prefix</code> and <code>--sexchr</code>. Two size gates apply:
+        </p>
+
+        <ul>
+          <li>N &lt; 10: the run becomes a <code>--kinship</code> run and
+            <code>--degree</code> is discarded.
+            <code>king -b trio.bed --related --degree 2</code> prints
+            <code>--related is replaced with --kinship for a small sample size.</code>
+            then <code>Options in effect: --kinship</code>.</li>
+          <li>N &lt; 100 at degree 1 or 2: the console reports
+            <code>No close relatives are inferred.</code> and no <code>.kin0</code> is
+            written. On <code>multifam</code>, 20 samples, degree 1 and degree 2 write no
+            <code>.kin0</code>, while degree 3 writes 54 rows and degree 4 writes 65.</li>
+        </ul>
+
+        <div class="code-block">
+<pre><code>king -b bigish.bed --related</code></pre>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>Options in effect:
+	--related
+
+Total length of 22 chromosomal segments usable for IBD segment analysis is 2498.9 Mb.
+  Information of these chromosomal segments can be found in file kingallsegs.txt
+
+Within-family kinship data saved in file king.kin
+
+Relationship summary (total relatives: 436 by pedigree, 435 by inference)
+  Source	MZ	PO	FS	2nd	3rd	OTHER
+  ===========================================================
+  Pedigree	0	226	111	81	18	137
+  Inference	0	226	111	79	19	138
+
+A subset of informative SNPs will be used to screen close relatives.
+Sorting autosomes...
+Relationship inference across families starts at Wed Aug 19 19:35:49 2026
+16 CPU cores are used...
+  Stages 1&amp;2 (with 32768 SNPs): 18 pairs of relatives are detected (with kinship &gt; 0.1250)
+                               Screening ends at Wed Aug 19 19:35:50 2026
+  Final Stage (with 50000 SNPs): 3 pairs of relatives (up to 1st-degree) are confirmed
+                               Inference ends at Wed Aug 19 19:35:50 2026
+
+Between-family relatives (kinship &gt;= 0.17678) saved in file king.kin0
+
+Note only duplicates and 1st-degree relatives are included in the inference.
+  Specifying '--degree 2' if a higher degree relationship inference is needed.
+
+KING ends at Wed Aug 19 19:35:50 2026</code></pre>
+        </div>
+
+        <p>
+          That run writes <code>king.kin</code> with 573 rows, <code>king.kin0</code> with
+          3 rows, and <code>kingallsegs.txt</code>.
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>$ head -2 king.kin0
+FID1	ID1	FID2	ID2	N_SNP	HetHet	IBS0	HetConc	HomIBS0	Kinship	IBD1Seg	IBD2Seg	PropIBD	InfType
+BF01	B01_F	BF02	B02_F	50000	0.2274	0.0132	0.4855	0.1175	0.2885	0.4575	0.3676	0.5964	FS</code></pre>
+        </div>
+
+        <h3 id="duplicate"><code>--duplicate</code></h3>
+
+        <p>Finds duplicate and MZ pairs by heterozygote concordance.</p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Written when</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;.con</code></th>
+                <td>Always for N &lt; 100, with a header and no rows when nothing passes. For N &gt;= 100, only when at least one pair passes</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Modified by <code>--minConc</code>, <code>--cpus</code>, <code>--prefix</code>,
+          and <code>--degree</code> (echoed only). It does not write
+          <code>allsegs.txt</code>: it and <code>--kinship</code> are the two analyses that
+          skip the segment pre-pass.
+        </p>
+
+        <div class="code-block">
+<pre><code>king -b dups.bed --duplicate</code></pre>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>Options in effect:
+	--duplicate
+
+Sorting autosomes...
+Computing pairwise genotype concordance starts at Wed Aug 19 19:35:53 2026
+  16 CPU cores are used...
+        Stage 2 (with all SNPs) inference ends at Wed Aug 19 19:35:53 2026
+2 pairs of duplicates with heterozygote concordance rate &gt; 80% are saved in file king.con
+
+  43 additional pairs from screening stage not confirmed in the final stage
+
+KING ends at Wed Aug 19 19:35:53 2026
+
+$ cat king.con
+FID1	ID1	FID2	ID2	N	N_IBS0	N_IBS1	N_IBS2	Concord	HomConc	HetConc
+DUPA	DUP_A	DUPB	DUP_A_COPY	10000	0	0	10000	1.00000	1.00000	1.00000
+MZFAM	MZ_1	MZFAM	MZ_2	10000	9	17	9974	0.99740	0.99862	0.99512</code></pre>
+        </div>
+
+        <p>
+          On <code>bigish</code>, 200 samples with no duplicates, no file is written at all
+          and the console prints
+          <code>No duplicates are found with heterozygote concordance rate &gt; 80%.</code>
+          On <code>unrelated</code>, 30 samples, the run writes a 65-byte
+          <code>king.con</code> holding only the header.
+        </p>
+
+        <h3 id="kinship"><code>--kinship</code></h3>
+
+        <p>
+          Kinship for every pair. No segments and no <code>InfType</code>.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Written when</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;.kin</code></th>
+                <td>At least one family has 2 or more members. 10 columns. Truncated when there is exactly one distinct FID</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;.kin0</code></th>
+                <td>At least 2 distinct FIDs. 8 columns</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;X.kin</code></th>
+                <td>512 or more X markers, more than one family, and <strong>no</strong> <code>--degree</code>. 9 columns</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;X.kin0</code></th>
+                <td>The same gate as <code>X.kin</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Modified by <code>--degree</code> (which filters <code>.kin0</code> only and
+          suppresses the X pass), <code>--cpus</code>, <code>--prefix</code> and
+          <code>--sexchr</code>. There is no sample-size gate: it runs on 3 samples.
+        </p>
+
+        <div class="code-block">
+<pre><code>king -b multifam.bed --kinship</code></pre>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>Options in effect:
+	--kinship
+
+Within-family kinship data saved in file king.kin
+
+Relationship summary (total relatives: 36 by pedigree, 36 by inference)
+  Source	MZ	PO	FS	2nd	3rd	OTHER
+  ===========================================================
+  Pedigree	0	24	12	0	0	4
+  Inference	0	24	11	1	0	4
+
+Relationship inference across families starts at Wed Aug 19 19:33:24 2026
+16 CPU cores are used.
+                                         ends at Wed Aug 19 19:33:24 2026
+Between-family kinship data saved in file king.kin0
+Note --kinship --degree &lt;n&gt; can filter &amp; speed up the kinship computing.
+KING ends at Wed Aug 19 19:33:24 2026
+
+$ head -2 king.kin
+FID	ID1	ID2	N_SNP	Z0	Phi	HetHet	IBS0	Kinship	Error
+FAM1	A_C1	A_C2	15000	0.250	0.2500	0.2219	0.0153	0.2721	0</code></pre>
+        </div>
+
+        <p>The X gate on the <code>sexchr</code> fileset:</p>
+
+        <div class="code-block code-block--plain">
+<pre><code>king -b sexchr.bed --kinship            -&gt; king.kin king.kin0 kingX.kin kingX.kin0
+king -b sexchr.bed --kinship --degree 2 -&gt; king.kin king.kin0</code></pre>
+        </div>
+
+        <p>
+          The single-family truncation is reproduced reference behaviour.
+          <code>king -b nuclear.bed --kinship</code>, 6 samples under one FID, leaves a
+          zero-byte <code>king.kin</code>.
+        </p>
+
+        <h3 id="ibdseg"><code>--ibdseg</code></h3>
+
+        <p>Pairwise IBD-segment inference.</p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Written when</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;.seg</code></th>
+                <td>The segment stage runs and the usable autosomal total reaches 100 Mb. 8 columns</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;allsegs.txt</code></th>
+                <td>The map yields at least one usable segment</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;splitped.txt</code></th>
+                <td>At least one family has 2 members, or a singleton names a parent</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;X.seg</code></th>
+                <td><code>--degree</code> was given with a non-zero value <strong>and</strong> the X map yields a usable segment. 11 header names over 9 values</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Modified by <code>--degree</code>, <code>--seglength</code>, <code>--cpus</code>,
+          <code>--prefix</code> and <code>--sexchr</code>. Under 5 samples it becomes a
+          <code>--kinship</code> run: <code>king -b pair.bed --ibdseg</code> prints
+          <code>--kinship analysis carried out instead for such a small sample size.</code>
+          and writes <code>king.kin0</code>.
+        </p>
+
+        <div class="code-block">
+<pre><code>king -b multifam.bed --ibdseg</code></pre>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>Options in effect:
+	--ibdseg
+
+Total length of 18 chromosomal segments usable for IBD segment analysis is 691.5 Mb.
+  Information of these chromosomal segments can be found in file kingallsegs.txt
+
+IBD segment analysis starts at Wed Aug 19 19:33:32 2026
+16 CPU cores are used for autosome inference...
+                       ends at Wed Aug 19 19:33:32 2026
+
+Note with relationship inference as the primary goal, the following filters are applied:
+  Sample pairs without any long IBD segments (&gt;10Mb) are excluded.
+  Short IBD segments (&lt;3Mb) are not reported/utilized.
+Summary statistics of IBD segments for individual pairs saved in file king.seg
+KING ends at Wed Aug 19 19:33:32 2026
+
+$ head -2 king.seg
+FID1	ID1	FID2	ID2	IBD1Seg	IBD2Seg	PropIBD	InfType
+FAM1	A_F	FAM1	A_C1	1.0000	0.0000	0.5000	PO</code></pre>
+        </div>
+
+        <p>
+          Files written: <code>king.seg</code> with 104 rows,
+          <code>kingallsegs.txt</code> with 18 rows, <code>kingsplitped.txt</code> with
+          21 rows. The X gate: <code>king -b sexchr.bed --ibdseg</code> writes no
+          <code>kingX.seg</code>, while
+          <code>king -b sexchr.bed --ibdseg --degree 2</code> writes it.
+        </p>
+
+        <h3 id="ibs"><code>--ibs</code></h3>
+
+        <p>
+          Full IBS and concordance statistics for every pair, as raw counts.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Written when</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;.ibs</code></th>
+                <td>Always. Header only when no within-family pair exists. 20 or 22 columns</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;.ibs0</code></th>
+                <td>At least 2 distinct FIDs. 19 or 21 columns</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;allsegs.txt</code></th>
+                <td>The map yields at least one usable segment</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          <code>MaxIBD2</code> and <code>Pr_IBD2</code> are appended only when the usable
+          autosomal segment total reaches 100 Mb.
+        </p>
+
+        <p>
+          Modified by <code>--cpus</code>, <code>--prefix</code>, <code>--sexchr</code> and
+          <code>--seglength</code>. <code>--degree</code> does <strong>not</strong> filter
+          <code>.ibs</code> or <code>.ibs0</code>: on <code>multifam</code>, degrees 1, 2
+          and 3 all give 40 and 150 rows and the same md5.
+        </p>
+
+        <div class="code-block">
+<pre><code>king -b multifam.bed --ibs</code></pre>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>Options in effect:
+	--ibs
+
+Total length of 18 chromosomal segments usable for IBD segment analysis is 691.5 Mb.
+  Information of these chromosomal segments can be found in file kingallsegs.txt
+
+Within-family IBS data saved in file king.ibs
+...
+IBS and relationship inference across families starts at Wed Aug 19 19:33:32 2026
+16 CPU cores are used.
+                                         ends at Wed Aug 19 19:33:32 2026
+Between-family IBS data saved in file king.ibs0
+KING ends at Wed Aug 19 19:33:32 2026
+
+$ head -2 king.ibs
+FID	ID1	ID2	Z0	Phi	N_SNP	N_IBS0	N_IBS1	N_IBS2	NHetHet	NHomHom	N_Het1	N_Het2	IBS	Dist	HetConc	Het2|1	Het1|2	HomConc	Kinship	MaxIBD2	Pr_IBD2
+FAM1	A_C1	A_C2	0.250	0.2500	15000	230	3885	10885	3329	7786	5257	5286	1.7103	0.3203	0.4615	0.6333	0.6298	0.9705	0.2721	44749371.000	0.2401</code></pre>
+        </div>
+
+        <p>
+          The short form appears on <code>pair</code>, where 42.6 Mb is usable and the
+          console prints <code>Segments too short.</code> There the header stops at
+          <code>Kinship</code>.
+        </p>
+
+        <h3 id="unrelated"><code>--unrelated</code></h3>
+
+        <p>Greedy maximal unrelated subset, plus its complement.</p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Written when</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;unrelated.txt</code></th>
+                <td>Always, including on datasets under 10 samples</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;unrelated_toberemoved.txt</code></th>
+                <td>Always</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;allsegs.txt</code></th>
+                <td>The map yields a usable segment and the tiny-dataset gate did not fire</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Modified by <code>--degree</code> (the clustering degree), <code>--cpus</code>,
+          <code>--prefix</code>, <code>--minConc</code> (echoed only),
+          <code>--sexchr</code> and <code>--seglength</code>. Both files are two-column
+          <code>FID</code> then <code>IID</code>, tab separated, no header, and together
+          they partition the sample set.
+        </p>
+
+        <div class="code-block">
+<pre><code>king -b bigish.bed --unrelated --degree 2</code></pre>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>Options in effect:
+	--unrelated
+	--degree 2
+
+Family clustering starts at Wed Aug 19 19:35:52 2026
+Autosome genotypes stored in 782 words for each of 200 individuals.
+Sorting autosomes...
+Total length of 22 chromosomal segments usable for IBD segment analysis is 2498.9 Mb.
+  Information of these chromosomal segments can be found in file kingallsegs.txt
+
+16 CPU cores are used to compute the pairwise kinship coefficients...
+Clustering up to 2nd-degree relatives in families...
+Individual IDs are unique across all families.
+...
+A list of 84 unrelated individuals saved in file kingunrelated.txt
+An alternative list of 116 to-be-removed individuals saved in file kingunrelated_toberemoved.txt</code></pre>
+        </div>
+
+        <p>
+          On a tiny dataset the analysis is skipped and both lists are still written.
+          <code>king -b trio.bed --unrelated</code> prints
+          <code>This function is currently disabled for tiny dataset with sample size &lt; 10.</code>
+          and leaves lists of 2 rows and 1 row.
+        </p>
+
+        <h3 id="cluster"><code>--cluster</code></h3>
+
+        <p>
+          Merges families connected by inferred relatedness and reports the pairs inside the
+          merged clusters.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Written when</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;cluster.kin</code></th>
+                <td>At least two families merged <strong>and</strong> the map yields an informative IBD segment. 15 columns</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;updateids.txt</code></th>
+                <td>At least one merge happened</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;allsegs.txt</code></th>
+                <td>The map yields a usable segment</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Modified by <code>--degree</code> (the clustering degree), <code>--cpus</code>,
+          <code>--prefix</code>, <code>--minConc</code> (echoed only),
+          <code>--sexchr</code> and <code>--seglength</code>. Merging requires N &gt;= 100.
+          On <code>multifam</code>, 20 samples, the run writes only
+          <code>kingallsegs.txt</code> and prints
+          <code>No families were found to be connected.</code>
+        </p>
+
+        <div class="code-block">
+<pre><code>king -b bigish.bed --cluster</code></pre>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>Options in effect:
+	--cluster
+...
+Clustering up to 1st-degree relatives in families...
+Individual IDs are unique across all families.
+
+Relationship summary (total relatives: 0 by pedigree, 3 by inference)
+        	MZ	PO	FS	2nd	3rd	4th
+  =========================================================
+  Inference	0	0	3	0	0	0
+
+The following families are found to be connected
+  NewFamID  OriginalFamID
+  KING1     BF01,BF02
+  KING2     BF13,BF14
+  KING3     BF25,BF26
+...
+Pair-wise relatedness in newly clustered families saved in kingcluster.kin.
+KING cluster analysis ends at Wed Aug 19 19:35:51 2026
+KING ends at Wed Aug 19 19:35:51 2026</code></pre>
+        </div>
+
+        <p>
+          Files written: <code>kingallsegs.txt</code>, <code>kingcluster.kin</code> with
+          165 rows, and <code>kingupdateids.txt</code> with 32 rows.
+          <code>king -b trio.bed --cluster</code> writes nothing at all.
+        </p>
+
+        <h3 id="build"><code>--build</code></h3>
+
+        <p>Pedigree reconstruction from the genotypes.</p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Written when</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;updateparents.txt</code></th>
+                <td>Every run past the tiny-dataset gate; zero bytes when nothing was reconstructed</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;build.log</code></th>
+                <td>Every run past the tiny-dataset gate; zero bytes when nothing was reconstructed</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;updateids.txt</code></th>
+                <td>At least one merge happened</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;allsegs.txt</code></th>
+                <td>The map yields a usable segment</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Modified by <code>--degree</code> (the clustering degree), <code>--cpus</code>,
+          <code>--prefix</code>, <code>--minConc</code> (echoed only),
+          <code>--sexchr</code> and <code>--seglength</code>.
+        </p>
+
+        <div class="note note--warn">
+          <p class="note-title">Announced but not written</p>
+          <p>
+            The console prints
+            <code>Update-ID information is saved in file &lt;p&gt;updateids.txt</code>
+            whether or not the file was written. On <code>multifam</code> the line appears
+            and no such file exists. This is reproduced reference behaviour, so a script
+            that greps the console for the filename will look for a file that is not there.
+            Test for the file instead.
+          </p>
+        </div>
+
+        <div class="code-block">
+<pre><code>king -b bigish.bed --build</code></pre>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>Options in effect:
+	--build
+...
+The following families are found to be connected
+  NewFamID  OriginalFamID
+  KING1     BF01,BF02
+  KING2     BF13,BF14
+  KING3     BF25,BF26
+...
+  Family KING3 RULE FS0: Sibship (B25_F B26_F)'s parents are (5 6)
+  Family KING3 INFERENCE AV.FS: B25_F is uncle of B26_C3 and B26_C1, Join3/Join2=0.803
+
+Details of pedigree reconstruction are available in log file kingbuild.log
+Update-ID information is saved in file kingupdateids.txt
+Update-parent information is saved in file kingupdateparents.txt
+Pedigree reconstruction ends at Wed Aug 19 19:35:52 2026
+KING ends at Wed Aug 19 19:35:52 2026
+
+$ head -3 kingupdateparents.txt
+KING1	B01_C1	B01_F	B01_M
+KING1	B01_C2	B01_F	B01_M
+KING1	B01_C3	B01_F	B01_M</code></pre>
+        </div>
+
+        <p><code>king -b trio.bed --build</code> writes nothing at all.</p>
+
+        <h3 id="bysample"><code>--bysample</code></h3>
+
+        <p>Per-sample QC: call rate, heterozygosity and Mendelian-error counts.</p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Written when</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;bySample.txt</code></th>
+                <td>Always. Space separated, <code>.fam</code> order. The column set varies with the data</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;allsegs.txt</code></th>
+                <td>The map yields a usable segment; written silently before the body</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Modified by <code>--cpus</code>, <code>--prefix</code>, <code>--minConc</code>
+          (echoed only), <code>--sexchr</code> and <code>--seglength</code>. The column list
+          grows with the data: X, Y and MT blocks appear only when the map holds those
+          markers, and the Mendelian blocks only when the pedigree holds parent-offspring
+          pairs or trios.
+        </p>
+
+        <div class="code-block">
+<pre><code>king -b multifam.bed --bysample</code></pre>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>Options in effect:
+	--bysample
+
+QC-by-sample starts at Wed Aug 19 19:33:33 2026
+There are 24 parent-offspring pairs and 12 trios, and 12 full-sibling pairs according to the pedigree.
+QC starts...
+  QC-by-sample ends at Wed Aug 19 19:33:33 2026
+QC statistics by samples saved in file kingbySample.txt
+
+KING ends at Wed Aug 19 19:33:33 2026
+
+$ head -2 kingbySample.txt
+FID IID FA MO SEX N_SNP Missing Heterozygosity N_pair N_MIp Err_MIp N_trio N_MIt Err_MIt MI_Removal
+FAM1 A_F 0 0 1 15000 0.0000 0.3505 45000 0 0.0000 45000 0 0.0000 0</code></pre>
+        </div>
+
+        <h3 id="bysnp"><code>--bySNP</code></h3>
+
+        <p>
+          Per-marker QC: allele frequency, genotype counts, call rate, and parent-offspring
+          and trio error rates.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Written when</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;bySNP.txt</code></th>
+                <td>Always. Space separated. Row order is autosomes and <code>XY</code> first, then X, then Y, then MT</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;allsegs.txt</code></th>
+                <td>The map yields a usable segment; written silently before the body</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Modified by <code>--cpus</code>, <code>--prefix</code>, <code>--minConc</code>
+          (echoed only), <code>--sexchr</code> and <code>--seglength</code>. The option is
+          spelled <code>--bySNP</code> and matched case-insensitively, but it is echoed as
+          <code>--bysnp</code> in both the <code>Options in effect</code> block and the
+          "will run separately" line.
+        </p>
+
+        <div class="code-block">
+<pre><code>king -b multifam.bed --bySNP</code></pre>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>Options in effect:
+	--bysnp
+
+QC-by-SNP starts at Wed Aug 19 19:33:33 2026
+There are 24 parent-offspring pairs and 12 trios, and 12 full-sibling pairs according to the pedigree.
+Scanning autosomes for QC-by-SNP with 16 CPU cores...
+QC-by-SNP ends at Wed Aug 19 19:33:33 2026
+QC statistics by SNPs saved in file kingbySNP.txt
+
+KING ends at Wed Aug 19 19:33:33 2026
+
+$ head -2 kingbySNP.txt
+SNP Chr Pos Label_A Label_a Freq_A N N_AA N_Aa N_aa CallRate N_PO N_HomPO N_errPO Err_InPO Err_InHomPO N_trio N_HetOff N_errTrio Err_InTrio Err_InHetTrio
+rs1_1009689 1 1009689 A G 0.3000 20 0 12 8 1.0000 24 4 0 0.0000 0.0000 12 6 0 0.0000 0.0000</code></pre>
+        </div>
+
+        <p>That run writes 15000 data rows.</p>
+
+        <h3 id="autoqc"><code>--autoQC</code></h3>
+
+        <p>
+          The packaged call-rate and sex QC pipeline. It is the only analysis that filters
+          anything.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Written when</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;_autoQC_Summary.txt</code></th>
+                <td>Always. Fixed-width, space padded, no tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;_autoQC_snptoberemoved.txt</code></th>
+                <td>Always. Tab separated, header <code>SNP REASON</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;_autoQC_sampletoberemoved.txt</code></th>
+                <td>Always. Tab separated, header <code>FID IID REASON</code>. Header only when nothing is removed</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>&lt;p&gt;_autoQC_updatesex.txt</code></th>
+                <td>At least one sample had <code>.fam</code> sex <code>0</code> and a sex was inferred. Tab separated, no header</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Modified by <code>--callrateN</code>, <code>--callrateM</code>,
+          <code>--prefix</code>, <code>--minConc</code> (echoed only) and
+          <code>--sexchr</code>. It writes no <code>allsegs.txt</code> and no
+          <code>.kin</code>, and it does not need <code>--kinship</code>.
+        </p>
+
+        <div class="code-block">
+<pre><code>king -b missing.bed --autoQC</code></pre>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>Options in effect:
+	--autoQC
+
+Auto-QC starts at ...
+
+Auto-QC step 1: Apply SNP call rate filter 80.0% on 10000 SNPs (in 6 samples)
+  1569 autosome SNPs have call rate &lt; 80.0%
+  0 X-chr SNPs have call rate &lt; 80.0%
+Auto-QC step 2: Apply sample call rate filter 95.0% on 6 samples (with 5232 SNPs)
+  2 samples have call rate &lt; 95.0%
+Auto-QC step 3: Apply SNP call rate filter 95.0% on 5232 SNPs (in 4 samples)
+  130 SNPs have call rate &lt; 95.0%
+  0 chr-X SNPs have call rate &lt; 95.0%
+...
+Auto-QC step 7: Final check
+Auto-QC step 8: QC Summary Report
+
+$ head -3 king_autoQC_sampletoberemoved.txt
+FID	IID	REASON
+MIS	M_C2	MissingMoreThan5
+MIS	M_C3	MissingMoreThan5</code></pre>
+        </div>
+
+        <p>
+          On <code>missing</code> that run writes the first three files.
+          <code>king -b sexchr.bed --autoQC</code> also writes
+          <code>king_autoQC_updatesex.txt</code>, because <code>sexchr</code> has samples
+          whose <code>.fam</code> sex is <code>0</code>.
+        </p>
+
+        <h2 id="parameters">Parameters</h2>
+
+        <p>
+          Eleven modifier options, all recognised case-insensitively by unique prefix.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide table--zebra">
+            <thead>
+              <tr>
+                <th scope="col">Option</th>
+                <th scope="col">Type</th>
+                <th scope="col">Default</th>
+                <th scope="col">Range</th>
+                <th scope="col">What it changes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>--degree &lt;d&gt;</code></th>
+                <td>int</td>
+                <td>0 (unset), except <code>--related</code> where the effective default is 1</td>
+                <td>Any int; negative inverts the <code>--ibdseg</code> filter</td>
+                <td>Reporting filter</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--noscreen [n]</code></th>
+                <td>int</td>
+                <td><code>-1717986816</code></td>
+                <td>Any int</td>
+                <td>Nothing. No consumer outside the parser</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--seglength &lt;Mb&gt;</code></th>
+                <td>double</td>
+                <td>3 Mb</td>
+                <td>Accepted strictly inside <code>(0.99, 10.01)</code>; anything else reverts to 3 Mb with a notice</td>
+                <td>Minimum length of a called IBD segment</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--minConc &lt;x&gt;</code></th>
+                <td>double</td>
+                <td>0.80</td>
+                <td>Out of <code>[0, 1]</code> warns and is applied anyway</td>
+                <td>Heterozygote-concordance floor for <code>--duplicate</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--callrateN &lt;x&gt;</code></th>
+                <td>double</td>
+                <td>0.95</td>
+                <td>Any double</td>
+                <td><code>--autoQC</code> step 2 sample call-rate threshold</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--callrateM &lt;x&gt;</code></th>
+                <td>double</td>
+                <td>0.95</td>
+                <td>Any double</td>
+                <td><code>--autoQC</code> step 3 SNP threshold, and step 1's pre-filter</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--cpus &lt;n&gt;</code></th>
+                <td>int</td>
+                <td>Machine parallelism</td>
+                <td><code>n &lt;= 0</code> falls back to the machine value</td>
+                <td>Worker threads and the reported core count. Changes no output digit</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--sexchr &lt;n&gt;</code></th>
+                <td>int</td>
+                <td>23</td>
+                <td><code>n &lt; 2</code> is fatal</td>
+                <td>Which numeric code is X, and therefore which codes are autosomal</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--fam &lt;path&gt;</code></th>
+                <td>string</td>
+                <td>empty</td>
+                <td>Any path, used verbatim</td>
+                <td>Replaces the derived <code>.fam</code> path</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--bim &lt;path&gt;</code></th>
+                <td>string</td>
+                <td>empty</td>
+                <td>Any path, used verbatim</td>
+                <td>Replaces the derived <code>.bim</code> path</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--prefix &lt;string&gt;</code></th>
+                <td>string</td>
+                <td><code>king</code></td>
+                <td>Any string; a directory component must already exist</td>
+                <td>Prepended to every output filename by plain concatenation</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="degree"><code>--degree</code></h3>
+
+        <p>
+          A reporting filter, not a computation switch. Everything is computed and fewer
+          rows are written. <code>--degree 0</code> is treated as unset and is not echoed.
+          Row counts on <code>multifam</code>, 20 samples and 15000 SNPs:
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Run</th>
+                <th scope="col" class="num"><code>.kin0</code> rows</th>
+                <th scope="col" class="num"><code>.kin</code> rows</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row"><code>--kinship</code></th><td class="num">150</td><td class="num">40</td></tr>
+              <tr><th scope="row"><code>--kinship --degree 1</code></th><td class="num">8</td><td class="num">40</td></tr>
+              <tr><th scope="row"><code>--kinship --degree 2</code></th><td class="num">32</td><td class="num">40</td></tr>
+              <tr><th scope="row"><code>--kinship --degree 3</code></th><td class="num">52</td><td class="num">40</td></tr>
+              <tr><th scope="row"><code>--kinship --degree 4</code></th><td class="num">63</td><td class="num">40</td></tr>
+              <tr><th scope="row"><code>--kinship --degree 0</code></th><td class="num">150</td><td class="num">40</td></tr>
+              <tr><th scope="row"><code>--kinship --degree -2</code></th><td class="num">0</td><td class="num">40</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The <code>--kinship</code> test is <code>Kinship &gt;= 2^-(d + 1.5)</code> against
+          the IEEE double, not the printed value. On the same fileset,
+          <code>--ibdseg</code> gives 104 <code>.seg</code> rows with no degree, 43 at
+          degree 1, 68 at degree 2, 88 at degree 3, and 36 at degree -2. Since
+          68 + 36 = 104, a negative degree reports the complement.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Analysis</th>
+                <th scope="col">Effect of <code>--degree</code></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>--kinship</code></th>
+                <td>Filters <code>.kin0</code> only; a non-zero degree also suppresses the X pass</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--related</code></th>
+                <td>Filters <code>.kin0</code> only, on <code>Kinship &gt;= 2^-(d+1.5)</code> or <code>PropIBD &gt; 2^-(d+0.5)</code>; default 1</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--ibdseg</code></th>
+                <td>Filters <code>.seg</code>; a non-zero degree is also the gate that enables <code>X.seg</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--unrelated</code>, <code>--cluster</code>, <code>--build</code></th>
+                <td>Sets the clustering degree (<code>Clustering up to Nth-degree relatives in families...</code>)</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--ibs</code></th>
+                <td>None. Row counts and md5 identical at degrees 1, 2 and 3</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>--duplicate</code></th>
+                <td>None beyond being echoed</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Bare <code>--degree</code> with no value means 1. <code>--degree 3.0</code> also
+          means 1: the token is rejected as a value, the int toggles from 0 to 1, and
+          <code>3.0</code> is reported as ignored.
+        </p>
+
+        <h3 id="noscreen"><code>--noscreen</code></h3>
+
+        <p>
+          Accepted, echoed and inert. Running <code>bigish --related --degree 2</code> with
+          and without <code>--noscreen 1</code> produces identical md5s for both
+          <code>.kin</code> and <code>.kin0</code>, and the option has no reader outside the
+          parser.
+        </p>
+
+        <p>
+          Its default <code>-1717986816</code> is not a value. In the reference it is
+          uninitialised memory that overlaps <code>--minConc</code>'s storage, and open-king
+          reproduces the overlap byte for byte:
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>king ...                            --noscreen [-1717986816]
+king --minConc 0.9 ...              --noscreen [-858993408]
+king --noscreen 7 --minConc 0.9 ... --noscreen [-858993401]
+king --minConc 0.9 --noscreen 7 ... --noscreen [7]</code></pre>
+        </div>
+
+        <h3 id="seglength"><code>--seglength</code></h3>
+
+        <p>
+          Measured range and effect on <code>multifam --ibdseg</code>, using the
+          <code>.seg</code> md5:
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide table--zebra">
+            <thead>
+              <tr>
+                <th scope="col">Value</th>
+                <th scope="col">Console</th>
+                <th scope="col"><code>.seg</code> md5</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">0</th><td><code>KING supports minimum segment length from 1 to 10 Mb at the moment.</code> then <code>Default seglength of 3Mb is used.</code></td><td><code>971b3240…</code></td></tr>
+              <tr><th scope="row">0.5</th><td>Same revert notice</td><td><code>971b3240…</code></td></tr>
+              <tr><th scope="row">0.99</th><td>Same revert notice</td><td><code>971b3240…</code></td></tr>
+              <tr><th scope="row">1</th><td><code>Minimum segment length is set as 1000000 bp</code></td><td><code>05850f8c…</code></td></tr>
+              <tr><th scope="row">1.0001</th><td><code>… 1000100 bp</code></td><td><code>05850f8c…</code></td></tr>
+              <tr><th scope="row">3</th><td><code>… 3000000 bp</code></td><td><code>971b3240…</code></td></tr>
+              <tr><th scope="row">5</th><td><code>… 5000000 bp</code></td><td><code>93f4da41…</code></td></tr>
+              <tr><th scope="row">10</th><td><code>… 10000000 bp</code></td><td><code>40e30e5c…</code></td></tr>
+              <tr><th scope="row">10.009</th><td><code>… 10009000 bp</code></td><td><code>40e30e5c…</code></td></tr>
+              <tr><th scope="row">10.01</th><td>Revert notice</td><td><code>971b3240…</code></td></tr>
+              <tr><th scope="row">11</th><td>Revert notice</td><td><code>971b3240…</code></td></tr>
+              <tr><th scope="row">omitted</th><td>No notice</td><td><code>971b3240…</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The revert is genuine: every out-of-range value produces the same md5 as no flag
+          at all.
+        </p>
+
+        <div class="note note--warn">
+          <p class="note-title">Never echoed</p>
+          <p>
+            <code>--seglength</code> does not appear in the <code>Options in effect</code>
+            block, even though it changes the output. It shows up only in its own
+            <code>Minimum segment length is set as &lt;n&gt; bp</code> line, which is
+            emitted before the fileset loads and is followed by a lone <code>.</code> with
+            no newline. A run that recorded only the echo block has no record of the
+            segment length it used.
+          </p>
+        </div>
+
+        <h3 id="minconc"><code>--minConc</code></h3>
+
+        <p>Measured on <code>dups</code>, 10 samples holding 2 duplicate pairs:</p>
+
+        <div class="table-wrap">
+          <table class="table--wide table--zebra">
+            <thead>
+              <tr>
+                <th scope="col">Value</th>
+                <th scope="col" class="num"><code>.con</code> rows</th>
+                <th scope="col">Console</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">omitted</th><td class="num">2</td><td><code>2 pairs of duplicates with heterozygote concordance rate &gt; 80% ...</code></td></tr>
+              <tr><th scope="row">0.5</th><td class="num">2</td><td><code>... &gt; 50% ...</code></td></tr>
+              <tr><th scope="row">0.9</th><td class="num">2</td><td><code>... &gt; 90% ...</code></td></tr>
+              <tr><th scope="row">0.99</th><td class="num">2</td><td><code>... &gt; 99% ...</code></td></tr>
+              <tr><th scope="row">0.999</th><td class="num">1</td><td><code>... &gt; 100% ...</code>; the MZ pair at 0.99512 is dropped</td></tr>
+              <tr><th scope="row">0</th><td class="num">45</td><td><code>... &gt; 0% ...</code></td></tr>
+              <tr><th scope="row">-1</th><td class="num">45</td><td><code>minConc value is out of range and not specified.</code> then <code>... &gt; -100% ...</code></td></tr>
+              <tr><th scope="row">1.5</th><td class="num">0</td><td>Header only. <code>minConc value is out of range and not specified.</code> then <code>No duplicates are found with heterozygote concordance rate &gt; 150%.</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          An out-of-range value warns and is used anyway. The percentage in the message is
+          the value scaled by 100 and rounded.
+        </p>
+
+        <p>
+          <code>--minConc</code> is echoed in <code>Options in effect</code> for
+          <code>--duplicate</code>, <code>--ibs</code>, <code>--autoQC</code>,
+          <code>--unrelated</code>, <code>--cluster</code>, <code>--build</code>,
+          <code>--bysample</code> and <code>--bySNP</code>, but not for
+          <code>--kinship</code>, <code>--related</code> or <code>--ibdseg</code>, which use
+          their own echo lists.
+        </p>
+
+        <h3 id="callrate"><code>--callrateN</code> and <code>--callrateM</code></h3>
+
+        <p>Both are read only by <code>--autoQC</code>. Measured on <code>missing</code>:</p>
+
+        <div class="code-block">
+<pre><code>king -b missing.bed --autoQC --callrateN 0.99 --callrateM 0.9</code></pre>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>Auto-QC step 1: Apply SNP call rate filter 80.0% on 10000 SNPs (in 6 samples)
+Auto-QC step 2: Apply sample call rate filter 99.0% on 6 samples (with 5232 SNPs)
+  3 samples have call rate &lt; 99.0%
+Auto-QC step 3: Apply SNP call rate filter 90.0% on 5232 SNPs (in 3 samples)
+  22 SNPs have call rate &lt; 90.0%</code></pre>
+        </div>
+
+        <p>
+          Step 1's threshold is not fixed at 80%. It is
+          <code>min(0.8, 0.1 * (trunc(callrateM * 10) - 1))</code>, which looks fixed only
+          because it saturates at 0.9 and above.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col" class="num"><code>--callrateM</code></th>
+                <th scope="col" class="num">Step 1 filter</th>
+                <th scope="col" class="num">Step 3 filter</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">0.5</td><td class="num">40.0%</td><td class="num">50.0%</td></tr>
+              <tr><td class="num">0.7</td><td class="num">60.0%</td><td class="num">70.0%</td></tr>
+              <tr><td class="num">0.85</td><td class="num">70.0%</td><td class="num">85.0%</td></tr>
+              <tr><td class="num">0.9</td><td class="num">80.0%</td><td class="num">90.0%</td></tr>
+              <tr><td class="num">0.95</td><td class="num">80.0%</td><td class="num">95.0%</td></tr>
+              <tr><td class="num">1.0</td><td class="num">80.0%</td><td class="num">100.0%</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The <code>_autoQC_Summary.txt</code> row labels are fixed text and always read
+          <code>&lt; 80%</code> and <code>&lt; 95%</code> whatever was passed. With
+          <code>--callrateN 0.99 --callrateM 0.9</code>:
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>1.3  Sample call rate &lt; 95% (removed)                       (3)
+1.4  SNPs with call rate &lt; 95% (removed)                              (22)</code></pre>
+        </div>
+
+        <p>
+          The reason strings in the removal files do track the values:
+          <code>MissingMoreThan&lt;round(100*(1-callrateN))&gt;</code> and
+          <code>CallRateLessThan&lt;round(100*callrateM)&gt;</code>.
+        </p>
+
+        <h3 id="cpus"><code>--cpus</code></h3>
+
+        <div class="code-block">
+<pre><code>king -b multifam.bed --kinship --cpus 3</code></pre>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>Options in effect:
+	--kinship
+	--cpus 3
+...
+3 CPU cores are used.</code></pre>
+        </div>
+
+        <p>
+          <code>--cpus 0</code> and <code>--cpus -4</code> both fall back to the machine
+          value, 16 on the test host, matching <code>sysctl -n hw.ncpu</code>. A zero is not
+          echoed at all; a negative value is echoed in the banner as
+          <code>--cpus [-4]</code> and still reports 16 cores in use.
+          <code>--cpus</code> changes no printed digit:
+          <code>multifam --kinship</code> at <code>--cpus 1</code> and <code>--cpus 16</code>
+          gives identical md5s for both <code>.kin</code> and <code>.kin0</code>.
+        </p>
+
+        <h3 id="sexchr"><code>--sexchr</code></h3>
+
+        <p>It re-partitions numeric chromosome codes:</p>
+
+        <div class="code-block code-block--plain">
+<pre><code>autosomes = 1 .. n-1, plus n+2
+X = n     Y = n+1     XY = n+2     MT = n+3
+every other numeric code is dropped</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide table--zebra">
+            <thead>
+              <tr>
+                <th scope="col">Value</th>
+                <th scope="col" class="num">Exit</th>
+                <th scope="col">Console</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">omitted / 23</th>
+                <td class="num">0</td>
+                <td><code>Genotype data consist of 4150 autosome SNPs (including 150 XY SNPs), 1500 X-chromosome SNPs, 300 Y-chromosome SNPs, 50 mitochondrial SNPs</code></td>
+              </tr>
+              <tr>
+                <th scope="row">2</th>
+                <td class="num">0</td>
+                <td><code>Non-human samples are analyzed, with 2 pairs of chromosomes</code>; <code>2000 autosome SNPs, 2000 X-chromosome SNPs</code>; <code>2000 other SNPs are removed.</code></td>
+              </tr>
+              <tr>
+                <th scope="row">22</th>
+                <td class="num">0</td>
+                <td><code>Non-human ... 22 pairs</code>; <code>4300 autosome SNPs (including 300 XY SNPs), 1500 Y-chromosome SNPs, 150 mitochondrial SNPs</code>; <code>50 other SNPs are removed.</code></td>
+              </tr>
+              <tr>
+                <th scope="row">24</th>
+                <td class="num">0</td>
+                <td><code>Non-human ... 24 pairs</code>; <code>5550 autosome SNPs (including 50 XY SNPs), 300 X-chromosome SNPs, 150 Y-chromosome SNPs</code></td>
+              </tr>
+              <tr>
+                <th scope="row">26</th>
+                <td class="num">0</td>
+                <td><code>Non-human ... 26 pairs</code>; <code>5950 autosome SNPs, 50 X-chromosome SNPs</code></td>
+              </tr>
+              <tr>
+                <th scope="row">1</th>
+                <td class="num">1</td>
+                <td><code>Sex chromosome 1 out of range.</code></td>
+              </tr>
+              <tr>
+                <th scope="row">0</th>
+                <td class="num">1</td>
+                <td><code>Sex chromosome 0 out of range.</code></td>
+              </tr>
+              <tr>
+                <th scope="row">bare <code>--sexchr</code></th>
+                <td class="num">1</td>
+                <td>Toggles 23 to 0, so <code>Sex chromosome 0 out of range.</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Any value other than 23 prints the <code>Non-human samples are analyzed</code>
+          line. Alphabetic map codes (<code>X</code>, <code>Y</code>, <code>XY</code>,
+          <code>MT</code>) are classified by name and are unaffected.
+        </p>
+
+        <h3 id="prefix"><code>--prefix</code></h3>
+
+        <p>Plain concatenation, with no separator inserted.</p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Command</th>
+                <th scope="col">Files</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>king -b multifam.bed --kinship --prefix ZZ_</code></th>
+                <td><code>ZZ_.kin</code>, <code>ZZ_.kin0</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b multifam.bed --kinship --prefix sub/x_</code></th>
+                <td><code>sub/x_.kin</code>, <code>sub/x_.kin0</code> (the directory must exist)</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b multifam.bed --kinship --prefix ""</code></th>
+                <td><code>.kin</code>, <code>.kin0</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b multifam.bed --kinship --prefix nodir/x</code></th>
+                <td>Exit 1, <code>Cannot open nodir/x$TMP$.ped to write.</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          <code>--prefix study</code> gives <code>study.kin</code> and
+          <code>studyallsegs.txt</code>, because the <code>allsegs.txt</code> suffix carries
+          no leading dot. The <code>--autoQC</code> suffixes start with <code>_</code>, so
+          <code>--prefix ZZ_</code> gives <code>ZZ__autoQC_Summary.txt</code>.
+          <code>--prefix</code> is echoed in <code>Options in effect</code> only when it
+          differs from <code>king</code>.
+        </p>
+
+        <h2 id="option-index">Every option at a glance</h2>
+
+        <p>
+          All 47 spellings. Excluded options are recognised by the parser, printed in the
+          banner, and then rejected at exit 1 before any input file is opened; see
+          <a href="#excluded-options">excluded options</a> for the exact message.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide table--zebra">
+            <thead>
+              <tr>
+                <th scope="col">Option</th>
+                <th scope="col">Takes</th>
+                <th scope="col">Category</th>
+                <th scope="col">Summary</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row"><code>-b</code> / <code>-B</code></th><td>path</td><td>Input</td><td>The <code>.bed</code> file path. Required</td></tr>
+              <tr><th scope="row"><code>--fam</code></th><td>path</td><td>Input</td><td>Overrides the derived <code>.fam</code> path, verbatim</td></tr>
+              <tr><th scope="row"><code>--bim</code></th><td>path</td><td>Input</td><td>Overrides the derived <code>.bim</code> path, verbatim</td></tr>
+              <tr><th scope="row"><code>--related</code></th><td>no</td><td>Analysis</td><td>Kinship, IBD segments and a relationship label. Default degree 1</td></tr>
+              <tr><th scope="row"><code>--duplicate</code></th><td>no</td><td>Analysis</td><td>Duplicate and MZ pairs by heterozygote concordance</td></tr>
+              <tr><th scope="row"><code>--kinship</code></th><td>no</td><td>Analysis</td><td>Kinship for every pair, without segments or labels</td></tr>
+              <tr><th scope="row"><code>--ibdseg</code></th><td>no</td><td>Analysis</td><td>Pairwise IBD-segment inference</td></tr>
+              <tr><th scope="row"><code>--ibs</code></th><td>no</td><td>Analysis</td><td>IBS and concordance counts for every pair</td></tr>
+              <tr><th scope="row"><code>--unrelated</code></th><td>no</td><td>Analysis</td><td>Greedy maximal unrelated subset and its complement</td></tr>
+              <tr><th scope="row"><code>--cluster</code></th><td>no</td><td>Analysis</td><td>Merges connected families, reports pairs in the clusters</td></tr>
+              <tr><th scope="row"><code>--build</code></th><td>no</td><td>Analysis</td><td>Pedigree reconstruction from the genotypes</td></tr>
+              <tr><th scope="row"><code>--bysample</code></th><td>no</td><td>Analysis</td><td>Per-sample call rate, heterozygosity, Mendelian errors</td></tr>
+              <tr><th scope="row"><code>--bySNP</code></th><td>no</td><td>Analysis</td><td>Per-marker QC. Echoed as <code>--bysnp</code></td></tr>
+              <tr><th scope="row"><code>--autoQC</code></th><td>no</td><td>Analysis</td><td>Packaged call-rate and sex QC pipeline</td></tr>
+              <tr><th scope="row"><code>--degree</code></th><td>int</td><td>Parameter</td><td>Reporting filter, or the clustering degree</td></tr>
+              <tr><th scope="row"><code>--noscreen</code></th><td>int</td><td>Parameter</td><td>Accepted, echoed, inert</td></tr>
+              <tr><th scope="row"><code>--seglength</code></th><td>double</td><td>Parameter</td><td>Minimum called IBD segment length in Mb. Never echoed</td></tr>
+              <tr><th scope="row"><code>--minConc</code></th><td>double</td><td>Parameter</td><td>Heterozygote-concordance floor for <code>--duplicate</code></td></tr>
+              <tr><th scope="row"><code>--callrateN</code></th><td>double</td><td>Parameter</td><td><code>--autoQC</code> sample call-rate threshold</td></tr>
+              <tr><th scope="row"><code>--callrateM</code></th><td>double</td><td>Parameter</td><td><code>--autoQC</code> SNP call-rate threshold and step 1 pre-filter</td></tr>
+              <tr><th scope="row"><code>--cpus</code></th><td>int</td><td>Parameter</td><td>Worker threads. Changes no output digit</td></tr>
+              <tr><th scope="row"><code>--sexchr</code></th><td>int</td><td>Parameter</td><td>Which numeric code is X</td></tr>
+              <tr><th scope="row"><code>--prefix</code></th><td>string</td><td>Output</td><td>Concatenated onto every output filename</td></tr>
+              <tr><th scope="row"><code>--pca</code></th><td>no</td><td>Excluded</td><td>Principal components</td></tr>
+              <tr><th scope="row"><code>--mds</code></th><td>no</td><td>Excluded</td><td>Multidimensional scaling</td></tr>
+              <tr><th scope="row"><code>--roh</code></th><td>no</td><td>Excluded</td><td>Runs of homozygosity</td></tr>
+              <tr><th scope="row"><code>--makeGRM</code></th><td>no</td><td>Excluded</td><td>Genetic relationship matrix</td></tr>
+              <tr><th scope="row"><code>--lmm</code></th><td>no</td><td>Excluded</td><td>Quantitative trait GWAS</td></tr>
+              <tr><th scope="row"><code>--tdt</code></th><td>no</td><td>Excluded</td><td>Binary trait GWAS</td></tr>
+              <tr><th scope="row"><code>--gdt</code></th><td>no</td><td>Excluded</td><td>Binary trait GWAS</td></tr>
+              <tr><th scope="row"><code>--risk</code></th><td>no</td><td>Excluded</td><td>Genetic risk score</td></tr>
+              <tr><th scope="row"><code>--plink</code></th><td>no</td><td>Excluded</td><td>PLINK-format output</td></tr>
+              <tr><th scope="row"><code>--rplot</code></th><td>no</td><td>Excluded</td><td>R plotting output</td></tr>
+              <tr><th scope="row"><code>--pngplot</code></th><td>no</td><td>Excluded</td><td>PNG plotting output</td></tr>
+              <tr><th scope="row"><code>--rpath</code></th><td>string</td><td>Excluded</td><td>Path to R</td></tr>
+              <tr><th scope="row"><code>--projection</code></th><td>int</td><td>Excluded</td><td>Structure parameter</td></tr>
+              <tr><th scope="row"><code>--pcs</code></th><td>int</td><td>Excluded</td><td>Structure parameter</td></tr>
+              <tr><th scope="row"><code>--trait</code></th><td>string</td><td>Excluded</td><td>Association model</td></tr>
+              <tr><th scope="row"><code>--covariate</code></th><td>string</td><td>Excluded</td><td>Association model</td></tr>
+              <tr><th scope="row"><code>--maxP</code></th><td>double</td><td>Excluded</td><td>Association model</td></tr>
+              <tr><th scope="row"><code>--invnorm</code></th><td>no</td><td>Excluded</td><td>Association method parameter</td></tr>
+              <tr><th scope="row"><code>--model</code></th><td>string</td><td>Excluded</td><td>Risk model file</td></tr>
+              <tr><th scope="row"><code>--prevalence</code></th><td>double</td><td>Excluded</td><td>Risk score parameter</td></tr>
+              <tr><th scope="row"><code>--noflip</code></th><td>no</td><td>Excluded</td><td>Risk score parameter</td></tr>
+              <tr><th scope="row"><code>--phefile</code></th><td>string</td><td>Excluded</td><td>Optional phenotype input</td></tr>
+              <tr><th scope="row"><code>--covfile</code></th><td>string</td><td>Excluded</td><td>Optional covariate input</td></tr>
+              <tr><th scope="row"><code>--prunedsnp</code></th><td>string</td><td>Excluded</td><td>Optional pruned-SNP input</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          There is no <code>--help</code> and no <code>--version</code>.
+          <code>--help</code> parses as an undefined option and the run continues.
+        </p>
+
+        <h2 id="options-in-effect">The "Options in effect" echo</h2>
+
+        <p>
+          Every analysis pass opens with an <code>Options in effect:</code> block naming the
+          analysis and a subset of the parameters. The whitelist is <code>--degree</code>,
+          <code>--minConc</code>, <code>--cpus</code>, <code>--prefix</code>, in that order,
+          after the analysis name. <code>--kinship</code>, <code>--related</code> and
+          <code>--ibdseg</code> use narrower lists that omit <code>--minConc</code>. The
+          same command line produces two different blocks depending on which analysis ran:
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>$ king -b dups.bed --duplicate --minConc 0.9 --degree 2 --cpus 2 --prefix q_
+Options in effect:
+	--duplicate
+	--degree 2
+	--minConc 0.9
+	--cpus 2
+	--prefix q_
+
+$ king -b multifam.bed --kinship --cpus 3 --degree 2 --minConc 0.9 --prefix ZZ_
+Options in effect:
+	--kinship
+	--degree 2
+	--cpus 3
+	--prefix ZZ_</code></pre>
+        </div>
+
+        <p>
+          This is a stdout-parity detail rather than a defect. Four things are missing from
+          the block by design:
+        </p>
+
+        <ul>
+          <li><code>--seglength</code> is never echoed, although it changes the output.</li>
+          <li><code>--minConc</code> is dropped for <code>--kinship</code>,
+            <code>--related</code> and <code>--ibdseg</code>.</li>
+          <li><code>--degree 0</code> and <code>--cpus 0</code> are not echoed, because both
+            are treated as unset.</li>
+          <li><code>--prefix</code> is echoed only when it differs from <code>king</code>.</li>
+        </ul>
+
+        <p>
+          A separate block, <code>The following parameters are in effect:</code>, prints on
+          every run before any analysis and is the fastest check that a command line was
+          understood. Its value rendering follows four rules:
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Kind</th>
+                <th scope="col">Off or unset</th>
+                <th scope="col">Set</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">switch</th>
+                <td><code>--kinship</code></td>
+                <td><code>--kinship [ON]</code></td>
+              </tr>
+              <tr>
+                <th scope="row">int</th>
+                <td>Hidden when 0: <code>--degree</code></td>
+                <td><code>--degree [2]</code></td>
+              </tr>
+              <tr>
+                <th scope="row">double</th>
+                <td>Hidden when 0 and never given: <code>--maxP</code></td>
+                <td><code>%.2f</code>, or <code>%.1e</code> when non-zero and below 0.01</td>
+              </tr>
+              <tr>
+                <th scope="row">string</th>
+                <td>Always shown: <code>--trait []</code></td>
+                <td><code>--prefix [king]</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>$ king -b multifam.bed --callrateN 0.9 --callrateM 0 --seglength 0.005 --degree 0 --cpus 4 --prefix p_
+              Inference Parameter : --degree, --noscreen [-1717986816],
+                                    --seglength [5.0e-03], --minConc [0.80]
+                     QC Parameter : --callrateN [0.90], --callrateM [0.00]
+              Computing Parameter : --cpus [4]
+                 Output Parameter : --prefix [p_], --rpath []</code></pre>
+        </div>
+
+        <h2 id="parser-rules">Parser rules</h2>
+
+        <ol>
+          <li>
+            <strong>Case-insensitive unique-prefix matching.</strong> <code>--rel</code>,
+            <code>--RELATED</code> and <code>--related</code> are the same option. An
+            ambiguous prefix warns and is ignored: <code>--r</code>, <code>--pc</code> and
+            <code>--rp</code> all give
+            <code>Command line parameter --X is ambiguous</code>. A name longer than the
+            option is undefined: <code>--related=1</code> gives
+            <code>Command line parameter --related=1 is undefined</code>. Neither aborts.
+          </li>
+          <li>
+            <strong>Switches toggle.</strong> <code>--related --related</code> leaves
+            <code>--related</code> off, and the run falls through to the "please specify"
+            notice at exit 0 with no files.
+          </li>
+          <li>
+            <strong>A value is consumed only if it looks like one.</strong>
+            <div class="table-wrap">
+              <table class="table--wide">
+                <thead>
+                  <tr>
+                    <th scope="col">Type</th>
+                    <th scope="col">With a value token</th>
+                    <th scope="col">With no value token</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">switch</th>
+                    <td>Never consumes</td>
+                    <td>Toggles</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">int</th>
+                    <td>Consumes iff <code>^[+-]?[0-9]+$</code></td>
+                    <td>Toggles between 0 and 1</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">double</th>
+                    <td>Consumes iff the first char is <code>[0-9.+-]</code> and any exponent is complete</td>
+                    <td>Left unchanged</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">string</th>
+                    <td>Consumes whatever comes next, option or not</td>
+                    <td>Left unchanged</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              <code>--degree 3.0</code> produces <code>--degree [1]</code> plus
+              <code>Command line parameter 3.0 (#5) ignored</code>.
+              <code>--trait --related --kinship</code> sets the trait to the literal
+              <code>--related</code> and leaves <code>--related</code> off, silently.
+            </p>
+          </li>
+          <li>
+            <strong>Everything else is reported as ignored,</strong> with a 1-based argument
+            index. <code>king -b multifam.bed --kinship -h foo</code> gives
+            <code>Command line parameter -h (#4) ignored</code> and
+            <code>Command line parameter foo (#5) ignored</code>.
+          </li>
+          <li>
+            <strong>A lone <code>--</code> borrows the next non-dash token as an option
+            name,</strong> and that option never takes a value.
+            <code>king -b multifam.bed -- related</code> gives
+            <code>Options in effect: --related</code>.
+          </li>
+          <li>
+            <strong>The WARNING block starts with a BEL byte</strong> (<code>0x07</code>).
+            Read with <code>od -c</code> the sequence is
+            <code>\n \n \n \a W A R N</code>. A <code>grep '^WARNING'</code> will not match;
+            strip control characters first.
+          </li>
+        </ol>
+
+        <h2 id="excluded-options">Excluded options</h2>
+
+        <p>
+          24 long options and one input form are recognised by the parser and then rejected
+          before any input file is opened. The banner still prints them, which keeps the
+          parse surface compatible with KING 2.3.2. Every one of them exits <strong>1</strong>.
+          The fatal body is:
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>FATAL ERROR -
+open-king's minimal relatedness product does not implement: &lt;list&gt;.
+Supported analyses: --related, --duplicate, --kinship, --ibdseg, --ibs, --unrelated, --cluster, --build, --bysample, --bySNP, and --autoQC.
+See docs/SCOPE.md for the product-scope contract.</code></pre>
+        </div>
+
+        <p>
+          <code>&lt;list&gt;</code> holds the excluded requests, comma separated, in the
+          fixed order below.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide table--zebra">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Option</th>
+                <th scope="col">Takes a value</th>
+                <th scope="col">Name in the fatal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1</td><th scope="row"><code>--pca</code></th><td>no</td><td><code>--pca</code></td></tr>
+              <tr><td class="num">2</td><th scope="row"><code>--mds</code></th><td>no</td><td><code>--mds</code></td></tr>
+              <tr><td class="num">3</td><th scope="row"><code>--roh</code></th><td>no</td><td><code>--roh</code></td></tr>
+              <tr><td class="num">4</td><th scope="row"><code>--makeGRM</code></th><td>no</td><td><code>--makeGRM</code></td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>--lmm</code></th><td>no</td><td><code>--lmm</code></td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>--tdt</code></th><td>no</td><td><code>--tdt</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>--gdt</code></th><td>no</td><td><code>--gdt</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>--risk</code></th><td>no</td><td><code>--risk</code></td></tr>
+              <tr><td class="num">9</td><th scope="row"><code>--plink</code></th><td>no</td><td><code>--plink</code></td></tr>
+              <tr><td class="num">10</td><th scope="row"><code>--rplot</code></th><td>no</td><td><code>--rplot</code></td></tr>
+              <tr><td class="num">11</td><th scope="row"><code>--pngplot</code></th><td>no</td><td><code>--pngplot</code></td></tr>
+              <tr><td class="num">12</td><th scope="row"><code>--rpath &lt;path&gt;</code></th><td>string</td><td><code>--rpath</code></td></tr>
+              <tr><td class="num">13</td><th scope="row"><code>--projection [n]</code></th><td>int</td><td><code>--projection</code></td></tr>
+              <tr><td class="num">14</td><th scope="row"><code>--pcs [n]</code></th><td>int</td><td><code>--pcs</code></td></tr>
+              <tr><td class="num">15</td><th scope="row"><code>--trait &lt;name&gt;</code></th><td>string</td><td><code>--trait</code></td></tr>
+              <tr><td class="num">16</td><th scope="row"><code>--covariate &lt;name&gt;</code></th><td>string</td><td><code>--covariate</code></td></tr>
+              <tr><td class="num">17</td><th scope="row"><code>--maxP &lt;p&gt;</code></th><td>double</td><td><code>--maxP</code></td></tr>
+              <tr><td class="num">18</td><th scope="row"><code>--invnorm</code></th><td>no</td><td><code>--invnorm</code></td></tr>
+              <tr><td class="num">19</td><th scope="row"><code>--model &lt;file&gt;</code></th><td>string</td><td><code>--model</code></td></tr>
+              <tr><td class="num">20</td><th scope="row"><code>--prevalence &lt;x&gt;</code></th><td>double</td><td><code>--prevalence</code></td></tr>
+              <tr><td class="num">21</td><th scope="row"><code>--noflip</code></th><td>no</td><td><code>--noflip</code></td></tr>
+              <tr><td class="num">22</td><th scope="row"><code>--phefile &lt;file&gt;</code></th><td>string</td><td><code>--phefile</code></td></tr>
+              <tr><td class="num">23</td><th scope="row"><code>--covfile &lt;file&gt;</code></th><td>string</td><td><code>--covfile</code></td></tr>
+              <tr><td class="num">24</td><th scope="row"><code>--prunedsnp &lt;file&gt;</code></th><td>string</td><td><code>--prunedsnp</code></td></tr>
+              <tr><td class="num">25</td><th scope="row">comma-separated <code>-b</code>, <code>--fam</code> or <code>--bim</code> value</th><td>n/a</td><td><code>comma-separated multi-fileset input</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>Four properties of the rejection:</p>
+
+        <ul>
+          <li>It fires on the option being <strong>named</strong>, not on its final value. A
+            toggled-off switch still triggers it, so <code>--pca --pca</code> exits 1.</li>
+          <li>Multiple excluded requests are listed in one fatal, in table order.
+            <code>king -b multifam.bed --pca --roh</code> reports
+            <code>does not implement: --pca, --roh.</code></li>
+          <li>Comma input is rejected the same way.
+            <code>king -b multifam.bed,dups.bed --kinship</code> and
+            <code>king -b multifam.bed --fam a.fam,b.fam --kinship</code> both report
+            <code>does not implement: comma-separated multi-fileset input.</code></li>
+          <li>Nothing after the banner runs: no <code>KING starts at</code>, no input probe,
+            no output file.</li>
+        </ul>
+
+        <h2 id="exit-status">Exit status and diagnostics</h2>
+
+        <p>Two exit statuses.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col" class="num">Status</th>
+                <th scope="col">Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="num">0</td>
+                <td>The run completed, including a run that selected no analysis and a run whose command line had warnings</td>
+              </tr>
+              <tr>
+                <td class="num">1</td>
+                <td>A fatal error, at any stage</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Everything, fatal errors included, goes to <strong>stdout</strong>. Nothing is
+          written to stderr.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide table--zebra">
+            <thead>
+              <tr>
+                <th scope="col">Command</th>
+                <th scope="col" class="num">Exit</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row"><code>king</code></th><td class="num">1</td></tr>
+              <tr><th scope="row"><code>king -b multifam.bed --kinship</code></th><td class="num">0</td></tr>
+              <tr><th scope="row"><code>king -b multifam.bed</code> (no analysis)</th><td class="num">0</td></tr>
+              <tr><th scope="row"><code>king --xyz -b multifam.bed --kinship</code> (undefined option)</th><td class="num">0</td></tr>
+              <tr><th scope="row"><code>king -b multifam.bed --related --related</code> (toggled back off)</th><td class="num">0</td></tr>
+              <tr><th scope="row"><code>king -b multifam.bed --kinship --degree</code> (bare int)</th><td class="num">0</td></tr>
+              <tr><th scope="row"><code>king -b unsortedpos.bed --ibdseg</code> (unsorted map)</th><td class="num">0</td></tr>
+              <tr><th scope="row"><code>king -b multifam.bed --pca</code> (excluded)</th><td class="num">1</td></tr>
+              <tr><th scope="row"><code>king -b nosuch.bed --kinship</code></th><td class="num">1</td></tr>
+              <tr><th scope="row"><code>king -b multifam.bed --kinship --sexchr 1</code></th><td class="num">1</td></tr>
+              <tr><th scope="row"><code>king -b multifam.bed --kinship --prefix nodir/x</code></th><td class="num">1</td></tr>
+              <tr><th scope="row"><code>king -b major.bed --ibs</code> (A1 major)</th><td class="num">1</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>Two things a script must not infer from the exit status:</p>
+
+        <ul>
+          <li><strong>A bad option is not an error.</strong> <code>--xyz</code> warns and the
+            run proceeds at exit 0. Grep the warning block to catch typos.</li>
+          <li><strong>An excluded product-scope request is an error,</strong> before any
+            input is opened.</li>
+        </ul>
+
+        <h3 id="diagnostic-blocks">Diagnostic block shapes</h3>
+
+        <p>The fatal block, always preceded and followed by a blank line:</p>
+
+        <div class="code-block code-block--plain">
+<pre><code>
+FATAL ERROR -
+&lt;message&gt;
+</code></pre>
+        </div>
+
+        <p>The warning block, preceded by a <code>0x07</code> BEL byte, never aborting:</p>
+
+        <div class="code-block code-block--plain">
+<pre><code>
+&lt;BEL&gt;WARNING -
+Problems encountered parsing command line:
+
+Command line parameter -h (#4) ignored
+Command line parameter foo (#5) ignored
+</code></pre>
+        </div>
+
+        <h3 id="startup-order">Startup order</h3>
+
+        <ol>
+          <li>Banner and the parameters-in-effect block.</li>
+          <li>The WARNING block, if any.</li>
+          <li><code>FATAL ERROR</code> if no <code>-b</code> was given, and nothing else.</li>
+          <li>Product-scope rejection of excluded requests.</li>
+          <li>Either the "please specify one of the following 24 options" notice or the
+            "will run separately" line.</li>
+          <li><code>KING starts at &lt;time&gt;</code>.</li>
+          <li>Parameter checks, in the order <code>--maxP</code>, <code>--sexchr</code>,
+            <code>--seglength</code>, <code>--minConc</code>,
+            <code>--risk</code>/<code>--model</code>.</li>
+          <li><code>FATAL ERROR</code> if the <code>.bed</code> cannot be opened.</li>
+          <li>The analyses.</li>
+        </ol>
+
+        <p>
+          A completed run closes with <code>KING ends at &lt;time&gt;</code> and a blank
+          line. A no-analysis run and a fatal exit never print it.
+          <code>king -b multifam.bed</code> ends at
+          <code>KING format genotype data successfully converted.</code> and writes no files.
+        </p>
+
+        <h3 id="fatal-messages">Reachable fatal messages</h3>
+
+        <div class="table-wrap">
+          <table class="table--wide table--zebra">
+            <thead>
+              <tr>
+                <th scope="col">Message</th>
+                <th scope="col">Cause</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row"><code>Genotype files are required. e.g., …</code></th><td>No <code>-b</code></td></tr>
+              <tr><th scope="row"><code>open-king's minimal relatedness product does not implement: …</code></th><td>An excluded request</td></tr>
+              <tr><th scope="row"><code>Sex chromosome n out of range.</code></th><td><code>--sexchr</code> below 2</td></tr>
+              <tr><th scope="row"><code>Genotype file &lt;path&gt; cannot be opened</code></th><td><code>.bed</code> missing or unreadable</td></tr>
+              <tr><th scope="row"><code>Please use PLINK binary format as input.</code></th><td><code>-b</code> argument does not end in lowercase <code>.bed</code></td></tr>
+              <tr><th scope="row"><code>Please use either PLINK or KING binary format as input.</code></th><td>Bad <code>.bed</code> magic</td></tr>
+              <tr><th scope="row"><code>Cannot open &lt;prefix&gt;$TMP$.ped to write.</code></th><td>Prefix directory missing or read-only</td></tr>
+              <tr><th scope="row"><code>Pedigree file &lt;path&gt; cannot be opened</code></th><td><code>.fam</code> missing</td></tr>
+              <tr><th scope="row"><code>Map file &lt;path&gt; cannot be opened</code></th><td><code>.bim</code> missing</td></tr>
+              <tr><th scope="row"><code>&lt;path&gt;: line N has K fields, expected 6</code></th><td>Short <code>.fam</code> or <code>.bim</code> line</td></tr>
+              <tr><th scope="row"><code>Please correct problems with pedigree structure</code></th><td>Duplicate <code>(FID, IID)</code>, preceded by <code>Family &lt;fid&gt;: Person &lt;iid&gt; is duplicated</code></td></tr>
+              <tr><th scope="row"><code>No autosome SNPs are available. Please check your map file.</code></th><td>Nothing survived the chromosome filter</td></tr>
+              <tr><th scope="row"><code>Currently only SNP-major mode can be analyzed.</code></th><td><code>.bed</code> mode byte is 0</td></tr>
+              <tr><th scope="row"><code>Not enough genotypes at the Nth marker</code></th><td><code>.bed</code> shorter than the map requires</td></tr>
+              <tr><th scope="row"><code>Too many first alleles as the major allele (~X%). Please use plink1.9 --make-bed to regenerate the genotype data again.</code></th><td>The A1-major gate</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Two further fatal messages exist in the source but cannot be reached in this
+          build, because the options that trigger them are rejected by the product-scope
+          gate first. <code>p-value [x] outside range in ninv()</code> would need
+          <code>--maxP</code> outside <code>0 &lt; p &lt; 2</code>, and
+          <code>Please use --model &lt;file&gt; to specify a risk model.</code> would need
+          <code>--risk</code> without <code>--model</code>. Running
+          <code>king -b multifam.bed --kinship --maxP 0</code> or
+          <code>king -b multifam.bed --risk</code> returns the scope message instead.
+        </p>
+
+        <h3 id="non-fatal-diagnostics">Non-fatal diagnostics</h3>
+
+        <div class="table-wrap">
+          <table class="table--wide table--zebra">
+            <thead>
+              <tr>
+                <th scope="col">Message</th>
+                <th scope="col">Cause</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row"><code>Command line parameter X is ambiguous</code></th><td>Prefix matches more than one option</td></tr>
+              <tr><th scope="row"><code>Command line parameter X is undefined</code></th><td>Prefix matches nothing</td></tr>
+              <tr><th scope="row"><code>Command line parameter X (#N) ignored</code></th><td>Bare token, or a single-dash token other than <code>-b</code>/<code>-B</code>, or a rejected value token</td></tr>
+              <tr><th scope="row"><code>minConc value is out of range and not specified.</code></th><td><code>--minConc</code> outside <code>[0, 1]</code>; the value is applied anyway</td></tr>
+              <tr><th scope="row"><code>KING supports minimum segment length from 1 to 10 Mb at the moment.</code> / <code>Default seglength of 3Mb is used.</code></th><td><code>--seglength</code> outside <code>(0.99, 10.01)</code></td></tr>
+              <tr><th scope="row"><code>Non-human samples are analyzed, with N pairs of chromosomes</code></th><td><code>--sexchr</code> other than 23</td></tr>
+              <tr><th scope="row"><code>N other SNPs are removed.</code></th><td>Map codes outside every class</td></tr>
+              <tr><th scope="row"><code>Positions unsorted: …</code> / <code>Chromosomes unsorted: …</code></th><td>Unsorted <code>.bim</code>; segment outputs are suppressed but exit is 0</td></tr>
+              <tr><th scope="row"><code>--related is replaced with --kinship for a small sample size.</code></th><td><code>--related</code> with N &lt; 10</td></tr>
+              <tr><th scope="row"><code>--kinship analysis carried out instead for such a small sample size.</code></th><td><code>--ibdseg</code> with N &lt; 5</td></tr>
+              <tr><th scope="row"><code>This function is currently disabled for tiny dataset with sample size &lt; 10.</code></th><td><code>--unrelated</code>, <code>--cluster</code> or <code>--build</code> with N &lt; 10</td></tr>
+              <tr><th scope="row"><code>Segments too short.</code></th><td>Usable autosomal segment total below 100 Mb</td></tr>
+              <tr><th scope="row"><code>No informative IBD segments.</code></th><td>The map is too thin for the segment caller</td></tr>
+              <tr><th scope="row"><code>Please specify one of the following 24 options: …</code></th><td>A fileset was given but no analysis</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Column layouts, row order, and the cases where a file is empty or absent are
+          covered on the <a href="outputs.html">output files</a> page.
+        </p>
+      </article>
+
+      <nav class="page-nav" aria-label="Page navigation">
+        <a class="page-nav-link page-nav-link--prev" href="install.html">
+          <span class="page-nav-dir">Previous</span>
+          <span class="page-nav-title">Install</span>
+        </a>
+        <a class="page-nav-link page-nav-link--next" href="outputs.html">
+          <span class="page-nav-dir">Next</span>
+          <span class="page-nav-title">Output files</span>
+        </a>
+      </nav>
+    </main>
+
+    <footer class="site-footer">
+      <p class="footer-note">
+        open-king is MIT licensed. It is not affiliated with, endorsed by, or derived from
+        the source code of KING.
+      </p>
+      <p class="footer-note">
+        Cite the method: Manichaikul et al., <em>Bioinformatics</em> 2010, 26(22):2867.
+        Credit for KING itself belongs to Wei-Min Chen and colleagues.
+      </p>
+    </footer>
+  </div>
+
+  <nav class="toc" id="toc" aria-label="On this page" hidden></nav>
+</div>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>

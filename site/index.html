@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overview | open-king</title>
+<meta name="description" content="open-king is a clean-room MIT reimplementation of the relatedness and quality-control workflows in KING 2.3.2, written in Rust.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Ctext%20x='3'%20y='25'%20font-family='monospace'%20font-size='26'%20fill='%231c5c8c'%3Ek%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+<script>
+  try {
+    var t = localStorage.getItem('open-king-theme');
+    if (t === 'light' || t === 'dark') { document.documentElement.setAttribute('data-theme', t); }
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<div class="shell">
+  <aside class="sidebar" data-nav-open="false">
+    <div class="sidebar-inner">
+      <div class="masthead">
+        <a class="brand" href="index.html">
+          <span class="brand-name">open-king</span>
+          <span class="brand-tag">docs</span>
+        </a>
+        <div class="masthead-actions">
+          <button class="icon-button theme-toggle" type="button" aria-label="Switch theme">
+            <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 12H2M22 12h-2.2M6.3 6.3 4.8 4.8M19.2 19.2l-1.5-1.5M17.7 6.3l1.5-1.5M4.8 19.2l1.5-1.5"/></svg>
+            <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.4A8.4 8.4 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4z"/></svg>
+          </button>
+          <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Show navigation">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <nav class="site-nav" id="site-nav" aria-label="Documentation">
+        <div class="nav-group">
+          <p class="nav-label">Guide</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link" href="index.html" aria-current="page">Overview</a></li>
+            <li class="nav-item"><a class="nav-link" href="install.html">Install</a></li>
+            <li class="nav-item"><a class="nav-link" href="usage.html">Commands and options</a></li>
+            <li class="nav-item"><a class="nav-link" href="outputs.html">Output files</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-label">Verification</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link" href="benchmarks.html">Benchmarks</a></li>
+            <li class="nav-item"><a class="nav-link" href="parity.html">Parity</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-label">Project</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link nav-link--external" href="https://github.com/Broccolito/open-king">Source repository</a></li>
+          </ul>
+        </div>
+      </nav>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <main class="content" id="main">
+      <article class="prose">
+        <p class="eyebrow">Overview</p>
+        <h1>open-king</h1>
+
+        <p class="lede">
+          open-king estimates how every pair of samples in a PLINK1 fileset is related.
+          It is a clean-room, MIT-licensed Rust reimplementation of the relatedness and
+          quality-control workflows in KING 2.3.2, and on its supported surface it aims
+          for the same command line, the same PLINK1 input and byte-identical output files.
+        </p>
+
+        <h2 id="what-it-does">What it does</h2>
+
+        <p>
+          Given a <code>.bed</code>, <code>.bim</code> and <code>.fam</code> trio, open-king
+          reports a kinship coefficient for every pair of samples, identifies duplicate and
+          monozygotic pairs, infers identity-by-descent segments, and assigns a relationship
+          label to each pair. Around that it produces per-sample, per-marker and automatic
+          quality-control reports, unrelated-sample selection, family clustering and pedigree
+          reconstruction. Results are written as plain text files, using the file names,
+          columns and row order the reference program uses. The same engine is available as
+          a Rust library, <code>king-core</code>, which returns owned data rather than a
+          report to parse.
+        </p>
+
+        <h2 id="provenance-and-license">Provenance and license</h2>
+
+        <p>
+          open-king is not affiliated with, endorsed by, or derived from the source code of
+          the original KING program by Wei-Min Chen and colleagues. It was written from the
+          published algorithm descriptions, the publicly documented file formats, and
+          black-box observation of the reference binary. No KING source code was read or
+          copied.
+        </p>
+
+        <p>
+          open-king's own code is MIT licensed. That covers this code only and makes no
+          claim about the original KING, which its authors license separately.
+        </p>
+
+        <p>
+          Credit for KING itself belongs to Wei-Min Chen and colleagues at the University
+          of Virginia, whose program
+          <a href="https://www.kingrelatedness.com/">kingrelatedness.com</a> this project
+          reimplements and measures itself against.
+        </p>
+
+        <h2 id="quick-start">Quick start</h2>
+
+        <p>
+          A Rust toolchain (1.75 or newer) is the only requirement to build. Python 3,
+          standard library only, runs the test corpus generator used below.
+        </p>
+
+        <div class="code-block">
+<pre><code>git clone https://github.com/Broccolito/open-king
+cd open-king
+cargo build --release</code></pre>
+        </div>
+
+        <p>
+          The binary lands at <code>target/release/king</code>. A run needs a PLINK1
+          fileset. If you do not have one to hand, the repository can synthesise thirteen
+          of them with no external tools:
+        </p>
+
+        <div class="code-block">
+<pre><code>python3 tests/parity/generate_corpus.py --outdir /tmp/kingdocs</code></pre>
+        </div>
+
+        <p>Then find the relatives, out to second degree:</p>
+
+        <div class="code-block">
+<pre><code>target/release/king -b /tmp/kingdocs/bigish.bed --related --degree 2 --prefix demo</code></pre>
+        </div>
+
+        <p>The run echoes the options in effect and names each file as it writes it.</p>
+
+        <div class="code-block code-block--plain">
+<pre><code>Options in effect:
+	--related
+	--degree 2
+	--prefix demo
+
+Total length of 22 chromosomal segments usable for IBD segment analysis is 2498.9 Mb.
+  Information of these chromosomal segments can be found in file demoallsegs.txt
+
+Within-family kinship data saved in file demo.kin
+...
+  Final Stage (with 50000 SNPs): 26 pairs of relatives (up to 2nd-degree) are confirmed
+
+Between-family relatives (kinship &gt;= 0.08839) saved in file demo.kin0</code></pre>
+        </div>
+
+        <p>
+          That leaves three files: <code>demo.kin</code> with 573 within-family pairs,
+          <code>demo.kin0</code> with the 26 cross-family pairs that cleared the
+          second-degree cut, and <code>demoallsegs.txt</code> with the usable-genome
+          denominator.
+        </p>
+
+        <div class="code-block">
+<pre><code>head -3 demo.kin0</code></pre>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>FID1	ID1	FID2	ID2	N_SNP	HetHet	IBS0	HetConc	HomIBS0	Kinship	IBD1Seg	IBD2Seg	PropIBD	InfType
+BF01	B01_F	BF02	B02_F	50000	0.2274	0.0132	0.4855	0.1175	0.2885	0.4575	0.3676	0.5964	FS
+BF01	B01_F	BF02	B02_C1	50000	0.1560	0.0299	0.2873	0.2261	0.1368	0.5684	0.0000	0.2842	2nd</code></pre>
+        </div>
+
+        <p>
+          <code>B01_F</code> and <code>B02_F</code> are declared in different families and
+          share half their genome, with a quarter of it doubled: full siblings the pedigree
+          never mentioned. That is the finding <code>--related</code> exists to produce.
+        </p>
+
+        <div class="note">
+          <p class="note-title">Two things to know first</p>
+          <p>
+            <code>--prefix</code> is concatenated, not joined, so <code>--prefix demo</code>
+            gives <code>demo.kin</code> and <code>demoallsegs.txt</code>.
+          </p>
+          <p>
+            On a cohort of any size, pass <code>--degree</code>. Unfiltered,
+            <code>.kin0</code> is every pair in the dataset.
+          </p>
+        </div>
+
+        <h2 id="the-analyses">The analyses</h2>
+
+        <p>
+          One or more of these must be given, or nothing is computed. Each flag links to
+          its entry on the <a href="usage.html">commands page</a>, which covers every
+          option and the parser behaviour that is not obvious from the flag name.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Flag</th>
+                <th scope="col">What it does</th>
+                <th scope="col">Writes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><a href="usage.html#kinship"><code>--kinship</code></a></th>
+                <td>Kinship for every pair, with no segments and no labels</td>
+                <td><code>.kin</code>, <code>.kin0</code>, <code>X.kin</code>, <code>X.kin0</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="usage.html#related"><code>--related</code></a></th>
+                <td>Kinship plus IBD segments and a relationship label per pair</td>
+                <td><code>.kin</code>, <code>.kin0</code>, <code>X.kin</code>, <code>allsegs.txt</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="usage.html#duplicate"><code>--duplicate</code></a></th>
+                <td>Duplicate and monozygotic pairs by heterozygote concordance</td>
+                <td><code>.con</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="usage.html#ibdseg"><code>--ibdseg</code></a></th>
+                <td>Pairwise IBD-segment inference on its own</td>
+                <td><code>.seg</code>, <code>X.seg</code>, <code>allsegs.txt</code>, <code>splitped.txt</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="usage.html#ibs"><code>--ibs</code></a></th>
+                <td>Full IBS and concordance counts for every pair</td>
+                <td><code>.ibs</code>, <code>.ibs0</code>, <code>allsegs.txt</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="usage.html#unrelated"><code>--unrelated</code></a></th>
+                <td>A maximal mutually unrelated subset, and its complement</td>
+                <td><code>unrelated.txt</code>, <code>unrelated_toberemoved.txt</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="usage.html#cluster"><code>--cluster</code></a></th>
+                <td>Merges families connected by inferred relatedness</td>
+                <td><code>cluster.kin</code>, <code>updateids.txt</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="usage.html#build"><code>--build</code></a></th>
+                <td>Reconstructs pedigrees from the genotypes</td>
+                <td><code>updateparents.txt</code>, <code>updateids.txt</code>, <code>build.log</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="usage.html#bysample"><code>--bysample</code></a></th>
+                <td>Per-sample QC: call rate, heterozygosity, Mendelian errors</td>
+                <td><code>bySample.txt</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="usage.html#bysnp"><code>--bySNP</code></a></th>
+                <td>Per-marker QC: frequency, genotype counts, error rates</td>
+                <td><code>bySNP.txt</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="usage.html#autoqc"><code>--autoQC</code></a></th>
+                <td>The packaged call-rate and sex QC pipeline</td>
+                <td>four <code>_autoQC_*</code> reports</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The common modifiers are <code>--degree</code>, <code>--prefix</code>,
+          <code>--seglength</code>, <code>--minConc</code> and <code>--cpus</code>.
+          <code>--cpus</code> is accepted and echoed in the console text, but it does not
+          promise a strict worker-thread cap. Computed files are deterministic across
+          thread counts.
+        </p>
+
+        <h2 id="out-of-scope">Out of scope</h2>
+
+        <p>
+          open-king is the smallest useful implementation of KING's relatedness workflow.
+          It does not reproduce every analysis that accumulated in the original executable.
+          Population structure (<code>--pca</code>, <code>--mds</code>), runs of homozygosity
+          (<code>--roh</code>), GRM, association and risk analysis (<code>--makeGRM</code>,
+          <code>--lmm</code>, <code>--tdt</code>, <code>--gdt</code>, <code>--risk</code>),
+          PLINK-export orchestration (<code>--plink</code>), R-based plotting
+          (<code>--rplot</code>, <code>--pngplot</code>, <code>--rpath</code>) and KING's
+          comma-separated multi-fileset merge mode are not planned for this package.
+        </p>
+
+        <p>
+          Their spellings stay in the parser and the banner, so KING 2.3.2's command-line
+          surface remains recognisable. Requesting one of them is a fatal error with exit
+          status 1 before any input file is opened, which stops a requested workflow from
+          appearing to succeed without producing its output. These are product boundaries
+          rather than defects in the relatedness core, and they do not count as parity
+          failures. Use a dedicated tool for those workflows, before or after open-king.
+        </p>
+
+        <h2 id="measured-parity">Measured parity</h2>
+
+        <p>
+          All 480 captured reference invocations are byte-identical: every output file,
+          plus stdout, stderr and exit status.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Measurement</th>
+                <th scope="col">Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Captured invocations</th>
+                <td>480 PASS, 0 FAIL, 480 total</td>
+              </tr>
+              <tr>
+                <th scope="row">Output files byte-compared</th>
+                <td>876, with 8 diff-excluded</td>
+              </tr>
+              <tr>
+                <th scope="row">Regression baseline</th>
+                <td><code>baseline: MATCH</code></td>
+              </tr>
+              <tr>
+                <th scope="row">Rust tests</th>
+                <td>355 passing</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The eight excluded files are documented, their reference bytes are host-unstable,
+          and they are excluded symmetrically from both sides of the comparison. Every
+          number above is measured against one reference build: KING 2.3.2, Mach-O arm64,
+          macOS. KING's segment algorithm is unpublished and its release notes record
+          repeated changes across 2.1.x to 2.2.x, so byte-identical means to 2.3.2.
+        </p>
+
+        <p>
+          Differences the 480-case corpus cannot exercise cost no case but remain part of
+          the claim. The <a href="parity.html">parity page</a> names them and gives the
+          per-analysis breakdown.
+        </p>
+
+        <h2 id="where-to-go-next">Where to go next</h2>
+
+        <dl>
+          <dt><a href="install.html">Install</a></dt>
+          <dd>Requirements, building from source, verifying the build, and putting the binary on your path.</dd>
+          <dt><a href="usage.html">Commands and options</a></dt>
+          <dd>Every flag, what it affects, and how the parser really behaves.</dd>
+          <dt><a href="outputs.html">Output files</a></dt>
+          <dd>Columns, formats, row order, and when a file is absent.</dd>
+          <dt><a href="parity.html">Parity</a></dt>
+          <dd>What was compared against the reference, what passed, and what is still open.</dd>
+          <dt><a href="benchmarks.html">Benchmarks</a></dt>
+          <dd>Runtime, thread scaling and peak memory, with the method used to measure them.</dd>
+        </dl>
+      </article>
+
+      <nav class="page-nav" aria-label="Page navigation">
+        <a class="page-nav-link page-nav-link--next" href="install.html">
+          <span class="page-nav-dir">Next</span>
+          <span class="page-nav-title">Install</span>
+        </a>
+      </nav>
+    </main>
+
+    <footer class="site-footer">
+      <p class="footer-note">
+        open-king is MIT licensed. It is not affiliated with, endorsed by, or derived from
+        the source code of KING.
+      </p>
+      <p class="footer-note">
+        Cite the method: Manichaikul et al., <em>Bioinformatics</em> 2010, 26(22):2867.
+        Credit for KING itself belongs to Wei-Min Chen and colleagues.
+      </p>
+    </footer>
+  </div>
+
+  <nav class="toc" id="toc" aria-label="On this page" hidden></nav>
+</div>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>

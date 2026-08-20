@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Benchmarks | open-king</title>
+<meta name="description" content="Runtime and memory measurements for open-king against the reference program, with the method used to take them.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Ctext%20x='3'%20y='25'%20font-family='monospace'%20font-size='26'%20fill='%231c5c8c'%3Ek%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+<script>
+  try {
+    var t = localStorage.getItem('open-king-theme');
+    if (t === 'light' || t === 'dark') { document.documentElement.setAttribute('data-theme', t); }
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<div class="shell">
+  <aside class="sidebar" data-nav-open="false">
+    <div class="sidebar-inner">
+      <div class="masthead">
+        <a class="brand" href="index.html">
+          <span class="brand-name">open-king</span>
+          <span class="brand-tag">docs</span>
+        </a>
+        <div class="masthead-actions">
+          <button class="icon-button theme-toggle" type="button" aria-label="Switch theme">
+            <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 12H2M22 12h-2.2M6.3 6.3 4.8 4.8M19.2 19.2l-1.5-1.5M17.7 6.3l1.5-1.5M4.8 19.2l1.5-1.5"/></svg>
+            <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.4A8.4 8.4 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4z"/></svg>
+          </button>
+          <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Show navigation">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <nav class="site-nav" id="site-nav" aria-label="Documentation">
+        <div class="nav-group">
+          <p class="nav-label">Guide</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link" href="index.html">Overview</a></li>
+            <li class="nav-item"><a class="nav-link" href="install.html">Install</a></li>
+            <li class="nav-item"><a class="nav-link" href="usage.html">Commands and options</a></li>
+            <li class="nav-item"><a class="nav-link" href="outputs.html">Output files</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-label">Verification</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link" href="benchmarks.html" aria-current="page">Benchmarks</a></li>
+            <li class="nav-item"><a class="nav-link" href="parity.html">Parity</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-label">Project</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link nav-link--external" href="https://github.com/Broccolito/open-king">Source repository</a></li>
+          </ul>
+        </div>
+      </nav>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <main class="content" id="main">
+      <article class="prose">
+        <p class="eyebrow">Verification</p>
+        <h1>Benchmarks</h1>
+
+        <p class="lede">
+          Wall-clock time and peak memory for the same analyses run by both programs on the
+          same inputs, on one machine. The method section states what was measured and what
+          was excluded, so the numbers can be checked.
+        </p>
+
+        <div class="note note--draft">
+          <p class="note-title">Draft</p>
+          <p>
+            Every number on this page is a placeholder. The charts and tables show the
+            intended presentation, not measured results. Replace the values and the machine
+            description before publishing.
+          </p>
+        </div>
+
+        <h2 id="method">Method</h2>
+
+        <p>
+          Each case ran five times. The reported figure is the median of the last three runs,
+          which drops the two runs that warm the page cache. Both programs read the same
+          fileset from local disk and wrote to the same directory. Output files were compared
+          after every run, so a timing is only reported for a run that produced correct output.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <tbody>
+              <tr>
+                <th scope="row">Machine</th>
+                <td>Placeholder: 10 core, 32 GB, NVMe</td>
+              </tr>
+              <tr>
+                <th scope="row">Reference</th>
+                <td>KING 2.3.2, vendor binary</td>
+              </tr>
+              <tr>
+                <th scope="row">Build</th>
+                <td><code>cargo build --release</code>, default profile</td>
+              </tr>
+              <tr>
+                <th scope="row">Threads</th>
+                <td>All cores, unless the case says otherwise</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="runtime-by-analysis">Runtime by analysis</h2>
+
+        <figure>
+          <div class="chart-scroll">
+            <svg class="chart" viewBox="0 0 700 292" role="img" aria-labelledby="chart1-title chart1-desc">
+              <title id="chart1-title">Wall-clock seconds by analysis</title>
+              <desc id="chart1-desc">Grouped bars comparing open-king with KING 2.3.2 for three analyses on a cohort of 5,000 samples. Values are given beside each bar.</desc>
+
+              <line x1="146" y1="6" x2="146" y2="276" stroke="var(--chart-axis)" stroke-width="1"/>
+
+              <!-- group 1: kinship -->
+              <text class="chart-group-label" x="0" y="18" fill="var(--fg)">--kinship</text>
+              <text class="chart-bar-label" x="138" y="42" text-anchor="end" fill="var(--chart-label)">open-king</text>
+              <rect x="146" y="28" width="121" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="277" y="42" fill="var(--chart-value)">31.2 s</text>
+              <text class="chart-bar-label" x="138" y="70" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
+              <rect x="146" y="56" width="343" height="20" fill="var(--chart-b)"/>
+              <text class="chart-value" x="499" y="70" fill="var(--chart-value)">88.4 s</text>
+
+              <!-- group 2: related -->
+              <text class="chart-group-label" x="0" y="116" fill="var(--fg)">--related</text>
+              <text class="chart-bar-label" x="138" y="140" text-anchor="end" fill="var(--chart-label)">open-king</text>
+              <rect x="146" y="126" width="186" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="342" y="140" fill="var(--chart-value)">47.9 s</text>
+              <text class="chart-bar-label" x="138" y="168" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
+              <rect x="146" y="154" width="470" height="20" fill="var(--chart-b)"/>
+              <text class="chart-value" x="626" y="168" fill="var(--chart-value)">121.0 s</text>
+
+              <!-- group 3: ibdseg -->
+              <text class="chart-group-label" x="0" y="214" fill="var(--fg)">--ibdseg</text>
+              <text class="chart-bar-label" x="138" y="238" text-anchor="end" fill="var(--chart-label)">open-king</text>
+              <rect x="146" y="224" width="204" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="360" y="238" fill="var(--chart-value)">52.6 s</text>
+              <text class="chart-bar-label" x="138" y="266" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
+              <rect x="146" y="252" width="374" height="20" fill="var(--chart-b)"/>
+              <text class="chart-value" x="530" y="266" fill="var(--chart-value)">96.3 s</text>
+            </svg>
+          </div>
+          <figcaption>
+            Placeholder figures. Cohort of 5,000 samples and 100,000 markers, all cores.
+            Lower is faster.
+          </figcaption>
+        </figure>
+
+        <h2 id="per-case-timings">Per-case timings</h2>
+
+        <div class="table-wrap">
+          <table class="table--wide table--zebra">
+            <thead>
+              <tr>
+                <th scope="col">Dataset</th>
+                <th scope="col" class="num">Samples</th>
+                <th scope="col" class="num">Markers</th>
+                <th scope="col">Analysis</th>
+                <th scope="col" class="num">open-king</th>
+                <th scope="col" class="num">KING 2.3.2</th>
+                <th scope="col" class="num">Ratio</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">small</th>
+                <td class="num">200</td>
+                <td class="num">20,000</td>
+                <td><code>--kinship</code></td>
+                <td class="num">0.4 s</td>
+                <td class="num">0.9 s</td>
+                <td class="num">2.3</td>
+              </tr>
+              <tr>
+                <th scope="row">small</th>
+                <td class="num">200</td>
+                <td class="num">20,000</td>
+                <td><code>--related</code></td>
+                <td class="num">0.7 s</td>
+                <td class="num">1.6 s</td>
+                <td class="num">2.3</td>
+              </tr>
+              <tr>
+                <th scope="row">bigish</th>
+                <td class="num">2,000</td>
+                <td class="num">50,000</td>
+                <td><code>--kinship</code></td>
+                <td class="num">6.1 s</td>
+                <td class="num">17.4 s</td>
+                <td class="num">2.9</td>
+              </tr>
+              <tr>
+                <th scope="row">bigish</th>
+                <td class="num">2,000</td>
+                <td class="num">50,000</td>
+                <td><code>--related</code></td>
+                <td class="num">9.4 s</td>
+                <td class="num">26.2 s</td>
+                <td class="num">2.8</td>
+              </tr>
+              <tr>
+                <th scope="row">cohort</th>
+                <td class="num">5,000</td>
+                <td class="num">100,000</td>
+                <td><code>--kinship</code></td>
+                <td class="num">31.2 s</td>
+                <td class="num">88.4 s</td>
+                <td class="num">2.8</td>
+              </tr>
+              <tr>
+                <th scope="row">cohort</th>
+                <td class="num">5,000</td>
+                <td class="num">100,000</td>
+                <td><code>--related</code></td>
+                <td class="num">47.9 s</td>
+                <td class="num">121.0 s</td>
+                <td class="num">2.5</td>
+              </tr>
+              <tr>
+                <th scope="row">cohort</th>
+                <td class="num">5,000</td>
+                <td class="num">100,000</td>
+                <td><code>--ibdseg</code></td>
+                <td class="num">52.6 s</td>
+                <td class="num">96.3 s</td>
+                <td class="num">1.8</td>
+              </tr>
+              <tr>
+                <th scope="row">cohort</th>
+                <td class="num">5,000</td>
+                <td class="num">100,000</td>
+                <td><code>--duplicate</code></td>
+                <td class="num">18.7 s</td>
+                <td class="num">44.1 s</td>
+                <td class="num">2.4</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="meta">
+          Ratio is reference time divided by open-king time. Higher means open-king finished
+          sooner.
+        </p>
+
+        <h2 id="thread-scaling">Thread scaling</h2>
+
+        <p>
+          The pairwise scan is the part that scales. Past eight threads the run is bounded by
+          reading genotypes rather than by comparing them, so the curve flattens.
+        </p>
+
+        <figure>
+          <div class="chart-scroll">
+            <svg class="chart" viewBox="0 0 700 180" role="img" aria-labelledby="chart2-title chart2-desc">
+              <title id="chart2-title">Wall-clock seconds by thread count</title>
+              <desc id="chart2-desc">Bars showing open-king runtime falling from 168.4 seconds on one thread to 27.4 seconds on sixteen threads, with most of the gain reached by eight threads.</desc>
+
+              <line x1="146" y1="4" x2="146" y2="170" stroke="var(--chart-axis)" stroke-width="1"/>
+
+              <text class="chart-bar-label" x="138" y="22" text-anchor="end" fill="var(--chart-label)">1 thread</text>
+              <rect x="146" y="8" width="470" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="626" y="22" fill="var(--chart-value)">168.4 s</text>
+
+              <text class="chart-bar-label" x="138" y="56" text-anchor="end" fill="var(--chart-label)">2 threads</text>
+              <rect x="146" y="42" width="257" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="413" y="56" fill="var(--chart-value)">92.1 s</text>
+
+              <text class="chart-bar-label" x="138" y="90" text-anchor="end" fill="var(--chart-label)">4 threads</text>
+              <rect x="146" y="76" width="143" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="299" y="90" fill="var(--chart-value)">51.3 s</text>
+
+              <text class="chart-bar-label" x="138" y="124" text-anchor="end" fill="var(--chart-label)">8 threads</text>
+              <rect x="146" y="110" width="89" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="245" y="124" fill="var(--chart-value)">31.9 s</text>
+
+              <text class="chart-bar-label" x="138" y="158" text-anchor="end" fill="var(--chart-label)">16 threads</text>
+              <rect x="146" y="144" width="76" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="232" y="158" fill="var(--chart-value)">27.4 s</text>
+            </svg>
+          </div>
+          <figcaption>
+            Placeholder figures. One dataset, <code>--related</code> on 5,000 samples, thread
+            count set with <code>--cpus</code>.
+          </figcaption>
+        </figure>
+
+        <h2 id="peak-memory">Peak memory</h2>
+
+        <p>
+          Genotypes are held in packed form and the pairwise scan allocates per thread, so
+          memory tracks sample count rather than the number of pairs.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Dataset</th>
+                <th scope="col" class="num">Samples</th>
+                <th scope="col" class="num">open-king</th>
+                <th scope="col" class="num">KING 2.3.2</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">small</th>
+                <td class="num">200</td>
+                <td class="num">14 MB</td>
+                <td class="num">31 MB</td>
+              </tr>
+              <tr>
+                <th scope="row">bigish</th>
+                <td class="num">2,000</td>
+                <td class="num">96 MB</td>
+                <td class="num">184 MB</td>
+              </tr>
+              <tr>
+                <th scope="row">cohort</th>
+                <td class="num">5,000</td>
+                <td class="num">421 MB</td>
+                <td class="num">790 MB</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="reproducing-these-numbers">Reproducing these numbers</h2>
+
+        <p>
+          The corpus generator writes the same filesets on any machine from a fixed seed, so
+          a timing run elsewhere compares against the same inputs.
+        </p>
+
+        <div class="code-block">
+<pre><code>python3 tests/parity/generate_corpus.py --outdir /tmp/kingbench
+scripts/bench.sh --impl target/release/king --reference /usr/local/bin/king</code></pre>
+        </div>
+      </article>
+
+      <nav class="page-nav" aria-label="Page navigation">
+        <a class="page-nav-link page-nav-link--prev" href="outputs.html">
+          <span class="page-nav-dir">Previous</span>
+          <span class="page-nav-title">Output files</span>
+        </a>
+        <a class="page-nav-link page-nav-link--next" href="parity.html">
+          <span class="page-nav-dir">Next</span>
+          <span class="page-nav-title">Parity</span>
+        </a>
+      </nav>
+    </main>
+
+    <footer class="site-footer">
+      <p class="footer-note">
+        open-king is MIT licensed. It is not affiliated with, endorsed by, or derived from
+        the source code of KING.
+      </p>
+      <p class="footer-note">
+        Cite the method: Manichaikul et al., <em>Bioinformatics</em> 2010, 26(22):2867.
+        Credit for KING itself belongs to Wei-Min Chen and colleagues.
+      </p>
+    </footer>
+  </div>
+
+  <nav class="toc" id="toc" aria-label="On this page" hidden></nav>
+</div>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>

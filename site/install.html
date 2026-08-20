@@ -1,0 +1,1089 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install | open-king</title>
+<meta name="description" content="Download a prebuilt open-king release with checksum verification, or build it from source. Includes verification steps, PATH setup, and a section on driving the binary from a coding agent.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Ctext%20x='3'%20y='25'%20font-family='monospace'%20font-size='26'%20fill='%231c5c8c'%3Ek%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+<script>
+  try {
+    var t = localStorage.getItem('open-king-theme');
+    if (t === 'light' || t === 'dark') { document.documentElement.setAttribute('data-theme', t); }
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<div class="shell">
+  <aside class="sidebar" data-nav-open="false">
+    <div class="sidebar-inner">
+      <div class="masthead">
+        <a class="brand" href="index.html">
+          <span class="brand-name">open-king</span>
+          <span class="brand-tag">docs</span>
+        </a>
+        <div class="masthead-actions">
+          <button class="icon-button theme-toggle" type="button" aria-label="Switch theme">
+            <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 12H2M22 12h-2.2M6.3 6.3 4.8 4.8M19.2 19.2l-1.5-1.5M17.7 6.3l1.5-1.5M4.8 19.2l1.5-1.5"/></svg>
+            <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.4A8.4 8.4 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4z"/></svg>
+          </button>
+          <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Show navigation">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <nav class="site-nav" id="site-nav" aria-label="Documentation">
+        <div class="nav-group">
+          <p class="nav-label">Guide</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link" href="index.html">Overview</a></li>
+            <li class="nav-item"><a class="nav-link" href="install.html" aria-current="page">Install</a></li>
+            <li class="nav-item"><a class="nav-link" href="usage.html">Commands and options</a></li>
+            <li class="nav-item"><a class="nav-link" href="outputs.html">Output files</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-label">Verification</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link" href="benchmarks.html">Benchmarks</a></li>
+            <li class="nav-item"><a class="nav-link" href="parity.html">Parity</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-label">Project</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link nav-link--external" href="https://github.com/Broccolito/open-king">Source repository</a></li>
+          </ul>
+        </div>
+      </nav>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <main class="content" id="main">
+      <article class="prose">
+        <p class="eyebrow">Guide</p>
+        <h1>Install</h1>
+
+        <p class="lede">
+          <code>king</code> is a single self-contained executable. It has no runtime
+          dependencies, reads no configuration files, opens no network sockets, and reads
+          nothing from stdin. Installing it means putting one file on disk.
+        </p>
+
+        <p>
+          There are two paths. Download a prebuilt archive from the GitHub release, or build
+          from source. Both end at the same binary. The version documented here is
+          <code>v0.1.0</code>, from the repository <code>Broccolito/open-king</code>.
+        </p>
+
+        <h2 id="requirements">Requirements</h2>
+
+        <p>
+          A prebuilt archive needs nothing installed. The requirements below apply to
+          building from source and to running the test suites.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Requirement</th>
+                <th scope="col">Value</th>
+                <th scope="col">Needed for</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Rust</th>
+                <td><code>1.75</code> minimum</td>
+                <td>Building from source. The floor is <code>rust-version = "1.75"</code> in <code>[workspace.package]</code> in the root <code>Cargo.toml</code>.</td>
+              </tr>
+              <tr>
+                <th scope="row">Rust used by CI</th>
+                <td>current <code>stable</code></td>
+                <td>The release workflow pins <code>dtolnay/rust-toolchain@stable</code> in <code>.github/workflows/release.yml</code>.</td>
+              </tr>
+              <tr>
+                <th scope="row">Python</th>
+                <td><code>3</code>, standard library only</td>
+                <td>The corpus generator and the parity suite. Not needed for the build.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          There is no <code>rust-toolchain.toml</code> in the repository, so <code>rustup</code>
+          uses your default toolchain. Anything at or above 1.75 builds. This tree was checked
+          with <code>rustc 1.92.0</code>.
+        </p>
+
+        <h2 id="download-a-release">Download a release build</h2>
+
+        <p>
+          The repository is public, so the release assets are fetched with an ordinary
+          unauthenticated request. Verified: <code>curl</code> on an asset URL returns HTTP
+          200, and <code>shasum -a 256 -c SHA256SUMS.txt --ignore-missing</code> reports
+          <code>OK</code> on the downloaded archive.
+        </p>
+
+        <h3 id="release-assets">Release assets</h3>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Asset</th>
+                <th scope="col">Platform</th>
+                <th scope="col" class="num">Bytes</th>
+                <th scope="col">Contains</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>king-macos-arm64.tar.gz</code></th>
+                <td>macOS, Apple silicon</td>
+                <td class="num">458518</td>
+                <td><code>./king</code>, <code>./LICENSE</code>, <code>./README.md</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king-macos-x86_64.tar.gz</code></th>
+                <td>macOS, Intel</td>
+                <td class="num">493276</td>
+                <td><code>./king</code>, <code>./LICENSE</code>, <code>./README.md</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king-linux-x86_64.tar.gz</code></th>
+                <td>Linux x86_64 (gnu)</td>
+                <td class="num">519457</td>
+                <td><code>./king</code>, <code>./README.md</code>, <code>./LICENSE</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king-windows-x86_64.zip</code></th>
+                <td>Windows x86_64 (msvc)</td>
+                <td class="num">381666</td>
+                <td><code>king.exe</code>, <code>LICENSE</code>, <code>README.md</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>SHA256SUMS.txt</code></th>
+                <td>all</td>
+                <td class="num">362</td>
+                <td>one <code>sha256&nbsp;&nbsp;filename</code> line per archive</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Archive layouts were listed with <code>tar -tzf</code> and <code>unzip -l</code> on
+          the downloaded files. The tarballs are built with
+          <code>tar -czf … -C dist .</code>, so every member carries a <code>./</code> prefix
+          and extraction drops <code>king</code> directly into the current directory. There is
+          no top-level folder in the tarballs and none in the zip, and no version number
+          inside either.
+        </p>
+
+        <p>The four digests for <code>v0.1.0</code>:</p>
+
+        <div class="code-block">
+<pre><code>1076ff2c74d2c32773a2e3806178cacd517b29e32618747703474580e893351b  king-linux-x86_64.tar.gz
+9d16b91a27f7651c6716d9d8f29b11f9a2433f431882b239d92cdceccb9e324e  king-macos-arm64.tar.gz
+6ddb9b450c20d73a2d2f574927c57a136c363c08d22e7b882354cdb75c5f92b0  king-macos-x86_64.tar.gz
+92d52f22e59d371ebac141330447da6f9f4f88e97477b5e35982004a6e33396d  king-windows-x86_64.zip</code></pre>
+        </div>
+
+        <div class="note note--warn">
+          <p class="note-title">Keep <code>--ignore-missing</code></p>
+          <p>
+            <code>SHA256SUMS.txt</code> has four lines, one per archive. With only one archive
+            on disk, <code>shasum -a 256 -c SHA256SUMS.txt</code> exits 1 and prints
+            <code>FAILED open or read</code> for the three files you did not download.
+            Measured. The single-file form works too:
+            <code>grep 'king-macos-arm64.tar.gz' SHA256SUMS.txt | shasum -a 256 -c -</code>.
+          </p>
+        </div>
+
+        <h3 id="macos-apple-silicon">macOS, Apple silicon (arm64)</h3>
+
+        <div class="code-block">
+<pre><code>mkdir -p ~/kingdl &amp;&amp; cd ~/kingdl
+BASE=https://github.com/Broccolito/open-king/releases/download/v0.1.0
+
+curl -LO "$BASE/king-macos-arm64.tar.gz"
+curl -LO "$BASE/SHA256SUMS.txt"
+
+shasum -a 256 -c SHA256SUMS.txt --ignore-missing   # king-macos-arm64.tar.gz: OK
+
+tar -xzf king-macos-arm64.tar.gz                   # ./king ./LICENSE ./README.md
+xattr -d com.apple.quarantine ./king 2&gt;/dev/null || true
+
+mkdir -p ~/.local/bin &amp;&amp; mv ./king ~/.local/bin/king
+chmod +x ~/.local/bin/king</code></pre>
+        </div>
+
+        <p>
+          <code>/usr/local/bin</code> is the alternative install location and needs
+          <code>sudo mv ./king /usr/local/bin/king</code>.
+        </p>
+
+        <h3 id="macos-intel">macOS, Intel (x86_64)</h3>
+
+        <p>The same sequence with the other asset name.</p>
+
+        <div class="code-block">
+<pre><code>mkdir -p ~/kingdl &amp;&amp; cd ~/kingdl
+BASE=https://github.com/Broccolito/open-king/releases/download/v0.1.0
+
+curl -LO "$BASE/king-macos-x86_64.tar.gz"
+curl -LO "$BASE/SHA256SUMS.txt"
+
+shasum -a 256 -c SHA256SUMS.txt --ignore-missing
+tar -xzf king-macos-x86_64.tar.gz
+xattr -d com.apple.quarantine ./king 2&gt;/dev/null || true
+
+mkdir -p ~/.local/bin &amp;&amp; mv ./king ~/.local/bin/king
+chmod +x ~/.local/bin/king</code></pre>
+        </div>
+
+        <div class="note">
+          <p class="note-title">Unverified</p>
+          <p>
+            The Intel binary was not executed. The documenting machine is Apple silicon, and
+            the x86_64 archive was only downloaded and listed. The arm64 binary from the same
+            release was extracted and run.
+          </p>
+        </div>
+
+        <h3 id="macos-gatekeeper">macOS Gatekeeper</h3>
+
+        <p>The released binaries are ad-hoc signed and not notarized.</p>
+
+        <div class="code-block code-block--plain">
+<pre><code>$ codesign -dv king
+Identifier=king-8819f0717292f7ca
+CodeDirectory v=20400 size=8280 flags=0x20002(adhoc,linker-signed)
+Signature=adhoc
+TeamIdentifier=not set</code></pre>
+        </div>
+
+        <p>What was measured on macOS 26.6.2, arm64:</p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Observation</th>
+                <th scope="col">Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>xattr -l</code> on the downloaded archive</th>
+                <td>only <code>com.apple.provenance</code>, no <code>com.apple.quarantine</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>xattr -l</code> on the binary extracted with <code>/usr/bin/tar</code></th>
+                <td>only <code>com.apple.provenance</code></td>
+              </tr>
+              <tr>
+                <th scope="row">Running the extracted binary</th>
+                <td>exit 0, normal output</td>
+              </tr>
+              <tr>
+                <th scope="row">Running a copy with <code>com.apple.quarantine</code> set by hand</th>
+                <td>exit 0, normal output</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          A binary fetched with <code>curl</code> or <code>gh</code> and extracted with
+          <code>tar</code> is not quarantined and needs no Gatekeeper step. The quarantine bit
+          is set by browsers and by Archive Utility, not by <code>gh</code>,
+          <code>curl</code>, or <code>/usr/bin/tar</code>.
+        </p>
+
+        <div class="note">
+          <p class="note-title">Unverified</p>
+          <p>
+            That a quarantined copy is actually blocked on a stock machine. The documenting
+            host reports <code>spctl -a -t execute king</code> as
+            <code>accepted, override=security disabled</code>, meaning Gatekeeper assessment
+            is turned off there, so the block could not be reproduced. Keep the
+            <code>xattr -d com.apple.quarantine ./king</code> line anyway: it is a no-op when
+            the attribute is absent, and it is the documented fix for
+            <code>"king" cannot be opened because the developer cannot be verified</code> when
+            the archive came from a browser.
+          </p>
+        </div>
+
+        <h3 id="linux-x86-64">Linux x86_64</h3>
+
+        <div class="code-block">
+<pre><code>mkdir -p ~/kingdl &amp;&amp; cd ~/kingdl
+BASE=https://github.com/Broccolito/open-king/releases/download/v0.1.0
+
+curl -LO "$BASE/king-linux-x86_64.tar.gz"
+curl -LO "$BASE/SHA256SUMS.txt"
+
+sha256sum --ignore-missing -c SHA256SUMS.txt       # king-linux-x86_64.tar.gz: OK
+
+tar -xzf king-linux-x86_64.tar.gz                  # ./king ./README.md ./LICENSE
+
+mkdir -p ~/.local/bin &amp;&amp; mv ./king ~/.local/bin/king
+chmod +x ~/.local/bin/king</code></pre>
+        </div>
+
+        <p>
+          The target is <code>x86_64-unknown-linux-gnu</code>, so a glibc system is required.
+        </p>
+
+        <div class="note">
+          <p class="note-title">Unverified</p>
+          <p>
+            The minimum glibc version. It is whatever the <code>ubuntu-latest</code> GitHub
+            runner shipped at build time; the workflow pins no older toolchain image. What was
+            verified is that the archive extracts and contains an executable named
+            <code>king</code>. The Linux binary was not executed, because no Linux host was
+            available.
+          </p>
+        </div>
+
+        <h3 id="windows-x86-64">Windows x86_64</h3>
+
+        <p>
+          Download <code>king-windows-x86_64.zip</code> and <code>SHA256SUMS.txt</code> from
+          the release page, or with <code>gh</code>. The zip has no top-level folder:
+          <code>king.exe</code>, <code>LICENSE</code> and <code>README.md</code> sit at the
+          archive root.
+        </p>
+
+        <div class="code-block">
+<pre><code>mkdir $HOME\kingdl; cd $HOME\kingdl
+gh release download v0.1.0 --repo Broccolito/open-king `
+  --pattern 'king-windows-x86_64.zip' --pattern 'SHA256SUMS.txt' --clobber
+
+(Get-FileHash king-windows-x86_64.zip -Algorithm SHA256).Hash.ToLower()
+# compare against the line in SHA256SUMS.txt:
+# 92d52f22e59d371ebac141330447da6f9f4f88e97477b5e35982004a6e33396d
+
+Expand-Archive king-windows-x86_64.zip -DestinationPath .\king-bin -Force
+mkdir $HOME\bin -Force
+Move-Item .\king-bin\king.exe $HOME\bin\king.exe -Force</code></pre>
+        </div>
+
+        <p>
+          Windows SmartScreen may warn about an unsigned executable. There is no code-signing
+          certificate in the release pipeline.
+        </p>
+
+        <div class="note">
+          <p class="note-title">Unverified</p>
+          <p>
+            No Windows host was available. The commands above follow from the measured zip
+            layout and standard PowerShell usage; they were not executed.
+          </p>
+        </div>
+
+        <h3 id="download-with-gh">Alternative: download with gh</h3>
+
+        <p>
+          <code>gh release download</code> fetches the same assets and carries your
+          <code>gh auth</code> token. Everything downstream of the download is unchanged.
+        </p>
+
+        <div class="code-block">
+<pre><code>gh auth login          # if you have not already
+gh auth status         # confirm
+
+gh release download v0.1.0 --repo Broccolito/open-king \
+  --pattern 'king-macos-arm64.tar.gz' --pattern 'SHA256SUMS.txt' --clobber</code></pre>
+        </div>
+
+        <h2 id="build-from-source">Build from source</h2>
+
+        <h3 id="install-rust">Install Rust</h3>
+
+        <div class="code-block">
+<pre><code>curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
+rustc --version</code></pre>
+        </div>
+
+        <p>To build against the declared floor rather than your default toolchain:</p>
+
+        <div class="code-block">
+<pre><code>rustup toolchain install 1.75
+cargo +1.75 build --release</code></pre>
+        </div>
+
+        <h3 id="clone-and-build">Clone and build</h3>
+
+        <p>The repository is public, so an unauthenticated HTTPS clone works.</p>
+
+        <div class="code-block">
+<pre><code>git clone https://github.com/Broccolito/open-king
+cd open-king
+cargo build --release</code></pre>
+        </div>
+
+        <p>
+          <code>gh repo clone Broccolito/open-king</code> and
+          <code>git clone git@github.com:Broccolito/open-king.git</code> reach the same tree.
+        </p>
+
+        <p>
+          The workspace has three crates, <code>king-io</code>, <code>king-core</code> and
+          <code>king-cli</code>. The binary is declared by <code>king-cli</code>, is named
+          <code>king</code>, and lands at <code>target/release/king</code>. The release
+          profile is <code>opt-level = 3</code>, thin LTO, one codegen unit, and
+          <code>panic = "abort"</code>.
+        </p>
+
+        <p>To build only the CLI, which is what the release workflow does per target:</p>
+
+        <div class="code-block">
+<pre><code>cargo build --release -p king-cli</code></pre>
+        </div>
+
+        <h2 id="verify-the-install">Verify the install</h2>
+
+        <h3 id="smoke-test">Smoke test</h3>
+
+        <p>Run the binary with no arguments.</p>
+
+        <div class="code-block">
+<pre><code>king</code></pre>
+        </div>
+
+        <p>
+          It exits <strong>1</strong> and prints the banner plus a fatal block, because no
+          input fileset was named. That is the expected result, and it is the cheapest proof
+          that the file on disk runs. Measured first lines:
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>KING 2.3.2 - (c) 2010-2023 Wei-Min Chen
+
+The following parameters are in effect:
+                   Binary File :                 (-bname)
+
+Additional Options
+         Close Relative Inference : --related [ON], --duplicate
+...</code></pre>
+        </div>
+
+        <p>and, at the end of the same output:</p>
+
+        <div class="code-block code-block--plain">
+<pre><code>FATAL ERROR -
+Genotype files are required. e.g.,
+  king -b ex.bed --related</code></pre>
+        </div>
+
+        <h3 id="which-program">Which program is on your path</h3>
+
+        <p>
+          open-king prints the banner
+          <code>KING 2.3.2 - (c) 2010-2023 Wei-Min Chen</code>, and it responds to
+          <code>--version</code>, <code>-v</code>, <code>--help</code> and <code>-h</code>
+          with that same banner. This is deliberate: the project targets drop-in stdout
+          parity, and the banner is part of stdout. Each of those four flags prints the
+          banner, then a <code>WARNING</code> block reporting the flag as undefined, then the
+          <code>Genotype files are required</code> fatal, and exits 1. There is no flag that
+          prints <code>0.1.0</code>.
+        </p>
+
+        <p>
+          So the banner does not tell you which of the two programs you are running. Two
+          things do:
+        </p>
+
+        <ul>
+          <li>
+            <strong>The path you invoked.</strong> Run the binary by absolute path, or check
+            <code>command -v king</code> first, so the transcript records which file ran.
+          </li>
+          <li>
+            <strong>The checksum.</strong> <code>SHA256SUMS.txt</code> covers the release
+            archives, so verifying an archive against it pins the build that was extracted
+            from it. For a binary already on disk, record its own SHA-256 and compare against
+            that.
+          </li>
+        </ul>
+
+        <h3 id="run-the-tests">Run the tests</h3>
+
+        <div class="code-block">
+<pre><code>cargo test --workspace</code></pre>
+        </div>
+
+        <div class="note">
+          <p class="note-title">Unverified</p>
+          <p>
+            This command was not run while the source notes were written, because another
+            process held the cargo build lock. It is read directly out of
+            <code>.github/workflows/release.yml</code>, where it is the first gate in the
+            release workflow.
+          </p>
+        </div>
+
+        <h3 id="parity-suite">Differential parity suite</h3>
+
+        <p>
+          The <code>.bed</code>, <code>.bim</code> and <code>.fam</code> filesets are not
+          committed. <code>.gitignore</code> excludes <code>/tests/parity/work/</code> and
+          <code>tests/parity/golden/**/*.{bed,bim,fam}</code>. The generator is committed and
+          is deterministic from a single seed, so everyone regenerates the same bytes.
+        </p>
+
+        <div class="code-block">
+<pre><code>python3 tests/parity/generate_corpus.py --outdir tests/parity/work/data
+python3 tests/parity/run_parity.py --impl ./target/release/king -q --baseline</code></pre>
+        </div>
+
+        <p>
+          Generation was measured at 4.2 s wall, 11 MB, 13 datasets, exit 0. Two notes about
+          where the data goes, both read out of <code>tests/parity/run_parity.py</code>:
+        </p>
+
+        <ul>
+          <li>
+            The runner's default dataset directory is
+            <code>tests/parity/work/data</code>
+            (<code>DEFAULT_DATA = PARITY_DIR / "work" / "data"</code>), not
+            <code>tests/parity/golden</code>. Generating into <code>golden</code> puts the
+            filesets where the runner will not look unless you also pass
+            <code>--data tests/parity/golden</code>.
+          </li>
+          <li>
+            Pre-generating is optional. <code>ensure_inputs()</code> checks the 13 datasets
+            and runs the generator itself for any that are missing. Generating first only
+            makes the first run faster and the failure mode clearer.
+          </li>
+        </ul>
+
+        <p>
+          <code>--baseline</code> with no argument defaults to
+          <code>tests/parity/BASELINE.txt</code>, which records one line per case. That file
+          currently holds 480 lines, all <code>PASS</code>. Measured, running the released
+          v0.1.0 binary against the committed baseline:
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>$ python3 tests/parity/run_parity.py --impl &lt;king&gt; -q --baseline \
+    --data &lt;corpus&gt; --alt &lt;alt&gt;
+[parity] 480 case(s), impl=/…/king, jobs=8
+
+parity: 480 PASS, 0 FAIL, 480 total (2.3s wall, 876 output file(s) byte-compared, 8 diff-excluded)
+baseline: MATCH (480 case(s) against BASELINE.txt)
+$ echo $?
+0</code></pre>
+        </div>
+
+        <p>
+          A correct result is exactly that: <code>0 FAIL</code> on the summary line,
+          <code>baseline: MATCH</code> on the next, exit status 0. The
+          <code>[parity] …</code> progress line goes to stderr; the two result lines go to
+          stdout. A mismatch prints
+          <code>baseline: MISMATCH against BASELINE.txt (N line(s) changed)</code> followed by
+          a unified diff, and exits 1. The suite fails in either direction: a case that newly
+          passes is also a mismatch, resolved with <code>--write-baseline</code> plus a
+          commit. The <a href="parity.html">parity page</a> covers what was compared and what
+          is still open.
+        </p>
+
+        <p>
+          Each case runs in its own <code>tempfile.mkdtemp()</code> directory, so the suite
+          does not write into your working directory. <code>--impl</code> is absolutized
+          before use, so a relative path is fine.
+        </p>
+
+        <h2 id="put-it-on-path">Put it on PATH</h2>
+
+        <p>
+          Copy the binary into a directory that is already on <code>PATH</code>, or add a
+          directory to <code>PATH</code>. The program reads no configuration and looks for
+          nothing beside itself, so a bare copy is enough.
+        </p>
+
+        <div class="code-block">
+<pre><code>mkdir -p ~/.local/bin
+install -m 0755 target/release/king ~/.local/bin/king
+export PATH="$HOME/.local/bin:$PATH"   # add to ~/.zshrc or ~/.bashrc to persist
+king                                   # banner + fatal, exit 1: the install is good</code></pre>
+        </div>
+
+        <p>On Windows:</p>
+
+        <div class="code-block">
+<pre><code># this session only:
+$env:Path = "$HOME\bin;$env:Path"
+# persist:
+[Environment]::SetEnvironmentVariable('Path', "$HOME\bin;$env:Path", 'User')</code></pre>
+        </div>
+
+        <p>
+          Copy rather than symlink into the target directory if you plan to rebuild while a
+          run is in flight.
+        </p>
+
+        <h2 id="setup-for-a-coding-agent">Setup for a coding agent</h2>
+
+        <p>
+          Every claim in this section was measured by running the binary, except where marked
+          otherwise. The behaviours below are the ones that cost an unattended caller the most
+          time when they are discovered late.
+        </p>
+
+        <h3 id="agent-invocation">Resolving the binary</h3>
+
+        <p>
+          Both <code>PATH</code> and an absolute path work. An absolute path is the safer
+          default for an agent: it is immune to a <code>PATH</code> that differs between the
+          agent's shell and a login shell, and it makes the file in use explicit in the
+          transcript. There is no wrapper script and no <code>king</code> subprocess lookup,
+          so nothing else has to resolve the name. <code>PATH</code> is required if the agent
+          hands the command to a tool that reconstructs the argv itself, or if the same recipe
+          has to run on machines with different install locations.
+        </p>
+
+        <p>Resolve once at the top of a session and reuse:</p>
+
+        <div class="code-block">
+<pre><code>KING=$(command -v king || echo "$HOME/.local/bin/king")
+[ -x "$KING" ] || { echo "king not installed"; exit 127; }</code></pre>
+        </div>
+
+        <p>
+          Record the SHA-256 of the binary alongside it. The banner reports
+          <code>KING 2.3.2</code>, the reimplemented reference's version, so it cannot
+          identify the build. See <a href="#which-program">which program is on your path</a>.
+        </p>
+
+        <h3 id="agent-working-directory">Output lands in the working directory</h3>
+
+        <p>
+          This is the behaviour to plan around first. <code>--prefix</code> defaults to the
+          literal string <code>king</code> and is applied by plain string concatenation, not
+          by joining a stem to a directory. From
+          <code>crates/king-cli/src/analysis/mod.rs</code>:
+        </p>
+
+        <div class="code-block">
+<pre><code>pub fn out_path(opts: &amp;Options, suffix: &amp;str) -&gt; String {
+    format!("{}{suffix}", opts.string(Opt::Prefix))
+}</code></pre>
+        </div>
+
+        <p>Consequences, all measured:</p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Command, run in an empty directory</th>
+                <th scope="col">Files created there</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>king -b …/multifam.bed --kinship</code></th>
+                <td><code>king.kin</code>, <code>king.kin0</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b …/multifam.bed --related --degree 2 --prefix demo</code></th>
+                <td><code>demo.kin</code>, <code>demoallsegs.txt</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b …/bigish.bed --related --degree 2 --prefix out/run_</code></th>
+                <td><code>out/run_.kin</code>, <code>out/run_.kin0</code>, <code>out/run_allsegs.txt</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Note <code>demoallsegs.txt</code>, with no dot. The suffix carries its own
+          separator, so <code>--prefix demo</code> gives both <code>demo.kin</code> and
+          <code>demoallsegs.txt</code>. An agent must therefore do one of two things: change
+          directory into a scratch directory before invoking <code>king</code>, or pass a
+          <code>--prefix</code> with a directory component such as
+          <code>--prefix out/run_</code>.
+        </p>
+
+        <p>
+          The directory named in a prefix must already exist. <code>king</code> does not
+          create it. Measured:
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>$ king -b trio.bed --kinship --prefix nodir/x
+...
+FATAL ERROR -
+Cannot open nodir/x$TMP$.ped to write.
+$ echo $?
+1</code></pre>
+        </div>
+
+        <p>
+          The check is a real write test, performed early, before the pedigree is parsed:
+          <code>king</code> creates <code>&lt;prefix&gt;$TMP$.ped</code>, then removes it. A
+          read-only directory fails it too. The code is
+          <code>crates/king-cli/src/load.rs::probe_tmp_ped</code>. Because output names are a
+          pure function of <code>--prefix</code>, two runs sharing a prefix in the same
+          directory overwrite each other, including the transient
+          <code>&lt;prefix&gt;$TMP$.ped</code>. Give each concurrent run its own directory or
+          its own prefix.
+        </p>
+
+        <h3 id="agent-exit-status">Exit status</h3>
+
+        <p>
+          Two statuses are produced. <code>0</code> means the run completed.
+          <code>1</code> means a fatal error: a <code>FATAL ERROR</code> block was printed and
+          nothing further ran. Only <code>fatal()</code> in
+          <code>crates/king-cli/src/main.rs</code> exits 1; every other termination is
+          <code>std::process::exit(0)</code>.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Command</th>
+                <th scope="col" class="num">Exit</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>king</code> (no arguments)</th>
+                <td class="num">1</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king --version</code> / <code>-v</code> / <code>--help</code> / <code>-h</code></th>
+                <td class="num">1</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b multifam.bed --kinship</code></th>
+                <td class="num">0</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b multifam.bed</code> (no analysis requested)</th>
+                <td class="num"><strong>0</strong></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b multifam.bed --kinship --bogus</code> (undefined flag)</th>
+                <td class="num"><strong>0</strong></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b /nope/missing.bed --kinship</code></th>
+                <td class="num">1</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b multifam.bed --pca</code> (out of product scope)</th>
+                <td class="num">1</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>king -b trio.bed --kinship --prefix nodir/x</code></th>
+                <td class="num">1</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>The two bold rows are the traps.</p>
+
+        <ul>
+          <li>
+            <strong>An undefined flag does not fail the run.</strong> <code>--bogus</code>
+            produces a <code>WARNING</code> block and the analysis proceeds to completion with
+            exit 0. A typo in an agent-generated command line is silent unless you grep for
+            it.
+          </li>
+          <li>
+            <strong>Requesting no analysis does not fail either.</strong>
+            <code>king -b file.bed</code> loads the fileset, prints a notice, writes nothing,
+            and exits 0. Checking only the exit status reports success for a run that produced
+            no results.
+          </li>
+        </ul>
+
+        <div class="note">
+          <p class="note-title">Unverified</p>
+          <p>
+            The status of a Rust panic. The release profile sets
+            <code>panic = "abort"</code>, so a panic would terminate on
+            <code>SIGABRT</code>, which a shell reports as 134, rather than exiting 1. No
+            input was found that panics, so this was not observed.
+          </p>
+        </div>
+
+        <h3 id="agent-streams">Everything goes to stdout</h3>
+
+        <p>
+          Measured across every invocation in the source notes and again while writing this
+          page, successful and fatal: stderr received 0 bytes in all cases. The
+          <code>FATAL ERROR</code> block is written to stdout, not stderr. That is deliberate
+          reference-console parity, stated in the module docs of <code>main.rs</code>:
+          everything goes to stdout, the reference writes nothing to stderr, and neither does
+          open-king. This is unusual enough to state plainly, because it breaks the ordinary
+          assumption that diagnostics arrive on stderr.
+        </p>
+
+        <ul>
+          <li>Capturing only stderr captures nothing, ever.</li>
+          <li>
+            <code>cmd &gt; log 2&gt;&amp;1</code> and <code>cmd &gt; log</code> are equivalent
+            here. Prefer the first anyway.
+          </li>
+          <li>Diagnostics have to be recovered from the stdout log, keyed off the exit status.</li>
+        </ul>
+
+        <p>Three byte-level details of that log, all measured with <code>od -c</code>:</p>
+
+        <ul>
+          <li>
+            The fatal marker line is exactly <code>FATAL ERROR - </code>, with a trailing space
+            and no leading control character. <code>grep '^FATAL ERROR' log</code> matches.
+          </li>
+          <li>
+            The warning marker line is <code>\aWARNING - </code>, prefixed by a BEL byte
+            (0x07). <code>grep '^WARNING' log</code> matches nothing. Use
+            <code>grep 'WARNING - '</code> unanchored.
+          </li>
+          <li>
+            Genotype loading progress is written as carriage-return-separated tokens
+            (<code>0%\r6%\r13%\r…</code>) even when stdout is redirected to a file rather than
+            a terminal. A line-oriented parser has to tolerate embedded <code>\r</code>.
+          </li>
+        </ul>
+
+        <h3 id="agent-output-files">Output files an agent can rely on</h3>
+
+        <p>
+          Not every declared output file is written on every run, and an existing file is not
+          proof of a result.
+        </p>
+
+        <ul>
+          <li>
+            <code>.kin0</code> is written only when cross-family relatives were found.
+            Measured: <code>multifam</code> with <code>--related --degree 2</code> prints
+            <code>No close relatives are inferred.</code> and produces <code>demo.kin</code>
+            and <code>demoallsegs.txt</code> but no <code>.kin0</code>. <code>bigish</code>
+            with the same flags produces all three.
+          </li>
+          <li>
+            An output file can legitimately be empty. Measured:
+            <code>king -b trio.bed --kinship</code> writes a 0-byte <code>king.kin</code> and
+            exits 0. This matches the captured reference goldens for the same command, which
+            are also 0 bytes, so it is correct behaviour and not a failure.
+          </li>
+        </ul>
+
+        <p>
+          Test with <code>[ -s file ]</code>, not <code>[ -f file ]</code>. The
+          <a href="outputs.html">output files page</a> covers the columns of each file.
+        </p>
+
+        <h3 id="agent-unattended">Unattended operation</h3>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Property</th>
+                <th scope="col">Evidence</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">No interactive prompt</th>
+                <td>no <code>stdin</code> reference anywhere in <code>crates/</code></td>
+              </tr>
+              <tr>
+                <th scope="row">No network access</th>
+                <td>the dependency graph in <code>Cargo.lock</code> is <code>flate2</code>, <code>rayon</code>, <code>miniz_oxide</code>, <code>crc32fast</code>, <code>crossbeam-*</code>, <code>either</code>, <code>adler2</code>, <code>cfg-if</code>, <code>simd-adler32</code>; no HTTP or socket crate, and no <code>std::net</code> reference in <code>crates/</code></td>
+              </tr>
+              <tr>
+                <th scope="row">No unsafe code</th>
+                <td><code>#![forbid(unsafe_code)]</code> in all three crate roots and in <code>main.rs</code></td>
+              </tr>
+              <tr>
+                <th scope="row">No config file</th>
+                <td>nothing is read from <code>$HOME</code> or <code>/etc</code></td>
+              </tr>
+              <tr>
+                <th scope="row">One environment variable read</th>
+                <td><code>TZ</code>, in <code>console.rs</code>, only to format the <code>KING starts at …</code> timestamps</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Runtime is short and CPU-bound. Measured: 200 samples by 50000 SNPs,
+          <code>--related --degree 2</code>, 0.48 s wall. <code>--cpus N</code> caps the
+          thread count if the caller needs to bound it.
+        </p>
+
+        <h3 id="agent-example">Worked example</h3>
+
+        <p>
+          An agent-shaped wrapper, run and verified in all three branches: success,
+          undefined-flag warning, and fatal input error.
+        </p>
+
+        <div class="code-block">
+<pre><code>#!/bin/sh
+# Usage: king_run.sh &lt;fileset.bed&gt; &lt;workdir&gt;
+set -eu
+bed=$1
+work=$2
+
+mkdir -p "$work/out"
+cd "$work"
+
+status=0
+king -b "$bed" --related --degree 2 --prefix out/run_ &gt; king.log 2&gt;&amp;1 || status=$?
+
+if [ "$status" -ne 0 ]; then
+  echo "king failed (exit $status)"
+  sed -n '/FATAL ERROR/,$p' king.log
+  exit "$status"
+fi
+
+# A typo in a flag does not fail the run; it only warns. Note the unanchored pattern:
+# the WARNING line carries a leading BEL byte.
+if grep -q 'WARNING - ' king.log; then
+  echo "king warned about the command line:"
+  grep 'is undefined' king.log
+fi
+
+# .kin0 is written only when cross-family relatives were found.
+if [ -s out/run_.kin0 ]; then
+  echo "cross-family pairs: $(( $(wc -l &lt; out/run_.kin0) - 1 ))"
+  awk -F'\t' 'NR &gt; 1 &amp;&amp; $14 == "FS" { print $1"/"$2, $3"/"$4, $10 }' out/run_.kin0
+else
+  echo "cross-family pairs: 0"
+fi</code></pre>
+        </div>
+
+        <p>
+          <code>.kin0</code> is tab separated with a header row and 14 columns. Field 10 is
+          <code>Kinship</code> and field 14 is <code>InfType</code>, which the
+          <code>awk</code> line above reads. Measured output on the <code>bigish</code> corpus
+          fileset:
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>$ ./king_run.sh /tmp/corpus/bigish.bed /tmp/w1
+cross-family pairs: 26
+BF01/B01_F BF02/B02_F 0.2885
+BF13/B13_F BF14/B14_F 0.2959
+BF25/B25_F BF26/B26_F 0.2504
+$ echo $?
+0</code></pre>
+        </div>
+
+        <p>With <code>--bogus</code> inserted into the command line:</p>
+
+        <div class="code-block code-block--plain">
+<pre><code>king warned about the command line:
+Command line parameter --bogus is undefined
+cross-family pairs: 26
+...</code></pre>
+        </div>
+
+        <p>With a missing input:</p>
+
+        <div class="code-block code-block--plain">
+<pre><code>$ ./king_run.sh /nope/x.bed /tmp/w3
+king failed (exit 1)
+FATAL ERROR -
+Genotype file /nope/x.bed cannot be opened
+$ echo $?
+1</code></pre>
+        </div>
+
+        <h3 id="agent-checklist">Checklist</h3>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Do</th>
+                <th scope="col">Why</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Change directory to a scratch directory, or use <code>--prefix dir/stem</code></th>
+                <td>output lands in the current working directory</td>
+              </tr>
+              <tr>
+                <th scope="row">Create the prefix directory first</th>
+                <td><code>king</code> will not; it exits 1</td>
+              </tr>
+              <tr>
+                <th scope="row">Branch on exit status: 0 or 1</th>
+                <td>only those two are produced</td>
+              </tr>
+              <tr>
+                <th scope="row">Also grep the log for <code>WARNING - </code></th>
+                <td>an undefined flag exits 0</td>
+              </tr>
+              <tr>
+                <th scope="row">Check that the expected output file exists and is non-empty</th>
+                <td>a run with no analysis requested exits 0 and writes nothing, and a successful run can leave a 0-byte file</td>
+              </tr>
+              <tr>
+                <th scope="row">Read diagnostics from stdout</th>
+                <td>stderr is always empty</td>
+              </tr>
+              <tr>
+                <th scope="row">Give concurrent runs separate directories or prefixes</th>
+                <td>output names are a pure function of <code>--prefix</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <nav class="page-nav" aria-label="Page navigation">
+        <a class="page-nav-link page-nav-link--prev" href="index.html">
+          <span class="page-nav-dir">Previous</span>
+          <span class="page-nav-title">Overview</span>
+        </a>
+        <a class="page-nav-link page-nav-link--next" href="usage.html">
+          <span class="page-nav-dir">Next</span>
+          <span class="page-nav-title">Commands and options</span>
+        </a>
+      </nav>
+    </main>
+
+    <footer class="site-footer">
+      <p class="footer-note">
+        open-king is MIT licensed. It is not affiliated with, endorsed by, or derived from
+        the source code of KING.
+      </p>
+      <p class="footer-note">
+        Cite the method: Manichaikul et al., <em>Bioinformatics</em> 2010, 26(22):2867.
+        Credit for KING itself belongs to Wei-Min Chen and colleagues.
+      </p>
+    </footer>
+  </div>
+
+  <nav class="toc" id="toc" aria-label="On this page" hidden></nav>
+</div>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>

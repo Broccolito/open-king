@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parity | open-king</title>
+<meta name="description" content="What open-king was compared against, how the comparison is run, which output files are byte-identical, which differences are held out, and the limit of the evidence.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Ctext%20x='3'%20y='25'%20font-family='monospace'%20font-size='26'%20fill='%231c5c8c'%3Ek%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+<script>
+  try {
+    var t = localStorage.getItem('open-king-theme');
+    if (t === 'light' || t === 'dark') { document.documentElement.setAttribute('data-theme', t); }
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<div class="shell">
+  <aside class="sidebar" data-nav-open="false">
+    <div class="sidebar-inner">
+      <div class="masthead">
+        <a class="brand" href="index.html">
+          <span class="brand-name">open-king</span>
+          <span class="brand-tag">docs</span>
+        </a>
+        <div class="masthead-actions">
+          <button class="icon-button theme-toggle" type="button" aria-label="Switch theme">
+            <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 12H2M22 12h-2.2M6.3 6.3 4.8 4.8M19.2 19.2l-1.5-1.5M17.7 6.3l1.5-1.5M4.8 19.2l1.5-1.5"/></svg>
+            <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.4A8.4 8.4 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4z"/></svg>
+          </button>
+          <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Show navigation">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <nav class="site-nav" id="site-nav" aria-label="Documentation">
+        <div class="nav-group">
+          <p class="nav-label">Guide</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link" href="index.html">Overview</a></li>
+            <li class="nav-item"><a class="nav-link" href="install.html">Install</a></li>
+            <li class="nav-item"><a class="nav-link" href="usage.html">Commands and options</a></li>
+            <li class="nav-item"><a class="nav-link" href="outputs.html">Output files</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-label">Verification</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link" href="benchmarks.html">Benchmarks</a></li>
+            <li class="nav-item"><a class="nav-link" href="parity.html" aria-current="page">Parity</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-label">Project</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link nav-link--external" href="https://github.com/Broccolito/open-king">Source repository</a></li>
+          </ul>
+        </div>
+      </nav>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <main class="content" id="main">
+      <article class="prose">
+        <p class="eyebrow">Verification</p>
+        <h1>Parity</h1>
+
+        <p class="lede">
+          Parity here means one operation: replay a captured KING invocation with open-king
+          and compare the result byte for byte. This page gives the measured numbers, names
+          every difference that is known and unfixed, and states where the evidence stops.
+        </p>
+
+        <h2 id="the-measured-result">The measured result</h2>
+
+        <div class="table-wrap">
+          <table>
+            <tbody>
+              <tr>
+                <th scope="row">Captured invocations replayed</th>
+                <td class="num">480</td>
+              </tr>
+              <tr>
+                <th scope="row">Cases passing</th>
+                <td class="num">480 PASS, 0 FAIL</td>
+              </tr>
+              <tr>
+                <th scope="row">Output files byte-compared</th>
+                <td class="num">876</td>
+              </tr>
+              <tr>
+                <th scope="row">Files diff-excluded</th>
+                <td class="num">8</td>
+              </tr>
+              <tr>
+                <th scope="row">Regression baseline</th>
+                <td class="num">MATCH, 480 cases</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>cargo test --workspace</code></th>
+                <td class="num">355 passed, 0 failed</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          A case passes only when the exit status, the standard output, the standard error,
+          the set of files produced and the bytes of every file all match. The eight
+          exclusions are all the same file, <code>&lt;prefix&gt;X.kin0</code>, on the captures
+          taken without <code>--cpus 1</code>. The reason is a race in the reference,
+          described below. One timing probe in the Rust suite is marked ignored.
+        </p>
+
+        <div class="note note--warn">
+          <p class="note-title">Scope of every number on this page</p>
+          <p>
+            All of it is measured against one KING build: KING 2.3.2, Mach-O 64-bit arm64,
+            on macOS. No cross-build or cross-platform differential has been run. See
+            <a href="#one-reference-build">One reference build, one host</a>, which states
+            the consequences rather than softening them.
+          </p>
+        </div>
+
+        <h2 id="what-is-compared">What is compared</h2>
+
+        <p>
+          Each directory under <code>tests/parity/golden/&lt;group&gt;/&lt;case&gt;/</code> is
+          one captured reference invocation. It holds <code>cmd.txt</code> (the argv, with
+          <code>{KING}</code>, <code>{DATA}</code> and <code>{ALT}</code> placeholders),
+          <code>exitcode.txt</code>, <code>stdout.txt</code> and <code>stderr.txt</code>
+          verbatim, and every output file the reference wrote into its working directory.
+        </p>
+
+        <p>
+          <code>run_parity.py</code> replays <code>cmd.txt</code> with the open-king binary in
+          a fresh temporary directory and compares five things: exit status, standard output,
+          standard error, the set of files produced, and the bytes of every file. A file the
+          reference did not write is a failure, and so is a missing one.
+        </p>
+
+        <p>
+          490 invocations are captured and 480 are replayed. The ten under
+          <code>core/_analysis/</code> are alternate-parameter captures kept for analysis and
+          are included only with <code>--include-analysis</code>.
+        </p>
+
+        <h3 id="the-five-normalized-lines">The five normalized lines</h3>
+
+        <p>
+          Five kinds of line are genuinely not reproducible. They are normalized on
+          <strong>both</strong> sides before comparison, never on open-king's side alone.
+        </p>
+
+        <ul>
+          <li>Timestamps, on every <code>… starts at</code> and <code>… ends at</code> line.</li>
+          <li>Thread counts, in <code>N CPU cores are used</code>, which follows the host.</li>
+          <li>Progress tokens, the carriage-return separated <code>10%20%…</code> sequences, whose granularity follows timing.</li>
+          <li>Absolute input paths, which the reference echoes back for the <code>.bed</code>, <code>.bim</code> and <code>.fam</code> it was given.</li>
+          <li>The <code>--noscreen [&lt;int&gt;]</code> value, which is uninitialised memory in the reference's own banner. Across the 484 captured stdouts that print it, it takes three values: <code>-1717986816</code> 469 times, <code>-858993408</code> 14 times and <code>-515396096</code> once.</li>
+        </ul>
+
+        <p>
+          One file is excluded from diffing entirely. The reference's between-family
+          X-chromosome writer is not serialised: six identical invocations of
+          <code>king -b sexchr.bed --kinship</code> produce six different files, and one
+          sampling caught the writer mid-truncation, with records torn mid-field and
+          identifier columns from different pairs interleaved. Adding <code>--cpus 1</code>
+          makes it deterministic, so no capture made without it can be a golden.
+          <code>&lt;prefix&gt;X.kin0</code> is therefore excluded on 8 of the 13 cases that
+          produce it, which is the whole of the "8 diff-excluded" figure. The other 5, all
+          captured with <code>--cpus 1</code>, are diffed and are byte-identical.
+        </p>
+
+        <p>
+          Nothing else is normalized. Row order is compared, not sorted. Trailing whitespace
+          is compared. Column widths are compared. Two of the rules open-king implements were
+          found only because the comparison is a byte diff: the row order of
+          <code>&lt;prefix&gt;.seg</code>, and the fact that its <code>PropIBD</code> column is
+          computed differently from the identically named column in
+          <code>&lt;prefix&gt;.kin</code>. Every row-level grader in the project matches rows on
+          their identifier columns before comparing, and had reported 0 extra and 0 missing
+          rows on a file whose rows were in the wrong order for the entire life of the
+          project. 486 of the goldens contain bare carriage returns, so
+          <code>.gitattributes</code> marks the golden tree, the baseline and the fixture
+          caches <code>-text</code> to stop a platform's git rewriting them on checkout.
+        </p>
+
+        <h3 id="the-runner-checks-itself">The runner checks itself</h3>
+
+        <p>
+          Running the same suite with the reference binary as the implementation gives
+          <strong>480 PASS, 0 FAIL</strong> with 876 files byte-compared. That is the evidence
+          that the normalization above is not hiding a real difference: the reference agrees
+          with its own captures under exactly the rules open-king is held to.
+        </p>
+
+        <h3 id="the-regression-baseline">The regression baseline</h3>
+
+        <p>
+          <code>tests/parity/BASELINE.txt</code> records the outcome of all 480 cases with
+          their per-file notes. <code>run_parity.py --baseline</code> fails on any difference
+          in either direction: a new failure, a changed reason for an existing failure, or an
+          unrecorded improvement. The last of those is deliberate, so that a change which
+          fixes a case must also update the file that said it was broken. CI runs it on every
+          push.
+        </p>
+
+        <h2 id="the-corpus">The corpus</h2>
+
+        <p>
+          The captures come from 13 simulated PLINK1 filesets: <code>trio</code>,
+          <code>nuclear</code>, <code>threegen</code>, <code>multifam</code>,
+          <code>dups</code>, <code>missing</code>, <code>monomorphic</code>,
+          <code>sexchr</code>, <code>unrelated</code>, <code>admixed</code>,
+          <code>singleton</code>, <code>pair</code> and <code>bigish</code>. The largest,
+          <code>bigish</code>, has 200 samples; <code>multifam</code> has 20 and
+          <code>threegen</code> 12. Nine of the thirteen have 16 samples or fewer.
+        </p>
+
+        <p>
+          Each analysis is captured against each dataset. Every cell in the matrix is
+          byte-identical on every output file, plus stdout, stderr and exit status.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Analysis</th>
+                <th scope="col">Invocations per dataset</th>
+                <th scope="col" class="num">Captured</th>
+                <th scope="col" class="num">Byte-identical</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row"><code>--kinship</code></th><td>1</td><td class="num">13</td><td class="num">13</td></tr>
+              <tr><th scope="row"><code>--duplicate</code></th><td>1</td><td class="num">13</td><td class="num">13</td></tr>
+              <tr><th scope="row"><code>--bysample</code></th><td>1</td><td class="num">13</td><td class="num">13</td></tr>
+              <tr><th scope="row"><code>--bySNP</code></th><td>1</td><td class="num">13</td><td class="num">13</td></tr>
+              <tr><th scope="row"><code>--autoQC</code></th><td>1</td><td class="num">13</td><td class="num">13</td></tr>
+              <tr><th scope="row"><code>--cluster</code></th><td>1</td><td class="num">13</td><td class="num">13</td></tr>
+              <tr><th scope="row"><code>--build</code></th><td>1</td><td class="num">13</td><td class="num">13</td></tr>
+              <tr><th scope="row"><code>--ibs</code></th><td>1</td><td class="num">13</td><td class="num">13</td></tr>
+              <tr><th scope="row"><code>--unrelated</code></th><td>2</td><td class="num">26</td><td class="num">26</td></tr>
+              <tr><th scope="row"><code>--related</code></th><td>5: bare plus four <code>--degree</code></td><td class="num">65</td><td class="num">65</td></tr>
+              <tr><th scope="row"><code>--ibdseg</code></th><td>4: bare, <code>--degree 2</code>, <code>--seglength 5</code>, <code>--seglength 10</code></td><td class="num">52</td><td class="num">52</td></tr>
+              <tr><th scope="row"><code>--related --ibdseg</code></th><td>1</td><td class="num">13</td><td class="num">13</td></tr>
+              <tr><th scope="row">command-line surface (<code>params</code>)</th><td>not per dataset</td><td class="num">220</td><td class="num">220</td></tr>
+              <tr><th scope="row">Total</th><td></td><td class="num">480</td><td class="num">480</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The <code>params</code> group is 220 invocations that exercise the command line
+          rather than one dataset: every <code>--prefix</code> shape, <code>--cpus</code>,
+          <code>--sexchr</code>, <code>--degree</code>, <code>--minConc</code>,
+          <code>--seglength</code>, alternate <code>--fam</code> and <code>--bim</code> inputs,
+          malformed and missing files, and the banner in each case. By capture group the
+          totals are <code>apps</code> 91/91, <code>core</code> 104/104, <code>ibdseg</code>
+          65/65 and <code>params</code> 220/220.
+        </p>
+
+        <div class="note">
+          <p class="note-title">What the small filesets do not prove</p>
+          <p>
+            <code>nuclear</code> (6 samples, 10,000 markers), <code>missing</code> (6,
+            10,000), <code>sexchr</code> (10, 6,000) and <code>monomorphic</code> (12, 5,000)
+            each report the same 14 <code>.seg</code> rows: the within-family pairs of one
+            six-person nuclear family. Half of <code>monomorphic</code>'s markers carry no
+            usable information. On these the reference's own segment numbers are nowhere near
+            the pedigree the generator built, so agreeing with the reference there says little
+            about the segment caller.
+          </p>
+        </div>
+
+        <h2 id="byte-identical-per-file">What is byte-identical, per output file</h2>
+
+        <p>
+          Counted over every case that produces the file under any <code>--prefix</code>,
+          across all four capture groups. <code>&lt;prefix&gt;</code> stands for
+          <code>king</code>, <code>custom</code>, <code>cus.tom</code> and
+          <code>custom.</code> alike. No compared output file differs anywhere in the 480-case
+          corpus.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide table--zebra">
+            <thead>
+              <tr>
+                <th scope="col">Output file</th>
+                <th scope="col" class="num">Cases</th>
+                <th scope="col" class="num">Byte-identical cases</th>
+                <th scope="col" class="num">Data rows</th>
+                <th scope="col" class="num">Rows differing</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row"><code>&lt;prefix&gt;allsegs.txt</code></th><td class="num">165</td><td class="num">all</td><td class="num">2,217</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;splitped.txt</code></th><td class="num">50</td><td class="num">all</td><td class="num">1,320</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;.con</code></th><td class="num">46</td><td class="num">all</td><td class="num">62</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;bySample.txt</code></th><td class="num">17</td><td class="num">all</td><td class="num">398</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;bySNP.txt</code></th><td class="num">13</td><td class="num">all</td><td class="num">181,000</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;_autoQC_Summary.txt</code></th><td class="num">13</td><td class="num">all</td><td class="num">101</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;_autoQC_snptoberemoved.txt</code></th><td class="num">13</td><td class="num">all</td><td class="num">23,725</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;_autoQC_sampletoberemoved.txt</code></th><td class="num">13</td><td class="num">all</td><td class="num">2</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;_autoQC_updatesex.txt</code></th><td class="num">1</td><td class="num">all</td><td class="num">1</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;updateids.txt</code></th><td class="num">2</td><td class="num">all</td><td class="num">64</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;updateparents.txt</code></th><td class="num">8</td><td class="num">all</td><td class="num">33</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;unrelated.txt</code></th><td class="num">26</td><td class="num">all</td><td class="num">358</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;unrelated_toberemoved.txt</code></th><td class="num">26</td><td class="num">all</td><td class="num">300</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;X.kin0</code></th><td class="num">5 diffable of 13</td><td class="num">all 5</td><td class="num">52</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;.ibs</code></th><td class="num">13</td><td class="num">all</td><td class="num">807</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;.ibs0</code></th><td class="num">8</td><td class="num">all</td><td class="num">20,754</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;X.kin</code></th><td class="num">17</td><td class="num">all</td><td class="num">225</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;.kin0</code></th><td class="num">178</td><td class="num">all</td><td class="num">228,770</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;.kin</code></th><td class="num">201</td><td class="num">all</td><td class="num">12,804</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;cluster.kin</code></th><td class="num">1</td><td class="num">all</td><td class="num">165</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;.seg</code></th><td class="num">50</td><td class="num">all</td><td class="num">4,172</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;build.log</code></th><td class="num">8</td><td class="num">all 8</td><td class="num">18</td><td class="num">0</td></tr>
+              <tr><th scope="row"><code>&lt;prefix&gt;X.seg</code></th><td class="num">2</td><td class="num">all 2</td><td class="num">28</td><td class="num">0</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Rows are matched on their identifier columns before comparison, so across the whole
+          corpus there are 0 extra and 0 missing rows on every file. The 16-column
+          <code>--related</code> layer is exact on all 4,805 corpus rows that carry it, on
+          every column: <code>N_SNP</code>, <code>Z0</code>, <code>Phi</code>,
+          <code>HetHet</code>, <code>IBS0</code>, <code>HetConc</code>, <code>HomIBS0</code>,
+          <code>Kinship</code>, <code>IBD1Seg</code>, <code>IBD2Seg</code>,
+          <code>PropIBD</code>, <code>InfType</code> and <code>Error</code>. All 480 cases
+          match stdout byte for byte after the normalization above, and every case matches
+          stderr and exit status.
+        </p>
+
+        <div class="note">
+          <p class="note-title">The limit of a saturated corpus</p>
+          <p>
+            <code>&lt;prefix&gt;.seg</code> is byte-identical in all 50 captures, on all 4,172
+            rows, at the default reporting floor and at <code>--seglength 5</code> and
+            <code>--seglength 10</code> alike. The primary <code>--ibdseg</code> scorecard is
+            982 of 982 rows exact at each of the three floors, with 0 extra and 0 missing
+            pairs. That is a statement about 480 captures of 13 simulated datasets. It is not
+            a proof that the segment caller is right in general, and the corpus can no longer
+            tell the difference: it has stopped grading the caller and become a regression
+            guard. The measurement that still discriminates is the out-of-sample battery
+            below, and it is not clean.
+          </p>
+        </div>
+
+        <h2 id="held-out-differences">Five held-out differences</h2>
+
+        <p>
+          These are supported-core differences that the 480-case corpus cannot exercise. None
+          of them costs a parity case, which is exactly why they are listed here rather than
+          left to the case count. All five are tracked in
+          <a href="https://github.com/Broccolito/open-king/issues/11">issue&nbsp;#11</a>.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide table--zebra">
+            <thead>
+              <tr>
+                <th scope="col">Difference</th>
+                <th scope="col">How large it is</th>
+                <th scope="col">Standing</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Segment acceptance gate</th>
+                <td>
+                  One constructed pair. On a built 8-sample single-family fileset the
+                  reference writes no <code>king.seg</code> row for one brother and sister,
+                  while open-king writes
+                  <code>IBD1Seg 0.0260  IBD2Seg 0.0893  PropIBD 0.1023  3rd</code>. It is the
+                  only default-floor case among that probe's 1,040 runs whose
+                  <code>X.seg</code> differs, and it differs because <code>king.seg</code>
+                  does. The corpus has 0 extra and 0 missing <code>.seg</code> rows.
+                </td>
+                <td>
+                  The first observed counterexample to the <code>&gt;= 10</code>
+                  informative-marker rule. A new discriminator is needed.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Sparse PO/FS cutoff</th>
+                <td>
+                  One constant. The segment-unavailable fallback uses <code>0.0050</code>,
+                  while reference probes show a deterministic data-derived value in roughly
+                  [0.0035, 0.0060].
+                </td>
+                <td>
+                  The application rule is known; the derivation of the value is not. A held-out
+                  fileset that moves the reference cutoff must pin the rule before the constant
+                  is replaced.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Exact <code>HomIBS0</code> ties</th>
+                <td>
+                  Zero golden rows differ. Two of 1,189 random-pedigree rows and four of nine
+                  hand-placed exact ties differ in the last printed digit.
+                </td>
+                <td>
+                  The integer counts and the algebraic ratio are correct. No tested floating
+                  evaluation reproduces every reference perturbation.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row"><code>MI_Removal</code></th>
+                <td>
+                  Every golden row is zero. The greedy pair-error cover matches six of seven
+                  focused probes.
+                </td>
+                <td>
+                  The seventh reference flag, at a 0.18&nbsp;% rate, refutes the current
+                  monotone threshold rule.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Rare pedigree reconstruction shapes</th>
+                <td>
+                  <code>&lt;prefix&gt;build.log</code> is byte-identical in all 8 corpus cases.
+                  Off corpus, the cached replay is 277 of 347 logs byte-identical, and a
+                  further 52 carry the same distinct lines and differ only in repetition or
+                  count residue. A held-out sweep of 20 merge shapes scores 18 OK, 0 MISMATCH,
+                  2 skipped.
+                </td>
+                <td>
+                  Remaining: cross-family named-parent materialization,
+                  <code>&lt;FID&gt;-&gt;&lt;IID&gt;</code> renaming, and rare inference-loop
+                  trigger and repetition shapes. Two cached reference logs are truncated
+                  evidence and are deliberately not fitted.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="safety-divergence">The one retained safety divergence</h2>
+
+        <p>
+          Because the corpus is saturated on the segment columns, the same binary is also
+          graded on filesets it has never seen. <code>oosseg.py</code> builds 24 of them with
+          the corpus generator's own simulator on 8 seeds used nowhere else in the repository,
+          in three pedigree shapes, runs both binaries at 3, 5 and 10 Mb, and diffs
+          <code>&lt;prefix&gt;.seg</code> byte for byte.
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>72 runs, 6 713 reference rows   -&gt;   68 byte-identical
+rows: 0 extra, 0 missing, 4 value-differing</code></pre>
+        </div>
+
+        <p>
+          That is 94.4&nbsp;% of whole-file runs and 99.94&nbsp;% of rows. The four differing
+          rows have one shape: a single full-sib pair on two filesets with exactly 40,000
+          markers, at the 3 and 5 Mb floors. <code>IBD1Seg</code> is exact;
+          open-king's <code>IBD2Seg</code> is lower by 0.0181 to 0.0182, and
+          <code>PropIBD</code> follows it.
+        </p>
+
+        <p>
+          Two controls make the cause precise. Holding the same seeds, genotypes and target
+          pair, the output is exact at 39,999 markers and exact after appending one
+          all-missing marker to reach 40,001. Only 40,000 differs. On an array whose length is
+          an exact multiple of 64, the reference reads past the end of the marker array: it
+          adds an absolute coordinate, the last marker's position, rather than a difference, to
+          a pair's IBD2 total, so <code>IBD2Seg</code> can come out larger than 1. The
+          behaviour was swept at 320, 384 and 448 markers, where it appears on some pairs and
+          always as exactly that added position over the usable total, and at 319, 321, 383,
+          385 and 449, where it appears on no pair at any seed. It shows identically in
+          <code>X.kin</code> and <code>X.seg</code>, so it is in the shared caller.
+        </p>
+
+        <p>
+          This is a memory-safety bug in the reference, not a caller rule, and safe Rust does
+          not emulate it. The divergence is retained on purpose and asserted by
+          <code>tests/parity/probes/segment_residuals.py::check_safe_tail_divergence</code>,
+          which runs all twelve controls. It is not open work and is not part of issue&nbsp;#11.
+          Every corpus array ends mid-word, so the corpus cannot reach it at all: 0 corpus rows
+          are affected.
+        </p>
+
+        <h2 id="independent-rebuild">An independently compiled reference</h2>
+
+        <p>
+          The goldens are only as good as the binary that produced them. To test that, KING
+          2.3.2 was compiled independently from the published source with a different compiler,
+          Homebrew GCC 16 on arm64, and all 480 captured invocations were replayed against that
+          build.
+        </p>
+
+        <p>
+          Every one of the 876 output files was byte-identical to the golden capture. The only
+          differences were on standard output, on two lines: the uninitialised value in KING's
+          own banner, which differs between compilations, and the reported CPU core count. On
+          the stdout comparison alone, <strong>475 of the 480 cases were marked FAIL</strong>,
+          with <strong>zero output-file differences</strong>. Those two lines are the same ones
+          the replay normalization targets, so the recorded failures show that the
+          normalization did not absorb the cross-build form of them.
+        </p>
+
+        <p>
+          Widening the replay past the 480 graded cases to all 490 captured invocations finds
+          one behavioural difference between the two builds, and it lands on the one option
+          whose value was never initialised. On
+          <code>--related --degree 1 --noscreen</code> over <code>multifam</code>, the second
+          build bypasses the screen and writes a <code>king.kin0</code> holding eight
+          between-family pairs. The binary the goldens were captured from writes no such file
+          and reports <code>No close relatives are inferred.</code> open-king matches the
+          capture binary.
+        </p>
+
+        <p>
+          That is one fact rather than two. <code>--noscreen</code> takes an integer, and the
+          integer it carries is uninitialised memory overlapping <code>--minConc</code>'s
+          storage. An undefined value reaching a branch is how one source yields two
+          behaviours. So open-king treating <code>--noscreen</code> as inert is a deliberate
+          match to the capture binary and not a gap: no implementation satisfies both builds,
+          because the reference does not agree with itself. The remaining difference across
+          those 490 cases is <code>X.kin0</code> on <code>sexchr</code>, which is KING's own
+          race between threads and differs between two runs of one binary.
+        </p>
+
+        <p>
+          What that supports: KING's computed output is reproducible across independent builds
+          of the same source, while its banner and its one uninitialised option are not. The
+          goldens this project is graded against are a property of the program rather than of
+          one compiler's code generation. What it does not support: anything about a different
+          KING version, or about a different platform. Same source, same version, same
+          architecture, different compiler is one axis of three.
+        </p>
+
+        <h2 id="out-of-scope">Analyses deliberately not implemented</h2>
+
+        <p>
+          open-king is the smallest useful permissively licensed implementation of KING's
+          relatedness workflow. It is not intended to reproduce every analysis that
+          accumulated in the original executable. The following are outside the product
+          boundary and are not planned for this package.
+        </p>
+
+        <ul>
+          <li>Population structure: <code>--pca</code>, <code>--mds</code>.</li>
+          <li>Runs of homozygosity: <code>--roh</code>.</li>
+          <li>GRM, association and risk analysis: <code>--makeGRM</code>, <code>--lmm</code>, <code>--tdt</code>, <code>--gdt</code>, <code>--risk</code>.</li>
+          <li>PLINK-export orchestration: <code>--plink</code>.</li>
+          <li>R-based plotting: <code>--rplot</code>, <code>--pngplot</code>, <code>--rpath</code>.</li>
+          <li>KING's comma-separated multi-fileset merge mode.</li>
+        </ul>
+
+        <p>
+          Their spellings remain in the parser and the banner so that KING 2.3.2's
+          command-line surface stays recognisable. Asking for an excluded analysis, its
+          associated parameter, or comma-separated input is a fatal error with exit status 1
+          before any input file is opened, so a requested workflow cannot appear to succeed
+          without producing its promised output. These are product boundaries. They must not
+          be counted as relatedness-parity failures, and expanding the boundary later would
+          require an explicit scope decision, clean-room behavioural evidence and its own
+          tests.
+        </p>
+
+        <p>
+          One computing-scope note. <code>--cpus &lt;n&gt;</code> is accepted, echoed and used
+          in compatibility console text, but it does not currently promise a strict Rayon
+          worker-thread cap. Computed files are deterministic across thread counts, and exact
+          performance parity with KING is not a product goal. Separately,
+          <code>&lt;prefix&gt;.segments.gz</code> is documented in KING's manual, but the 2.3.2
+          build ships without zlib in its segment writer and writes no such file on any
+          invocation in the corpus, so it is not a parity target.
+        </p>
+
+        <h2 id="one-reference-build">One reference build, one host</h2>
+
+        <div class="note note--warn">
+          <p class="note-title">The standing caveat</p>
+          <p>
+            Every figure on this page was measured against one binary:
+            <code>KING 2.3.2 - (c) 2010-2023 Wei-Min Chen</code>, Mach-O 64-bit arm64, run on
+            macOS Darwin 25.5.0, Apple silicon. <strong>No cross-build or cross-platform
+            differential has been run.</strong> That is a gap in the evidence, stated as one,
+            not a claim that no such differences exist.
+          </p>
+        </div>
+
+        <p>
+          The caveat bites hardest on the segment engine, because KING's segment numerics are
+          not stable across KING's own releases, on KING's own account. The version history
+          records 2.1.2 "IBD segment algorithm improved"; 2.1.3
+          "<code>--ibdseg</code>, <code>--related</code>, <code>--roh</code> algorithms
+          improved"; 2.1.4 up-to-4th-degree inference for <code>--related</code> and
+          <code>--ibdseg</code>; 2.2.1 a <code>maxIBD1</code>/<code>maxIBD2</code> fix; 2.2.5
+          "<code>--ibdseg</code> is substantially improved"; and 2.2.7 the 2.2.5
+          <code>--ibdseg</code> bug "completly fixed" [sic]. The algorithm behind those changes
+          has never been published.
+        </p>
+
+        <p>
+          So "byte-identical to KING" on this page means byte-identical to 2.3.2. open-king is
+          not claimed to reproduce 2.1.x, 2.2.x, or whatever follows 2.3.2, and against those
+          builds the <code>.seg</code> columns should be expected to differ. Anyone comparing
+          against a different KING should re-capture the goldens before believing any segment
+          number here.
+        </p>
+
+        <p>
+          The rest of the surface is far less exposed. The kinship and IBS estimators are
+          published, in Manichaikul et al. 2010, and the file formats are stable. It is the
+          unpublished segment caller, and only it, whose parity is pinned to a single build.
+          The rebuild described above addresses the compiler axis and leaves the version and
+          platform axes open.
+        </p>
+
+        <h2 id="reproduce">Reproducing these numbers</h2>
+
+        <p>
+          <code>run_parity.py</code> and <code>measure_gaps.py</code> use the Python 3 standard
+          library only, regenerate the input corpus automatically on first run (about 20 s),
+          and need no reference binary. Start from a checkout.
+        </p>
+
+        <div class="code-block">
+<pre><code>cd /path/to/open-king
+cargo build --release</code></pre>
+        </div>
+
+        <p>These four need nothing but the open-king build.</p>
+
+        <div class="code-block">
+<pre><code>python3 tests/parity/run_parity.py --impl ./target/release/king
+python3 tests/parity/run_parity.py --impl ./target/release/king --baseline
+python3 tests/parity/measure_gaps.py --impl ./target/release/king -q
+cargo test --workspace</code></pre>
+        </div>
+
+        <p>
+          These three drive a KING 2.3.2 binary directly, so they need one on the machine.
+        </p>
+
+        <div class="code-block">
+<pre><code>python3 tests/parity/run_parity.py --impl "/path/to/reference/king"
+python3 docs/research/fixtures/oosseg.py --ref "/path/to/reference/king"
+python3 tests/parity/probes/segment_residuals.py \
+    --ref "/path/to/reference/king" --impl target/release/king</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Command</th>
+                <th scope="col">Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>run_parity.py --impl target/release/king</code></th>
+                <td>480 PASS, 0 FAIL, 480 total; 876 output files byte-compared, 8 diff-excluded</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>run_parity.py --impl target/release/king --baseline</code></th>
+                <td><code>baseline: MATCH</code>, 480 cases against <code>BASELINE.txt</code></td>
+              </tr>
+              <tr>
+                <th scope="row"><code>measure_gaps.py --impl target/release/king -q</code></th>
+                <td>every captured output file reported byte-identical in all its cases</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>cargo test --workspace</code></th>
+                <td>355 passed, 0 failed, one timing probe ignored</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>run_parity.py --impl &lt;reference&gt;</code></th>
+                <td>480 PASS, 0 FAIL, 876 files byte-compared: the normalization is complete and the goldens are self-consistent</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>oosseg.py --ref &lt;reference&gt;</code></th>
+                <td>68 of 72 runs byte-identical; 4 of 6,713 rows value-differing; 0 extra, 0 missing</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>segment_residuals.py</code></th>
+                <td>39,999 and 40,001 marker controls exact; exactly four expected value divergences at 40,000 markers</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          <code>run_parity.py</code> exits 0 when every case passed, 1 when at least one
+          failed, and 2 on an internal error. With <code>--baseline</code> it exits 0 only when
+          the outcome matches <code>tests/parity/BASELINE.txt</code> exactly. A clean checkout
+          reproduces the same counts: a pristine copy of the tree builds in 9.5 s from cold and
+          its binary gives 480 PASS, 0 FAIL with <code>baseline: MATCH</code>, so the published
+          figures do not depend on a warm <code>target/</code> or a pre-generated corpus.
+        </p>
+
+        <p class="meta">
+          The authoritative measured statement is <code>docs/PARITY.md</code> in the source
+          repository. Where this page and that document disagree, that document is current.
+        </p>
+      </article>
+
+      <nav class="page-nav" aria-label="Page navigation">
+        <a class="page-nav-link page-nav-link--prev" href="benchmarks.html">
+          <span class="page-nav-dir">Previous</span>
+          <span class="page-nav-title">Benchmarks</span>
+        </a>
+        <a class="page-nav-link page-nav-link--next" href="index.html">
+          <span class="page-nav-dir">Next</span>
+          <span class="page-nav-title">Overview</span>
+        </a>
+      </nav>
+    </main>
+
+    <footer class="site-footer">
+      <p class="footer-note">
+        open-king is MIT licensed. It is not affiliated with, endorsed by, or derived from
+        the source code of KING.
+      </p>
+      <p class="footer-note">
+        Cite the method: Manichaikul et al., <em>Bioinformatics</em> 2010, 26(22):2867.
+        Credit for KING itself belongs to Wei-Min Chen and colleagues.
+      </p>
+    </footer>
+  </div>
+
+  <nav class="toc" id="toc" aria-label="On this page" hidden></nav>
+</div>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>

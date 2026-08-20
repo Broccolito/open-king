@@ -1,0 +1,1705 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Output files | open-king</title>
+<meta name="description" content="Reference for every file open-king writes: naming, columns, formatting, row order, and the conditions under which a file is absent.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Ctext%20x='3'%20y='25'%20font-family='monospace'%20font-size='26'%20fill='%231c5c8c'%3Ek%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+<script>
+  try {
+    var t = localStorage.getItem('open-king-theme');
+    if (t === 'light' || t === 'dark') { document.documentElement.setAttribute('data-theme', t); }
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<div class="shell">
+  <aside class="sidebar" data-nav-open="false">
+    <div class="sidebar-inner">
+      <div class="masthead">
+        <a class="brand" href="index.html">
+          <span class="brand-name">open-king</span>
+          <span class="brand-tag">docs</span>
+        </a>
+        <div class="masthead-actions">
+          <button class="icon-button theme-toggle" type="button" aria-label="Switch theme">
+            <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 12H2M22 12h-2.2M6.3 6.3 4.8 4.8M19.2 19.2l-1.5-1.5M17.7 6.3l1.5-1.5M4.8 19.2l1.5-1.5"/></svg>
+            <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.4A8.4 8.4 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4z"/></svg>
+          </button>
+          <button class="icon-button nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Show navigation">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <nav class="site-nav" id="site-nav" aria-label="Documentation">
+        <div class="nav-group">
+          <p class="nav-label">Guide</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link" href="index.html">Overview</a></li>
+            <li class="nav-item"><a class="nav-link" href="install.html">Install</a></li>
+            <li class="nav-item"><a class="nav-link" href="usage.html">Commands and options</a></li>
+            <li class="nav-item"><a class="nav-link" href="outputs.html" aria-current="page">Output files</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-label">Verification</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link" href="benchmarks.html">Benchmarks</a></li>
+            <li class="nav-item"><a class="nav-link" href="parity.html">Parity</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-label">Project</p>
+          <ul class="nav-list">
+            <li class="nav-item"><a class="nav-link nav-link--external" href="https://github.com/Broccolito/open-king">Source repository</a></li>
+          </ul>
+        </div>
+      </nav>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <main class="content" id="main">
+      <article class="prose">
+        <p class="eyebrow">Guide</p>
+        <h1>Output files</h1>
+
+        <p class="lede">
+          open-king writes 23 distinct output files. All are terminated with a newline.
+          Which of them a run produces depends on the analysis flag, the pedigree, the map
+          and the sample count. Several can be absent, zero bytes or header-only after a
+          run that succeeded, so the presence of a file is not evidence that the analysis
+          found anything.
+        </p>
+
+        <div class="note note--warn">
+          <p class="note-title">Before you script around these files</p>
+          <p>
+            A successful run can write a 0-byte file. Testing for file existence, or for a
+            non-empty file, is therefore not a success check. The single-family
+            <code>.kin</code> case below is the clearest example: 6 samples in one family
+            produce a <code>.kin</code> of exactly 0 bytes and the process still exits 0.
+            Read the console lines and the exit status instead, and see
+            <a href="#empty-header-only-absent">Empty, header-only, absent</a> for the full
+            set of conditions.
+          </p>
+        </div>
+
+        <h2 id="how-files-are-named">How files are named</h2>
+
+        <p>
+          <code>--prefix</code> defaults to <code>king</code>. It is glued directly onto the
+          suffix with no separator inserted, so the prefix and the suffix run together in
+          the file name. A prefix containing <code>/</code> writes into that directory,
+          which must already exist.
+        </p>
+
+        <div class="code-block">
+<pre><code>king -b sexchr.bed --autoQC  --prefix ZZ_
+king -b sexchr.bed --kinship --prefix ZZ_
+king -b sexchr.bed --ibdseg --degree 2 --prefix ZZ_
+king -b sexchr.bed --kinship --prefix run.2026</code></pre>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>ZZ_.kin
+ZZ_.kin0
+ZZ_.seg
+ZZ_X.kin
+ZZ_X.kin0
+ZZ_X.seg
+ZZ__autoQC_Summary.txt
+ZZ__autoQC_sampletoberemoved.txt
+ZZ__autoQC_snptoberemoved.txt
+ZZ__autoQC_updatesex.txt
+ZZ_allsegs.txt
+ZZ_splitped.txt
+run.2026.kin
+run.2026.kin0
+run.2026X.kin
+run.2026X.kin0</code></pre>
+        </div>
+
+        <p>
+          Three shapes are worth noticing in that listing. The <code>allsegs.txt</code> and
+          <code>splitped.txt</code> suffixes carry no leading dot, so <code>--prefix
+          study</code> gives <code>studyallsegs.txt</code>. The X suffixes carry no leading
+          dot either, which is why <code>run.2026</code> produces
+          <code>run.2026X.kin</code>. And the <code>--autoQC</code> suffixes start with
+          <code>_</code>, so a prefix ending in <code>_</code> produces a double underscore.
+        </p>
+
+        <p>
+          <code>--prefix</code> is echoed in the <code>Options in effect</code> block only
+          when it differs from <code>king</code>. A prefix naming a directory that does not
+          exist is fatal: <code>--prefix nodir/x</code> exits 1 with <code>Cannot open
+          nodir/x$TMP$.ped to write.</code>
+        </p>
+
+        <p>
+          That message names a 24th file. <code>&lt;prefix&gt;$TMP$.ped</code> is created
+          and removed during the loader's writability probe, which runs after the
+          <code>.fam</code> is opened and before a single pedigree row is parsed. It is not
+          left behind on a successful run.
+        </p>
+
+        <h2 id="which-analysis-writes-which-file">Which analysis writes which file</h2>
+
+        <p>
+          Below, <code>&lt;p&gt;</code> stands for the prefix. Each row states the analyses
+          that can write the file, whether it carries a header line, and its field
+          separator. Nothing here is unconditional: the per-file sections give the
+          conditions, and <a href="#empty-header-only-absent">Empty, header-only,
+          absent</a> collects them.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide table--zebra">
+            <caption>The 23 output files.</caption>
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Written by</th>
+                <th scope="col">Header</th>
+                <th scope="col">Separator</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><a href="#kin"><code>&lt;p&gt;.kin</code></a></th>
+                <td><code>--kinship</code>, <code>--related</code></td>
+                <td>yes</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#kin0"><code>&lt;p&gt;.kin0</code></a></th>
+                <td><code>--kinship</code>, <code>--related</code></td>
+                <td>yes</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#con"><code>&lt;p&gt;.con</code></a></th>
+                <td><code>--duplicate</code></td>
+                <td>yes</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#ibs"><code>&lt;p&gt;.ibs</code></a></th>
+                <td><code>--ibs</code></td>
+                <td>yes</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#ibs0"><code>&lt;p&gt;.ibs0</code></a></th>
+                <td><code>--ibs</code></td>
+                <td>yes</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#seg"><code>&lt;p&gt;.seg</code></a></th>
+                <td><code>--ibdseg</code></td>
+                <td>yes</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#x-kin"><code>&lt;p&gt;X.kin</code></a></th>
+                <td><code>--kinship</code>, <code>--related</code> (different layouts)</td>
+                <td>yes</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#x-kin0"><code>&lt;p&gt;X.kin0</code></a></th>
+                <td><code>--kinship</code>, <code>--related</code> (different layouts)</td>
+                <td>yes</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#x-seg"><code>&lt;p&gt;X.seg</code></a></th>
+                <td><code>--ibdseg</code> with a non-zero <code>--degree</code></td>
+                <td>yes (misaligned)</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#allsegs"><code>&lt;p&gt;allsegs.txt</code></a></th>
+                <td><code>--related</code>, <code>--ibs</code>, <code>--ibdseg</code>, <code>--unrelated</code>, <code>--cluster</code>, <code>--build</code>, <code>--bysample</code>, <code>--bySNP</code></td>
+                <td>yes</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#splitped"><code>&lt;p&gt;splitped.txt</code></a></th>
+                <td><code>--ibdseg</code></td>
+                <td>no</td>
+                <td>space</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#unrelated-lists"><code>&lt;p&gt;unrelated.txt</code></a></th>
+                <td><code>--unrelated</code></td>
+                <td>no</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#unrelated-lists"><code>&lt;p&gt;unrelated_toberemoved.txt</code></a></th>
+                <td><code>--unrelated</code></td>
+                <td>no</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#cluster-kin"><code>&lt;p&gt;cluster.kin</code></a></th>
+                <td><code>--cluster</code></td>
+                <td>yes</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#updateids"><code>&lt;p&gt;updateids.txt</code></a></th>
+                <td><code>--cluster</code>, <code>--build</code></td>
+                <td>no</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#updateparents"><code>&lt;p&gt;updateparents.txt</code></a></th>
+                <td><code>--build</code></td>
+                <td>no</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#build-log"><code>&lt;p&gt;build.log</code></a></th>
+                <td><code>--build</code></td>
+                <td>n/a</td>
+                <td>free text</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#bysample"><code>&lt;p&gt;bySample.txt</code></a></th>
+                <td><code>--bysample</code></td>
+                <td>yes</td>
+                <td>space</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#bysnp"><code>&lt;p&gt;bySNP.txt</code></a></th>
+                <td><code>--bySNP</code></td>
+                <td>yes</td>
+                <td>space</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#autoqc-summary"><code>&lt;p&gt;_autoQC_Summary.txt</code></a></th>
+                <td><code>--autoQC</code></td>
+                <td>yes</td>
+                <td>fixed-width, space padded, no tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#autoqc-snp"><code>&lt;p&gt;_autoQC_snptoberemoved.txt</code></a></th>
+                <td><code>--autoQC</code></td>
+                <td>yes</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#autoqc-sample"><code>&lt;p&gt;_autoQC_sampletoberemoved.txt</code></a></th>
+                <td><code>--autoQC</code></td>
+                <td>yes</td>
+                <td>tab</td>
+              </tr>
+              <tr>
+                <th scope="row"><a href="#autoqc-updatesex"><code>&lt;p&gt;_autoQC_updatesex.txt</code></a></th>
+                <td><code>--autoQC</code></td>
+                <td>no</td>
+                <td>tab</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          <code>--kinship</code> and <code>--duplicate</code> are the only analyses that
+          never write <code>allsegs.txt</code>, because they are the only two that skip the
+          segment pre-pass. <code>--autoQC</code> writes only its own four reports.
+        </p>
+
+        <p>
+          The separator column is worth reading before writing a parser. Most files are tab
+          separated, but <code>bySample.txt</code>, <code>bySNP.txt</code> and
+          <code>splitped.txt</code> are space separated, and
+          <code>_autoQC_Summary.txt</code> contains no tab at all. Six files carry no header
+          line: <code>unrelated.txt</code>, <code>unrelated_toberemoved.txt</code>,
+          <code>updateids.txt</code>, <code>updateparents.txt</code>,
+          <code>splitped.txt</code> and <code>_autoQC_updatesex.txt</code>.
+        </p>
+
+        <h2 id="inftype">The InfType vocabulary</h2>
+
+        <p>
+          <code>InfType</code> is the inferred relationship label. It takes seven values,
+          and they appear in <code>.seg</code>, <code>.kin</code>, <code>.kin0</code> and
+          <code>cluster.kin</code>.
+        </p>
+
+        <div class="code-block">
+<pre><code>Dup/MZ   PO   FS   2nd   3rd   4th   UN</code></pre>
+        </div>
+
+        <p>
+          <code>Dup/MZ</code> is a duplicate sample or a monozygotic twin pair;
+          <code>PO</code> is parent and offspring; <code>FS</code> is full siblings;
+          <code>2nd</code>, <code>3rd</code> and <code>4th</code> are those degrees;
+          <code>UN</code> is unrelated. <code>PO</code> and <code>FS</code> are separated by
+          IBD2 sharing when segment analysis is available (a true <code>PO</code> pair is
+          <code>IBD1Seg 1.0000</code> with <code>IBD2Seg 0.0000</code>), and by an
+          <code>IBS0</code> cutoff otherwise.
+        </p>
+
+        <div class="note">
+          <p class="note-title">Cross-referencing files</p>
+          <p>
+            <code>.kin</code>'s <code>InfType</code> is not <code>.seg</code>'s.
+            <code>.kin</code>'s <code>Dup/MZ</code> clause additionally requires
+            <code>HetConc &gt; 0.8</code>, so the same pair can print <code>Dup/MZ</code> in
+            <code>.seg</code> and <code>FS</code> in <code>.kin</code>.
+          </p>
+        </div>
+
+        <h2 id="row-order">Row order</h2>
+
+        <p>
+          Three rules cover the pairwise files, and none of them is <code>.fam</code> order.
+          Two of the three coincide with the obvious guess on small inputs and diverge on
+          larger ones.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Files</th>
+                <th scope="col">Order</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>.kin</code>, <code>.ibs</code>, <code>X.kin</code></th>
+                <td>Families by a natural-sort comparator on FID, members by the same comparator on IID, then the <code>i &lt; j</code> upper triangle. Digit runs compare by length first then bytes, so <code>7 &lt; 70 &lt; 007</code>; non-digits fold to uppercase; a non-digit sorts before a digit.</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>.kin0</code>, <code>.ibs0</code></th>
+                <td>Pairs <code>i &lt; j</code> over <code>.fam</code> row index, sorted by <code>(i/B, j/B, i, j)</code> with integer division. <code>B = 32</code> for <code>.kin0</code>, <code>B = 8</code> for <code>.ibs0</code>.</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>.seg</code>, <code>X.seg</code></th>
+                <td>16-sample blocks.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The block sizes were fixed by regenerating each candidate order against a
+          200-sample run and comparing to the emitted rows.
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>.ibs0   19327 rows   block size that reproduces the order: 8   (rejected: 1, 16, 32, 64)
+.kin0   19327 rows   block size that reproduces the order: 32  (rejected: 1, 8, 16, 64)
+.seg      442 rows   block size that reproduces the order: 16  (rejected: 1, 8, 32, 64)</code></pre>
+        </div>
+
+        <p>
+          The remaining files: <code>.con</code> is serial <code>i &lt; j</code>
+          <code>.fam</code> order; <code>bySample.txt</code> is <code>.fam</code> order;
+          <code>bySNP.txt</code> is <code>.bim</code> order within each chromosome class
+          (autosomes and <code>XY</code>, then X, then Y, then MT);
+          <code>allsegs.txt</code> is map order; <code>cluster.kin</code> is by cluster then
+          the sorted-member upper triangle; <code>updateids.txt</code> is by original
+          <code>(FID, IID)</code> while <code>updateparents.txt</code> is in cluster order.
+        </p>
+
+        <h2 id="relatedness-files">Relatedness files</h2>
+
+        <h3 id="kin"><code>&lt;p&gt;.kin</code></h3>
+
+        <p>
+          Within-family pairwise relatedness. Two layouts: 10 columns under
+          <code>--kinship</code>, 16 columns under <code>--related</code>. Written when at
+          least one family has two or more members.
+        </p>
+
+        <p><strong>The <code>--kinship</code> form, 10 columns.</strong></p>
+
+        <div class="code-block">
+<pre><code>FID	ID1	ID2	N_SNP	Z0	Phi	HetHet	IBS0	Kinship	Error</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1</td><th scope="row"><code>FID</code></th><td>Family ID, shared.</td><td>text</td></tr>
+              <tr><td class="num">2</td><th scope="row"><code>ID1</code></th><td>First member.</td><td>text</td></tr>
+              <tr><td class="num">3</td><th scope="row"><code>ID2</code></th><td>Second member.</td><td>text</td></tr>
+              <tr><td class="num">4</td><th scope="row"><code>N_SNP</code></th><td>Markers called in both.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>Z0</code></th><td>Pedigree Pr[IBD = 0].</td><td><code>%.3f</code></td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>Phi</code></th><td>Pedigree kinship.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>HetHet</code></th><td>Fraction of <code>N_SNP</code> het in both.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>IBS0</code></th><td>Fraction opposite-homozygous.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">9</td><th scope="row"><code>Kinship</code></th><td>Within-family estimator, <code>(HetHet - 2*IBS0)/(Het1 + Het2)</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">10</td><th scope="row"><code>Error</code></th><td>Pedigree-versus-inference grade, one of <code>0</code>, <code>0.5</code>, <code>1</code>. Not an integer.</td><td>shortest round trip</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p><strong>The <code>--related</code> form, 16 columns.</strong></p>
+
+        <div class="code-block">
+<pre><code>FID	ID1	ID2	N_SNP	Z0	Phi	HetHet	IBS0	HetConc	HomIBS0	Kinship	IBD1Seg	IBD2Seg	PropIBD	InfType	Error</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1</td><th scope="row"><code>FID</code></th><td>Family ID, shared.</td><td>text</td></tr>
+              <tr><td class="num">2</td><th scope="row"><code>ID1</code></th><td>First member.</td><td>text</td></tr>
+              <tr><td class="num">3</td><th scope="row"><code>ID2</code></th><td>Second member.</td><td>text</td></tr>
+              <tr><td class="num">4</td><th scope="row"><code>N_SNP</code></th><td>Markers called in both.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>Z0</code></th><td>Pedigree Pr[IBD = 0].</td><td><code>%.3f</code></td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>Phi</code></th><td>Pedigree kinship.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>HetHet</code></th><td>Fraction of <code>N_SNP</code> het in both.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>IBS0</code></th><td>Fraction opposite-homozygous.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">9</td><th scope="row"><code>HetConc</code></th><td><code>HetHet / (HetHet + IBS1)</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">10</td><th scope="row"><code>HomIBS0</code></th><td><code>IBS0</code> over the count of markers where either sample is A1 homozygous. Prints <code>nan</code> when that count is 0.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">11</td><th scope="row"><code>Kinship</code></th><td>Within-family estimator, as above.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">12</td><th scope="row"><code>IBD1Seg</code></th><td>Proportion of the usable genome shared IBD1.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">13</td><th scope="row"><code>IBD2Seg</code></th><td>Proportion shared IBD2.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">14</td><th scope="row"><code>PropIBD</code></th><td><code>IBD2Seg + IBD1Seg/2</code> at full precision.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">15</td><th scope="row"><code>InfType</code></th><td>Inferred relationship.</td><td>text</td></tr>
+              <tr><td class="num">16</td><th scope="row"><code>Error</code></th><td>Grade. Under <code>--related</code> this compares labels, not kinships.</td><td>shortest round trip</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Columns 1 to 8 are the <code>--kinship</code> set. In <code>.kin</code> the
+          quantities <code>HetHet</code> and <code>IBS0</code> are proportions of
+          <code>N_SNP</code>; in <code>.ibs</code> the same quantities appear as the raw
+          counts <code>NHetHet</code> and <code>N_IBS0</code>.
+        </p>
+
+        <h3 id="kin0"><code>&lt;p&gt;.kin0</code></h3>
+
+        <p>
+          Between-family pairwise relatedness: pairs whose two members are in different
+          families. 8 columns under <code>--kinship</code>, 14 under <code>--related</code>.
+          Under <code>--kinship</code> the file needs at least two distinct FIDs. Under
+          <code>--related</code> it needs the between-family stage to detect something, and
+          at degree 1 or 2 that stage also requires 100 or more samples.
+        </p>
+
+        <p><strong>The <code>--kinship</code> form, 8 columns.</strong></p>
+
+        <div class="code-block">
+<pre><code>FID1	ID1	FID2	ID2	N_SNP	HetHet	IBS0	Kinship</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1</td><th scope="row"><code>FID1</code></th><td>First sample's family.</td><td>text</td></tr>
+              <tr><td class="num">2</td><th scope="row"><code>ID1</code></th><td>First sample.</td><td>text</td></tr>
+              <tr><td class="num">3</td><th scope="row"><code>FID2</code></th><td>Second sample's family.</td><td>text</td></tr>
+              <tr><td class="num">4</td><th scope="row"><code>ID2</code></th><td>Second sample.</td><td>text</td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>N_SNP</code></th><td>Markers called in both.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>HetHet</code></th><td>Proportion of <code>N_SNP</code> het in both.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>IBS0</code></th><td>Proportion of <code>N_SNP</code> opposite-homozygous.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>Kinship</code></th><td>Between-family estimator, <code>0.5 + (2*HetHet - 4*IBS0 - Het1 - Het2) / (4*min(Het1, Het2))</code>.</td><td><code>%.4f</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The <code>Kinship</code> column here is not the <code>.kin</code> form. Which
+          estimator applies is decided purely by whether the pair shares an FID.
+          <code>.kin0</code> carries no <code>Z0</code>, <code>Phi</code> or
+          <code>Error</code>, because pairs in different families have no pedigree
+          expectation to compare against.
+        </p>
+
+        <p><strong>The <code>--related</code> form, 14 columns.</strong></p>
+
+        <div class="code-block">
+<pre><code>FID1	ID1	FID2	ID2	N_SNP	HetHet	IBS0	HetConc	HomIBS0	Kinship	IBD1Seg	IBD2Seg	PropIBD	InfType</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1</td><th scope="row"><code>FID1</code></th><td>First sample's family.</td><td>text</td></tr>
+              <tr><td class="num">2</td><th scope="row"><code>ID1</code></th><td>First sample.</td><td>text</td></tr>
+              <tr><td class="num">3</td><th scope="row"><code>FID2</code></th><td>Second sample's family.</td><td>text</td></tr>
+              <tr><td class="num">4</td><th scope="row"><code>ID2</code></th><td>Second sample.</td><td>text</td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>N_SNP</code></th><td>Markers called in both.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>HetHet</code></th><td>Proportion of <code>N_SNP</code> het in both.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>IBS0</code></th><td>Proportion of <code>N_SNP</code> opposite-homozygous.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>HetConc</code></th><td><code>HetHet / (HetHet + IBS1)</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">9</td><th scope="row"><code>HomIBS0</code></th><td><code>IBS0</code> over the count of markers where either sample is A1 homozygous.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">10</td><th scope="row"><code>Kinship</code></th><td>Between-family estimator.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">11</td><th scope="row"><code>IBD1Seg</code></th><td>Proportion of the usable genome shared IBD1.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">12</td><th scope="row"><code>IBD2Seg</code></th><td>Proportion shared IBD2.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">13</td><th scope="row"><code>PropIBD</code></th><td><code>IBD2Seg + IBD1Seg/2</code> at full precision.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">14</td><th scope="row"><code>InfType</code></th><td>Inferred relationship.</td><td>text</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Rows in the <code>--related</code> form are filtered, unlike <code>.kin</code>. A
+          pair appears only if <code>Kinship &gt;= 2^-(d+1.5)</code> or <code>PropIBD &gt;
+          2^-(d+0.5)</code>, where <code>d</code> is <code>--degree</code> (default 1). On a
+          200-sample run that leaves 3 rows out of 19327 possible pairs.
+        </p>
+
+        <h3 id="con"><code>&lt;p&gt;.con</code></h3>
+
+        <p>
+          Duplicate and monozygotic pairs found by <code>--duplicate</code>. 11 columns,
+          both within-family and cross-family pairs, in serial <code>i &lt; j</code>
+          <code>.fam</code> order.
+        </p>
+
+        <div class="code-block">
+<pre><code>FID1	ID1	FID2	ID2	N	N_IBS0	N_IBS1	N_IBS2	Concord	HomConc	HetConc</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1 to 4</td><th scope="row"><code>FID1</code> <code>ID1</code> <code>FID2</code> <code>ID2</code></th><td>The pair.</td><td>text</td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>N</code></th><td>Markers called in both. Named <code>N</code>, not <code>N_SNP</code>.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>N_IBS0</code></th><td>Opposite homozygotes.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>N_IBS1</code></th><td>Sharing exactly one allele.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>N_IBS2</code></th><td>Identical genotypes.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">9</td><th scope="row"><code>Concord</code></th><td><code>N_IBS2 / N</code>.</td><td><code>%.5f</code></td></tr>
+              <tr><td class="num">10</td><th scope="row"><code>HomConc</code></th><td><code>(HomHom - IBS0) / HomHom</code>.</td><td><code>%.5f</code></td></tr>
+              <tr><td class="num">11</td><th scope="row"><code>HetConc</code></th><td><code>HetHet / (Het1 + Het2 - HetHet)</code>. This is the column <code>--minConc</code> thresholds.</td><td><code>%.5f</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Columns 9, 10 and 11 are the only five-decimal fields in any output file.
+        </p>
+
+        <h3 id="ibs"><code>&lt;p&gt;.ibs</code></h3>
+
+        <p>
+          Within-family IBS and concordance statistics from <code>--ibs</code>, as raw
+          counts. 20 columns, or 22 when the usable autosomal segment total reaches 100 Mb:
+          <code>MaxIBD2</code> and <code>Pr_IBD2</code> are appended on that trigger and
+          absent otherwise.
+        </p>
+
+        <div class="code-block">
+<pre><code>FID	ID1	ID2	Z0	Phi	N_SNP	N_IBS0	N_IBS1	N_IBS2	NHetHet	NHomHom	N_Het1	N_Het2	IBS	Dist	HetConc	Het2|1	Het1|2	HomConc	Kinship	MaxIBD2	Pr_IBD2</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1 to 3</td><th scope="row"><code>FID</code> <code>ID1</code> <code>ID2</code></th><td>The within-family pair.</td><td>text</td></tr>
+              <tr><td class="num">4</td><th scope="row"><code>Z0</code></th><td>Pedigree Pr[IBD = 0].</td><td><code>%.3f</code></td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>Phi</code></th><td>Pedigree kinship.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>N_SNP</code></th><td>Markers called in both.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>N_IBS0</code></th><td>Count of opposite homozygotes.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>N_IBS1</code></th><td>Count sharing exactly one allele.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">9</td><th scope="row"><code>N_IBS2</code></th><td>Count of identical genotypes.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">10</td><th scope="row"><code>NHetHet</code></th><td>Count het in both.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">11</td><th scope="row"><code>NHomHom</code></th><td>Count homozygous in both.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">12</td><th scope="row"><code>N_Het1</code></th><td><code>ID1</code>'s het count over the pairwise non-missing set.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">13</td><th scope="row"><code>N_Het2</code></th><td><code>ID2</code>'s, likewise.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">14</td><th scope="row"><code>IBS</code></th><td><code>(N_IBS1 + 2*N_IBS2)/N_SNP</code>, in <code>[0, 2]</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">15</td><th scope="row"><code>Dist</code></th><td><code>(N_IBS1 + 4*N_IBS0)/N_SNP</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">16</td><th scope="row"><code>HetConc</code></th><td><code>NHetHet / (N_Het1 + N_Het2 - NHetHet)</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">17</td><th scope="row"><code>Het2|1</code></th><td><code>NHetHet / N_Het1</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">18</td><th scope="row"><code>Het1|2</code></th><td><code>NHetHet / N_Het2</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">19</td><th scope="row"><code>HomConc</code></th><td><code>(NHomHom - N_IBS0) / NHomHom</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">20</td><th scope="row"><code>Kinship</code></th><td>Within-family estimator.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">21</td><th scope="row"><code>MaxIBD2</code></th><td>Longest IBD2 segment, in base pairs.</td><td><code>%.3f</code></td></tr>
+              <tr><td class="num">22</td><th scope="row"><code>Pr_IBD2</code></th><td>Proportion of the usable genome shared IBD2.</td><td><code>%.4f</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          A pair below the segment gate prints <code>0.000</code> and <code>0.0000</code> in
+          <code>.ibs</code>. The literal <code>-9</code> is <code>.ibs0</code>'s spelling,
+          not this file's.
+        </p>
+
+        <h3 id="ibs0"><code>&lt;p&gt;.ibs0</code></h3>
+
+        <p>
+          Between-family IBS statistics from <code>--ibs</code>. 19 columns, or 21 in the
+          long form. The same statistics as <code>.ibs</code>, with <code>FID1 ID1 FID2
+          ID2</code> replacing <code>FID ID1 ID2</code> and no <code>Z0</code> or
+          <code>Phi</code>. <code>Kinship</code> is the between-family estimator. Written
+          when at least two distinct FIDs exist.
+        </p>
+
+        <div class="code-block">
+<pre><code>FID1	ID1	FID2	ID2	N_SNP	N_IBS0	N_IBS1	N_IBS2	NHetHet	NHomHom	N_Het1	N_Het2	IBS	Dist	HetConc	Het2|1	Het1|2	HomConc	Kinship	MaxIBD2	Pr_IBD2</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1 to 4</td><th scope="row"><code>FID1</code> <code>ID1</code> <code>FID2</code> <code>ID2</code></th><td>The cross-family pair.</td><td>text</td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>N_SNP</code></th><td>Markers called in both.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>N_IBS0</code></th><td>Count of opposite homozygotes.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>N_IBS1</code></th><td>Count sharing exactly one allele.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>N_IBS2</code></th><td>Count of identical genotypes.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">9</td><th scope="row"><code>NHetHet</code></th><td>Count het in both.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">10</td><th scope="row"><code>NHomHom</code></th><td>Count homozygous in both.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">11</td><th scope="row"><code>N_Het1</code></th><td><code>ID1</code>'s het count over the pairwise non-missing set.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">12</td><th scope="row"><code>N_Het2</code></th><td><code>ID2</code>'s, likewise.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">13</td><th scope="row"><code>IBS</code></th><td><code>(N_IBS1 + 2*N_IBS2)/N_SNP</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">14</td><th scope="row"><code>Dist</code></th><td><code>(N_IBS1 + 4*N_IBS0)/N_SNP</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">15</td><th scope="row"><code>HetConc</code></th><td><code>NHetHet / (N_Het1 + N_Het2 - NHetHet)</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">16</td><th scope="row"><code>Het2|1</code></th><td><code>NHetHet / N_Het1</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">17</td><th scope="row"><code>Het1|2</code></th><td><code>NHetHet / N_Het2</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">18</td><th scope="row"><code>HomConc</code></th><td><code>(NHomHom - N_IBS0) / NHomHom</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">19</td><th scope="row"><code>Kinship</code></th><td>Between-family estimator.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">20</td><th scope="row"><code>MaxIBD2</code></th><td>Longest IBD2 segment, in base pairs. Present in the long form only.</td><td><code>%.3f</code></td></tr>
+              <tr><td class="num">21</td><th scope="row"><code>Pr_IBD2</code></th><td>Proportion of the usable genome shared IBD2. Present in the long form only.</td><td><code>%.4f</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          <code>MaxIBD2</code> and <code>Pr_IBD2</code> are the literal string
+          <code>-9</code> for any pair whose <code>Kinship</code> is below <code>2^-3.5 =
+          0.08839</code>, because that pair was never handed to the segment scanner. A
+          measured row:
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>FAM1	A_F	FAM2	B_M	15000	1028	6400	7572	2079	6521	5257	5301	1.4363	0.7008	0.2452	0.3955	0.3922	0.8424	0.0001	-9	-9</code></pre>
+        </div>
+
+        <p>
+          The rule was checked over every row of a 200-sample run.
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>.ibs0 -9 rule: 19327 rows, violations of 'MaxIBD2/Pr_IBD2 == -9 iff Kinship &lt; 2^-3.5': 0
+   max Kinship on a -9 row: 0.0882   min Kinship on a valued row: 0.1172</code></pre>
+        </div>
+
+        <div class="note note--warn">
+          <p class="note-title">Do not read <code>-9</code> as zero</p>
+          <p>
+            <code>-9</code> means "not measured". A pair above the gate with no IBD2 prints
+            <code>0.000</code> and <code>0.0000</code> instead, and those two states are
+            different facts about the pair.
+          </p>
+        </div>
+
+        <h3 id="seg"><code>&lt;p&gt;.seg</code></h3>
+
+        <p>
+          Per-pair IBD segment summary from <code>--ibdseg</code>. 8 columns, holding both
+          within-family and between-family pairs in one file.
+        </p>
+
+        <div class="code-block">
+<pre><code>FID1	ID1	FID2	ID2	IBD1Seg	IBD2Seg	PropIBD	InfType</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1 to 4</td><th scope="row"><code>FID1</code> <code>ID1</code> <code>FID2</code> <code>ID2</code></th><td>The pair. <code>FID1 == FID2</code> for a within-family pair.</td><td>text</td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>IBD1Seg</code></th><td>Proportion of the usable genome covered by IBD1 segments.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>IBD2Seg</code></th><td>Proportion covered by IBD2 segments.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>PropIBD</code></th><td><code>IBD2Seg + IBD1Seg/2</code>, recombined from the two printed columns above.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>InfType</code></th><td>Inferred relationship.</td><td>text</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Rows are filtered. A pair appears only if it has at least one segment longer than
+          10 Mb, and only segments above the <code>--seglength</code> floor are counted.
+        </p>
+
+        <div class="note">
+          <p class="note-title"><code>PropIBD</code> can disagree between files</p>
+          <p>
+            <code>.seg</code>'s <code>PropIBD</code> is computed from its own printed
+            four-decimal columns, while every other file computes it at full precision. The
+            two can therefore differ in the last digit for the same pair. That is faithful
+            to the reference.
+          </p>
+        </div>
+
+        <h3 id="allsegs"><code>&lt;p&gt;allsegs.txt</code></h3>
+
+        <p>
+          The map's usable segments, which are the denominator every IBD proportion is
+          computed against. 8 columns, one row per segment, in map order with the autosomal
+          segments first and X after them.
+        </p>
+
+        <div class="code-block">
+<pre><code>Segment	Chr	StartMB	StopMB	Length	N_SNP	StartSNP	StopSNP</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1</td><th scope="row"><code>Segment</code></th><td>1-based index across the file, autosomal segments then X.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">2</td><th scope="row"><code>Chr</code></th><td>Chromosome, numeric.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">3</td><th scope="row"><code>StartMB</code></th><td>First marker position, in megabases.</td><td><code>%.3f</code></td></tr>
+              <tr><td class="num">4</td><th scope="row"><code>StopMB</code></th><td>Last marker position, in megabases.</td><td><code>%.3f</code></td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>Length</code></th><td><code>StopMB - StartMB</code>.</td><td><code>%.3f</code></td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>N_SNP</code></th><td>Markers in the segment.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>StartSNP</code></th><td>First marker ID.</td><td>text</td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>StopSNP</code></th><td>Last marker ID.</td><td>text</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Summing <code>Length</code> over the autosomal rows gives the console's
+          <code>Total length of N chromosomal segments usable for IBD segment analysis is X
+          Mb.</code> That total must reach 100 Mb for <code>.ibs</code> and
+          <code>.ibs0</code> to gain their two segment columns, and for <code>.seg</code> to
+          be written at all.
+        </p>
+
+        <h3 id="splitped"><code>&lt;p&gt;splitped.txt</code></h3>
+
+        <p>
+          A pedigree file <code>--ibdseg</code> leaves behind. 9 space-separated fields, no
+          header. Nothing in it depends on the genotypes, <code>--degree</code> or
+          <code>--seglength</code>.
+        </p>
+
+        <div class="code-block">
+<pre><code>OldFID OldIID NewFID NewIID Father Mother Sex Pheno Dummy</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Field</th>
+                <th scope="col">Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1</td><th scope="row"><code>OldFID</code></th><td>FID as it appears in the <code>.fam</code>.</td></tr>
+              <tr><td class="num">2</td><th scope="row"><code>OldIID</code></th><td>IID as it appears in the <code>.fam</code>.</td></tr>
+              <tr><td class="num">3</td><th scope="row"><code>NewFID</code></th><td>FID after splitting. <code>&lt;FID&gt;_S&lt;k&gt;</code> when one declared family is several disconnected pedigrees.</td></tr>
+              <tr><td class="num">4</td><th scope="row"><code>NewIID</code></th><td>The IID. It never changes.</td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>Father</code></th><td>Father's IID, <code>0</code> if none.</td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>Mother</code></th><td>Mother's IID, <code>0</code> if none.</td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>Sex</code></th><td><code>1</code> male, <code>2</code> female, <code>0</code> unknown.</td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>Pheno</code></th><td>The <code>.fam</code> phenotype, with <code>-9</code> rewritten to <code>0</code>.</td></tr>
+              <tr><td class="num">9</td><th scope="row"><code>Dummy</code></th><td><code>1</code> if the person was invented by the program, <code>0</code> if genotyped.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="sample-selection-files">Sample selection and pedigree files</h2>
+
+        <h3 id="unrelated-lists"><code>&lt;p&gt;unrelated.txt</code> and <code>&lt;p&gt;unrelated_toberemoved.txt</code></h3>
+
+        <p>
+          The output of <code>--unrelated</code>: a maximal set of mutually unrelated
+          individuals, and its complement. Two columns each, no header. Together they
+          partition the sample set exactly.
+        </p>
+
+        <div class="code-block">
+<pre><code>FID	IID</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1</td><th scope="row"><code>FID</code></th><td>Family ID.</td></tr>
+              <tr><td class="num">2</td><th scope="row"><code>IID</code></th><td>Individual ID.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The kept list is in the order the greedy selection picked, which is neither
+          <code>.fam</code> order nor sorted order.
+        </p>
+
+        <h3 id="cluster-kin"><code>&lt;p&gt;cluster.kin</code></h3>
+
+        <p>
+          Pairwise relatedness inside families that <code>--cluster</code> newly merged. 15
+          columns.
+        </p>
+
+        <div class="code-block">
+<pre><code>FID	ID1	ID2	Sex1	Sex2	N_SNP	HetHet	IBS0	HetConc	HomIBS0	Kinship	IBD1Seg	IBD2Seg	PropIBD	InfType</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1</td><th scope="row"><code>FID</code></th><td>The new cluster ID: <code>KING1</code>, <code>KING2</code>, and so on.</td><td>text</td></tr>
+              <tr><td class="num">2</td><th scope="row"><code>ID1</code></th><td>First member of the pair.</td><td>text</td></tr>
+              <tr><td class="num">3</td><th scope="row"><code>ID2</code></th><td>Second member.</td><td>text</td></tr>
+              <tr><td class="num">4</td><th scope="row"><code>Sex1</code></th><td><code>.fam</code> sex code of <code>ID1</code>. This column and the next appear in no other file.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>Sex2</code></th><td><code>.fam</code> sex code of <code>ID2</code>.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>N_SNP</code></th><td>Markers called in both.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>HetHet</code></th><td>Proportion of <code>N_SNP</code> het in both.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>IBS0</code></th><td>Proportion of <code>N_SNP</code> opposite-homozygous.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">9</td><th scope="row"><code>HetConc</code></th><td><code>HetHet / (HetHet + IBS1)</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">10</td><th scope="row"><code>HomIBS0</code></th><td><code>IBS0</code> over the count of markers where either sample is A1 homozygous.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">11</td><th scope="row"><code>Kinship</code></th><td>The within-family estimator, since the pair is now in one family.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">12</td><th scope="row"><code>IBD1Seg</code></th><td>Proportion of the usable genome shared IBD1.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">13</td><th scope="row"><code>IBD2Seg</code></th><td>Proportion shared IBD2.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">14</td><th scope="row"><code>PropIBD</code></th><td><code>IBD2Seg + IBD1Seg/2</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">15</td><th scope="row"><code>InfType</code></th><td>Inferred relationship.</td><td>text</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Columns 6 to 15 are the <code>--related</code> <code>.kin0</code> set. Read this
+          file together with <code>updateids.txt</code>, which records which original
+          families each <code>KING&lt;k&gt;</code> absorbed.
+        </p>
+
+        <h3 id="updateids"><code>&lt;p&gt;updateids.txt</code></h3>
+
+        <p>
+          The FID rename map produced by clustering. 4 columns, no header, in the shape
+          PLINK's <code>--update-ids</code> wants.
+        </p>
+
+        <div class="code-block">
+<pre><code>OldFID	OldIID	NewFID	NewIID</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1</td><th scope="row"><code>OldFID</code></th><td>FID before the merge.</td></tr>
+              <tr><td class="num">2</td><th scope="row"><code>OldIID</code></th><td>The person.</td></tr>
+              <tr><td class="num">3</td><th scope="row"><code>NewFID</code></th><td>The cluster ID after the merge.</td></tr>
+              <tr><td class="num">4</td><th scope="row"><code>NewIID</code></th><td>Always a repeat of column 2, because the IID never changes.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Only merged clusters get rows. Rows are ordered by the original
+          <code>(FID, IID)</code>.
+        </p>
+
+        <h3 id="updateparents"><code>&lt;p&gt;updateparents.txt</code></h3>
+
+        <p>
+          The reconstructed parentage produced by <code>--build</code>. 4 columns, no
+          header, in the shape PLINK's <code>--update-parents</code> wants.
+        </p>
+
+        <div class="code-block">
+<pre><code>FID	IID	Father	Mother</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1</td><th scope="row"><code>FID</code></th><td>The cluster ID after merging.</td></tr>
+              <tr><td class="num">2</td><th scope="row"><code>IID</code></th><td>The person.</td></tr>
+              <tr><td class="num">3</td><th scope="row"><code>Father</code></th><td>Father's IID, <code>0</code> if none. A bare integer names an inferred phantom parent.</td></tr>
+              <tr><td class="num">4</td><th scope="row"><code>Mother</code></th><td>Mother's IID, on the same rule.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The bare integers match the numbers in <code>build.log</code>'s <code>RULE
+          FS0</code> lines. Rows are in cluster order, a different order from
+          <code>updateids.txt</code>.
+        </p>
+
+        <h3 id="build-log"><code>&lt;p&gt;build.log</code></h3>
+
+        <p>
+          A free-text record of what <code>--build</code> reconstructed. It has no columns
+          and no header, and holds two line kinds.
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>Family KING1:
+  Family KING1 RULE FS0: Sibship (B01_F B02_F)'s parents are (1 2)
+  Family KING1 INFERENCE AV.FS: B01_F is uncle of B02_C3 and B02_C4, Join3/Join2=0.801</code></pre>
+        </div>
+
+        <p>Zero bytes when nothing was reconstructed.</p>
+
+        <h2 id="qc-files">QC files</h2>
+
+        <h3 id="bysample"><code>&lt;p&gt;bySample.txt</code></h3>
+
+        <p>
+          Per-sample QC from <code>--bysample</code>. Space separated, one row per sample in
+          <code>.fam</code> order. The column count runs from 8 to 21: the first eight
+          columns are always present, and the optional blocks appear only when the data
+          supports them.
+        </p>
+
+        <div class="code-block">
+<pre><code>FID IID FA MO SEX N_SNP Missing Heterozygosity N_xSNP xHeterozygosity N_ySNP N_yHetero N_mtSNP N_mtHetero N_pair N_MIp Err_MIp N_trio N_MIt Err_MIt MI_Removal</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Column</th>
+                <th scope="col">Present when</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row"><code>FID</code> <code>IID</code></th><td>always</td><td>The sample.</td><td>text</td></tr>
+              <tr><th scope="row"><code>FA</code> <code>MO</code></th><td>always</td><td>Parent IIDs. A sample naming exactly one parent gets an invented <code>KING&lt;k&gt;</code> in the empty slot.</td><td>text</td></tr>
+              <tr><th scope="row"><code>SEX</code></th><td>always</td><td><code>.fam</code> sex code.</td><td><code>%d</code></td></tr>
+              <tr><th scope="row"><code>N_SNP</code></th><td>always</td><td>Autosomal markers called, <code>XY</code> included.</td><td><code>%d</code></td></tr>
+              <tr><th scope="row"><code>Missing</code></th><td>always</td><td>Autosomal missing rate.</td><td><code>%.4f</code></td></tr>
+              <tr><th scope="row"><code>Heterozygosity</code></th><td>always</td><td>Autosomal het rate over called markers.</td><td><code>%.4f</code></td></tr>
+              <tr><th scope="row"><code>N_xSNP</code> <code>xHeterozygosity</code></th><td>map has X markers</td><td>X call count and X het rate.</td><td><code>%d</code>, <code>%.4f</code></td></tr>
+              <tr><th scope="row"><code>N_ySNP</code> <code>N_yHetero</code></th><td>map has Y markers</td><td>Y call count and Y het count. The X block above reports a rate; this block reports a count.</td><td><code>%d</code>, <code>%d</code></td></tr>
+              <tr><th scope="row"><code>N_mtSNP</code> <code>N_mtHetero</code></th><td>map has MT markers</td><td>MT call count and MT het count.</td><td><code>%d</code>, <code>%d</code></td></tr>
+              <tr><th scope="row"><code>N_pair</code> <code>N_MIp</code> <code>Err_MIp</code></th><td>pedigree has at least one PO pair</td><td>Markers examined across this sample's parent-offspring pairs, inconsistencies among them, and the rate.</td><td><code>%d</code>, <code>%d</code>, <code>%.4f</code></td></tr>
+              <tr><th scope="row"><code>N_trio</code> <code>N_MIt</code> <code>Err_MIt</code></th><td>pedigree has at least one trio</td><td>The same three for trios.</td><td><code>%d</code>, <code>%d</code>, <code>%.4f</code></td></tr>
+              <tr><th scope="row"><code>MI_Removal</code></th><td>pedigree has at least one PO pair</td><td><code>1</code> if the error rate suggests removing this sample.</td><td><code>%d</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Four header variants were observed by running <code>--bysample</code> over all 12
+          golden filesets.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">Columns</th>
+                <th scope="col">Header</th>
+                <th scope="col">Seen on</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">8</td><td><code>FID IID FA MO SEX N_SNP Missing Heterozygosity</code></td><td><code>pair</code>, <code>unrelated</code></td></tr>
+              <tr><td class="num">12</td><td><code>... N_pair N_MIp Err_MIp MI_Removal</code></td><td><code>dups</code>, which has PO pairs but no trio</td></tr>
+              <tr><td class="num">15</td><td><code>... N_pair N_MIp Err_MIp N_trio N_MIt Err_MIt MI_Removal</code></td><td><code>trio</code>, <code>nuclear</code>, <code>missing</code>, <code>monomorphic</code>, <code>threegen</code>, <code>multifam</code>, <code>admixed</code>, <code>bigish</code></td></tr>
+              <tr><td class="num">21</td><td><code>... N_xSNP xHeterozygosity N_ySNP N_yHetero N_mtSNP N_mtHetero N_pair ... MI_Removal</code></td><td><code>sexchr</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          <code>docs/CLI.md</code> states that six variants exist. Four are reachable from
+          the shipped corpus; the other two need a map with only some of the X, Y and MT
+          classes.
+        </p>
+
+        <h3 id="bysnp"><code>&lt;p&gt;bySNP.txt</code></h3>
+
+        <p>
+          Per-marker QC from <code>--bySNP</code>. Space separated, 21 columns in the full
+          form.
+        </p>
+
+        <div class="code-block">
+<pre><code>SNP Chr Pos Label_A Label_a Freq_A N N_AA N_Aa N_aa CallRate N_PO N_HomPO N_errPO Err_InPO Err_InHomPO N_trio N_HetOff N_errTrio Err_InTrio Err_InHetTrio</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1</td><th scope="row"><code>SNP</code></th><td>Marker ID.</td><td>text</td></tr>
+              <tr><td class="num">2</td><th scope="row"><code>Chr</code></th><td>Chromosome. <code>X</code>, <code>Y</code> and <code>MT</code> are spelled out; everything else is numeric, and <code>25</code> stays a number.</td><td>text</td></tr>
+              <tr><td class="num">3</td><th scope="row"><code>Pos</code></th><td>Base-pair position.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">4</td><th scope="row"><code>Label_A</code></th><td>The A1 allele.</td><td>text</td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>Label_a</code></th><td>The A2 allele.</td><td>text</td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>Freq_A</code></th><td>A1 frequency among called genotypes.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>N</code></th><td>Samples called at this marker.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>N_AA</code></th><td>Homozygous A1.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">9</td><th scope="row"><code>N_Aa</code></th><td>Heterozygous.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">10</td><th scope="row"><code>N_aa</code></th><td>Homozygous A2.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">11</td><th scope="row"><code>CallRate</code></th><td><code>N</code> over the total sample count.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">12</td><th scope="row"><code>N_PO</code></th><td>Parent-offspring pairs where both are called here.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">13</td><th scope="row"><code>N_HomPO</code></th><td>Of those, pairs where both are homozygous.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">14</td><th scope="row"><code>N_errPO</code></th><td>Of those, Mendelian-inconsistent pairs.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">15</td><th scope="row"><code>Err_InPO</code></th><td><code>N_errPO / N_PO</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">16</td><th scope="row"><code>Err_InHomPO</code></th><td><code>N_errPO / N_HomPO</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">17</td><th scope="row"><code>N_trio</code></th><td>Complete trios called here.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">18</td><th scope="row"><code>N_HetOff</code></th><td>Of those, trios whose offspring is heterozygous.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">19</td><th scope="row"><code>N_errTrio</code></th><td>Mendelian-inconsistent trios.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">20</td><th scope="row"><code>Err_InTrio</code></th><td><code>N_errTrio / N_trio</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">21</td><th scope="row"><code>Err_InHetTrio</code></th><td><code>N_errTrio / N_HetOff</code>.</td><td><code>%.4f</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Y rows carry no trio statistics and MT rows carry neither PO nor trio statistics.
+          Those cells print a bare <code>0</code> rather than <code>0.0000</code>, which a
+          strict fixed-format parser will notice. All three documented header variants were
+          observed across the 12 golden filesets.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">Columns</th>
+                <th scope="col">Header tail</th>
+                <th scope="col">Seen on</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">11</td><td>ends at <code>CallRate</code></td><td><code>pair</code>, <code>unrelated</code></td></tr>
+              <tr><td class="num">16</td><td><code>... N_PO N_HomPO N_errPO Err_InPO Err_InHomPO</code></td><td><code>dups</code></td></tr>
+              <tr><td class="num">21</td><td><code>... N_trio N_HetOff N_errTrio Err_InTrio Err_InHetTrio</code></td><td>the other nine</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="autoqc-summary"><code>&lt;p&gt;_autoQC_Summary.txt</code></h3>
+
+        <p>
+          The step table, byte-identical to the block <code>--autoQC</code> prints on
+          stdout. Fixed-width and space padded; it contains no tab at all, so it has no
+          column list in the sense the other files do. The layout is
+          <code>%-5s%-55s%-10s%-10s</code> for the two count rows,
+          <code>%-5s%-65s(%d)</code> for a SNP counter and <code>%-5s%-55s(%d)</code> for a
+          subject counter. A parenthesised number is a removal count.
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>Step Description                                            Subjects  SNPs
+1    Raw data counts                                        6         10000
+1.1  SNPs with very low call rate &lt; 80% (removed)                     (1569)
+1.2  Monomorphic SNPs (removed)                                       (3199)
+1.3  Sample call rate &lt; 95% (removed)                       (2)
+1.4  SNPs with call rate &lt; 95% (removed)                              (130)
+3    Generate Final Study Files
+     Final QC'ed data                                       4         5086</code></pre>
+        </div>
+
+        <p>
+          The <code>&lt; 80%</code> and <code>&lt; 95%</code> labels are fixed text and do
+          not follow <code>--callrateN</code> or <code>--callrateM</code>. The
+          <code>2.x</code> block appears only when the map has both X and Y markers.
+        </p>
+
+        <h3 id="autoqc-snp"><code>&lt;p&gt;_autoQC_snptoberemoved.txt</code></h3>
+
+        <p>Two columns, one row per removed marker.</p>
+
+        <div class="code-block">
+<pre><code>SNP	REASON</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1</td><th scope="row"><code>SNP</code></th><td>Marker ID.</td></tr>
+              <tr><td class="num">2</td><th scope="row"><code>REASON</code></th><td>One of <code>CallRateLessThan&lt;pct&gt;</code>, <code>Monomorphic</code>, <code>xHeterozygosityInMale</code>, <code>YSNPInFemales</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Rows are grouped by the step that removed them, and the reasons do not interleave.
+        </p>
+
+        <h3 id="autoqc-sample"><code>&lt;p&gt;_autoQC_sampletoberemoved.txt</code></h3>
+
+        <p>Three columns, one row per removed sample.</p>
+
+        <div class="code-block">
+<pre><code>FID	IID	REASON</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1</td><th scope="row"><code>FID</code></th><td>Family ID.</td></tr>
+              <tr><td class="num">2</td><th scope="row"><code>IID</code></th><td>Individual ID.</td></tr>
+              <tr><td class="num">3</td><th scope="row"><code>REASON</code></th><td>One of <code>MissingMoreThan&lt;pct&gt;</code>, <code>MislabeledAsMale</code>, <code>MislabeledAsFemale</code>, <code>GenderQC</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>Header only when nothing is removed.</p>
+
+        <h3 id="autoqc-updatesex"><code>&lt;p&gt;_autoQC_updatesex.txt</code></h3>
+
+        <p>Three columns, no header.</p>
+
+        <div class="code-block">
+<pre><code>FID	IID	sex</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1</td><th scope="row"><code>FID</code></th><td>Family ID.</td></tr>
+              <tr><td class="num">2</td><th scope="row"><code>IID</code></th><td>Individual ID.</td></tr>
+              <tr><td class="num">3</td><th scope="row"><code>sex</code></th><td>The sex the pass inferred.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          One row per sample whose <code>.fam</code> sex was <code>0</code> and whose sex
+          the pass inferred, in <code>.fam</code> order. The file is not created when there
+          is no such sample.
+        </p>
+
+        <h2 id="x-chromosome-files">X-chromosome files</h2>
+
+        <p>
+          Three files carry X results, and they are not variants of one layout. The same
+          file name means different columns under different flags.
+        </p>
+
+        <h3 id="x-kin"><code>&lt;p&gt;X.kin</code></h3>
+
+        <p>
+          <strong>Under <code>--kinship</code>: within-family X kinship, 9 columns.</strong>
+          The <code>--kinship</code> X pass runs when the map has 512 or more X markers,
+          more than one family exists, and no <code>--degree</code> was given.
+        </p>
+
+        <div class="code-block">
+<pre><code>FID	ID1	ID2	Sex	N_SNP	PhiX	Het	IBS0	KinshipX</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1 to 3</td><th scope="row"><code>FID</code> <code>ID1</code> <code>ID2</code></th><td>The within-family pair.</td><td>text</td></tr>
+              <tr><td class="num">4</td><th scope="row"><code>Sex</code></th><td>A two-letter code in the row's own order. <code>FM</code> is a female <code>ID1</code> and a male <code>ID2</code>.</td><td>text</td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>N_SNP</code></th><td>X markers called in both.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>PhiX</code></th><td>Pedigree X-kinship.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>Het</code></th><td>The pair's X heterozygosity denominator.</td><td><code>%.3f</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>IBS0</code></th><td>Proportion opposite-homozygous.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">9</td><th scope="row"><code>KinshipX</code></th><td>Estimated X kinship.</td><td><code>%.4f</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>Three estimators, chosen by the pair's sexes:</p>
+
+        <div class="code-block">
+<pre><code>FF   Het = (Het_i + Het_j) / 2N     KinshipX = (HetHet - 2*IBS0) / (Het_i + Het_j)
+FM   Het = Het_female / N           KinshipX = 0.5  - IBS0 / Het_female
+MM   Het = H (imputed)              KinshipX = 0.75 - IBS0 / (N * H)</code></pre>
+        </div>
+
+        <p>
+          Samples whose <code>.fam</code> sex is neither 1 nor 2 are excluded from this
+          pass.
+        </p>
+
+        <p>
+          <strong>Under <code>--related</code>: within-family X segment sharing, 9 different
+          columns.</strong> The <code>--related</code> X pass has no 512-marker threshold
+          and is not suppressed by <code>--degree</code>.
+        </p>
+
+        <div class="code-block">
+<pre><code>FID	ID1	ID2	Sex1	Sex2	PhiX	IBD1Seg	IBD2Seg	PropIBD</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1 to 3</td><th scope="row"><code>FID</code> <code>ID1</code> <code>ID2</code></th><td>The within-family pair.</td><td>text</td></tr>
+              <tr><td class="num">4</td><th scope="row"><code>Sex1</code></th><td><code>.fam</code> sex code of <code>ID1</code>, numeric rather than the two-letter code.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>Sex2</code></th><td><code>.fam</code> sex code of <code>ID2</code>.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>PhiX</code></th><td>Pedigree X-kinship.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>IBD1Seg</code></th><td>Proportion of the usable X shared IBD1.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>IBD2Seg</code></th><td>Proportion shared IBD2.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">9</td><th scope="row"><code>PropIBD</code></th><td><code>IBD2Seg + IBD1Seg/2</code> at full precision.</td><td><code>%.4f</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          This form carries no <code>N_SNP</code>, no <code>IBS0</code> and no
+          <code>KinshipX</code>. Verified:
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>$ king -b sexchr.bed --related --prefix rx_
+Within-family X-chr IBD-sharing inference saved in file rx_X.kin
+$ head -2 rx_X.kin
+FID	ID1	ID2	Sex1	Sex2	PhiX	IBD1Seg	IBD2Seg	PropIBD
+SEX	S_DAU1	S_DAU2	2	2	0.3750	0.6464	0.3530	0.6762</code></pre>
+        </div>
+
+        <h3 id="x-kin0"><code>&lt;p&gt;X.kin0</code></h3>
+
+        <p>
+          <strong>Under <code>--kinship</code>: between-family X kinship, 9
+          columns.</strong> The same statistics as <code>--kinship</code>'s
+          <code>X.kin</code>, minus <code>PhiX</code> and plus the second FID. Negative
+          <code>KinshipX</code> values are normal. Row order here is family-major, not the
+          autosomal <code>.kin0</code>'s 32-tiled <code>.fam</code> order.
+        </p>
+
+        <div class="code-block">
+<pre><code>FID1	ID1	FID2	ID2	Sex	N_SNP	Het	IBS0	KinshipX</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1 to 4</td><th scope="row"><code>FID1</code> <code>ID1</code> <code>FID2</code> <code>ID2</code></th><td>The cross-family pair.</td><td>text</td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>Sex</code></th><td>Two-letter code in the row's own order.</td><td>text</td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>N_SNP</code></th><td>X markers called in both.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>Het</code></th><td>The pair's X heterozygosity denominator.</td><td><code>%.3f</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>IBS0</code></th><td>Proportion opposite-homozygous.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">9</td><th scope="row"><code>KinshipX</code></th><td>Estimated X kinship.</td><td><code>%.4f</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          <strong>Under <code>--related</code>: between-family X segment sharing, 9
+          different columns.</strong> Rows are exactly <code>.kin0</code>'s pairs,
+          re-measured on X.
+        </p>
+
+        <div class="code-block">
+<pre><code>FID1	ID1	FID2	ID2	Sex1	Sex2	IBD1Seg	IBD2Seg	PropIBD</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Column</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1 to 4</td><th scope="row"><code>FID1</code> <code>ID1</code> <code>FID2</code> <code>ID2</code></th><td>The cross-family pair.</td><td>text</td></tr>
+              <tr><td class="num">5</td><th scope="row"><code>Sex1</code></th><td><code>.fam</code> sex code of <code>ID1</code>.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">6</td><th scope="row"><code>Sex2</code></th><td><code>.fam</code> sex code of <code>ID2</code>.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>IBD1Seg</code></th><td>Proportion of the usable X shared IBD1.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>IBD2Seg</code></th><td>Proportion shared IBD2.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">9</td><th scope="row"><code>PropIBD</code></th><td><code>IBD2Seg + IBD1Seg/2</code> at full precision.</td><td><code>%.4f</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="note note--warn">
+          <p class="note-title">Unverified by a run</p>
+          <p>
+            The <code>--related</code> layout above was not produced during the inventory
+            pass: no golden fileset combines 100 or more samples with X markers, which is
+            the gate for a <code>--related</code> <code>.kin0</code>. The column list is
+            taken from <code>docs/OUTPUTS.md</code>, which documents a purpose-built
+            104-sample fixture.
+          </p>
+        </div>
+
+        <h3 id="x-seg"><code>&lt;p&gt;X.seg</code></h3>
+
+        <p>
+          The X half of <code>--ibdseg</code>. Written when <code>--degree</code> is given
+          with a non-zero value and the X map yields a usable segment. The header names 11
+          columns; every data row carries 9 values plus a trailing tab.
+        </p>
+
+        <div class="code-block">
+<pre><code>FID1	ID1	FID2	ID2	Sex1	Sex2	MaxIBD1	MaxIBD2	IBD1Seg	IBD2Seg	PropIBD</code></pre>
+        </div>
+
+        <p>
+          The header is wrong, and open-king copies it wrong on purpose, because that is
+          what the reference emits. The real layout:
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Header says</th>
+                <th scope="col">Actually holds</th>
+                <th scope="col">Format</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num">1 to 4</td><th scope="row"><code>FID1</code> <code>ID1</code> <code>FID2</code> <code>ID2</code></th><td>The pair.</td><td>text</td></tr>
+              <tr><td class="num">5 to 6</td><th scope="row"><code>Sex1</code> <code>Sex2</code></th><td><code>.fam</code> sex codes, raw. Samples outside <code>{1,2}</code> are not excluded here.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">7</td><th scope="row"><code>MaxIBD1</code></th><td><code>IBD1Seg</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>MaxIBD2</code></th><td><code>IBD2Seg</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">9</td><th scope="row"><code>IBD1Seg</code></th><td><code>PropIBD</code>, at full precision.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">10 to 11</td><th scope="row"><code>IBD2Seg</code> <code>PropIBD</code></th><td>Nothing. The row ends with a tab.</td><td>n/a</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Verified on the <code>sexchr</code> fileset. <code>cat -e</code> marks the line
+          ends, so the trailing tab on every data row is visible:
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>$ king -b sexchr.bed --ibdseg --degree 2
+$ cat -e kingX.seg
+FID1	ID1	FID2	ID2	Sex1	Sex2	MaxIBD1	MaxIBD2	IBD1Seg	IBD2Seg	PropIBD$
+SEX	S_F	SEX	S_SON1	1	1	0.0000	0.0000	0.0000	$
+SEX	S_F	SEX	S_SON2	1	1	0.0000	0.0000	0.0000	$</code></pre>
+        </div>
+
+        <h2 id="empty-header-only-absent">Empty, header-only, absent</h2>
+
+        <p>
+          Four states are distinguishable, and the difference decides what a script around
+          these files can conclude: the file is absent, the file exists at zero bytes, the
+          file holds its header and no data rows, or the file holds data.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide table--zebra">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Absent when</th>
+                <th scope="col">Zero bytes when</th>
+                <th scope="col">Header only when</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>.kin</code></th>
+                <td>no family has 2 or more members</td>
+                <td>exactly one distinct FID and under 64 KiB of rows</td>
+                <td>n/a</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>.kin0</code> (<code>--kinship</code>)</th>
+                <td>fewer than 2 distinct FIDs</td>
+                <td>n/a</td>
+                <td>n/a</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>.kin0</code> (<code>--related</code>)</th>
+                <td>nothing detected, and always below 100 samples at degree 1 or 2</td>
+                <td>n/a</td>
+                <td>n/a</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>.ibs</code></th>
+                <td>never</td>
+                <td>never</td>
+                <td>no within-family pair exists</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>.ibs0</code></th>
+                <td>fewer than 2 distinct FIDs</td>
+                <td>n/a</td>
+                <td>n/a</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>.con</code></th>
+                <td>N &gt;= 100 and no duplicate found</td>
+                <td>n/a</td>
+                <td>N &lt; 100 and no duplicate found (65 bytes)</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>build.log</code></th>
+                <td>N &lt; 10</td>
+                <td>nothing reconstructed</td>
+                <td>n/a</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>updateparents.txt</code></th>
+                <td>N &lt; 10</td>
+                <td>nothing reconstructed</td>
+                <td>n/a</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>updateids.txt</code></th>
+                <td>no cluster merge (still announced by <code>--build</code>)</td>
+                <td>n/a</td>
+                <td>n/a</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>cluster.kin</code></th>
+                <td>no cluster merge, or no informative IBD segment</td>
+                <td>n/a</td>
+                <td>n/a</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>_autoQC_updatesex.txt</code></th>
+                <td>no sample has <code>.fam</code> sex <code>0</code></td>
+                <td>n/a</td>
+                <td>n/a</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>allsegs.txt</code></th>
+                <td>the map yields no usable segment</td>
+                <td>n/a</td>
+                <td>n/a</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="single-family-kin">The single-family <code>.kin</code> is truncated</h3>
+
+        <p>
+          A dataset with exactly one distinct FID loses the tail of its <code>.kin</code>.
+          Rows are flushed every 65536 bytes and the final partial buffer is never written.
+          Under 64 KiB of content that leaves a zero-byte file. Measured:
+          <code>king -b nuclear.bed --kinship</code>, 6 samples in one FID, leaves a
+          zero-byte <code>.kin</code> and exits 0.
+        </p>
+
+        <p>
+          Above 64 KiB it leaves a file that ends, on a line boundary, at the last flushed
+          chunk. Relabelling all 200 <code>bigish</code> samples into one family gives:
+        </p>
+
+        <div class="code-block code-block--plain">
+<pre><code>one.kin:  1180057 bytes, 19546 rows of 19900</code></pre>
+        </div>
+
+        <p>
+          354 pairs are missing, and the byte count is 18 flushes' worth. With two or more
+          distinct FIDs the file is complete regardless of size. This is a reference bug
+          reproduced deliberately, because the alternative is disagreeing with KING.
+        </p>
+
+        <h3 id="tiny-datasets">Tiny datasets</h3>
+
+        <p>
+          N &lt; 10 is the tiny-dataset gate. <code>--unrelated</code>,
+          <code>--cluster</code> and <code>--build</code> print <code>This function is
+          currently disabled for tiny dataset with sample size &lt; 10.</code> at that size.
+          <code>--cluster</code> and <code>--build</code> then write nothing at all,
+          <code>allsegs.txt</code> included. <code>--unrelated</code> takes the same early
+          exit and still writes both of its lists.
+        </p>
+
+        <p>
+          Two more small-sample substitutions change which files appear.
+          <code>--related</code> below 10 samples becomes a <code>--kinship</code> run
+          (<code>--related is replaced with --kinship for a small sample size.</code>), so
+          the <code>.kin</code> is the 10-column form and the <code>.kin0</code> the
+          8-column one. <code>--ibdseg</code> below 5 samples becomes a
+          <code>--kinship</code> run in the same way
+          (<code>--kinship analysis carried out instead for such a small sample
+          size.</code>). Check the header before assuming which layout is on disk.
+        </p>
+      </article>
+
+      <nav class="page-nav" aria-label="Page navigation">
+        <a class="page-nav-link page-nav-link--prev" href="usage.html">
+          <span class="page-nav-dir">Previous</span>
+          <span class="page-nav-title">Commands and options</span>
+        </a>
+        <a class="page-nav-link page-nav-link--next" href="benchmarks.html">
+          <span class="page-nav-dir">Next</span>
+          <span class="page-nav-title">Benchmarks</span>
+        </a>
+      </nav>
+    </main>
+
+    <footer class="site-footer">
+      <p class="footer-note">
+        open-king is MIT licensed. It is not affiliated with, endorsed by, or derived from
+        the source code of KING.
+      </p>
+      <p class="footer-note">
+        Cite the method: Manichaikul et al., <em>Bioinformatics</em> 2010, 26(22):2867.
+        Credit for KING itself belongs to Wei-Min Chen and colleagues.
+      </p>
+    </footer>
+  </div>
+
+  <nav class="toc" id="toc" aria-label="On this page" hidden></nav>
+</div>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>
