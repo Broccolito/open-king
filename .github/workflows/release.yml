@@ -24,6 +24,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      # The genotype corpus is never committed, and `open-king-core`'s PLINK
+      # entrypoint test opens `tests/parity/golden/multifam.bed` directly, so this
+      # has to run BEFORE `cargo test`. `ci.yml` has the same ordering and the same
+      # comment; this job was missed when that one was fixed, and it turned every
+      # tagged release red at the first gate.
+      - name: generate corpus
+        run: python3 tests/parity/generate_corpus.py --outdir tests/parity/golden
+
       - run: cargo test --workspace
       - run: cargo build --release
       - run: python3 tests/parity/run_parity.py --impl ./target/release/open-king -q --baseline
