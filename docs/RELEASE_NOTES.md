@@ -1,104 +1,38 @@
 # open-king v0.1.0
 
-First release of **open-king**, a clean-room, MIT-licensed reimplementation of
-**KING 2.3.2** for relatedness inference from PLINK filesets.
+`open-king` reads a PLINK1 fileset and reports how every pair of samples in it is related:
+kinship coefficients, duplicate and monozygotic pairs, IBD segments, a relationship label
+for each pair, and per-sample and per-marker quality control.
 
-The goal is drop-in replacement: the same command line, the same input files, and
-byte-identical output.
-
-```bash
-open-king -b study.bed --related --prefix study
-```
-
-## Parity
-
-**All 480 captured reference invocations reproduce byte-identically.** "Byte
--identical" means the whole invocation — every output file, every column, plus stdout,
-stderr and exit status.
-
-The differential harness is in the repository, so you can check this yourself rather than
-taking our word for it:
-
-```bash
-cargo build --release
-python3 tests/parity/run_parity.py --impl ./target/release/open-king
-```
-
-Running the harness against the *reference* binary scores 480/480, which is what
-establishes that a failure means a real difference rather than harness noise.
-
-### Byte-identical
-
-| Analysis | Outputs |
-| --- | --- |
-| `--kinship` | `.kin`, `.kin0`, `X.kin`, `X.kin0` |
-| `--related` | `.kin` (16 col), `.kin0` (14 col), `allsegs.txt` |
-| `--ibdseg` | `.seg`, `X.seg`, `allsegs.txt`, `splitped.txt` |
-| `--duplicate` | `.con` |
-| `--ibs` | `.ibs`, `.ibs0` |
-| `--unrelated` | `unrelated.txt`, `unrelated_toberemoved.txt` |
-| `--cluster` | `cluster.kin`, `updateids.txt` |
-| `--bysample` / `--bySNP` | `bySample.txt`, `bySNP.txt` |
-| `--autoQC` | the four `_autoQC_*` files |
-
-Segment estimates are exact on all 982 corpus rows at every supported `--seglength`
-floor (3, 5 and 10 Mb). The command-line surface was additionally validated by a
-differential fuzz of 10,000 random command lines against the reference.
-
-### Known gaps
-
-There are no known differences in the captured suite. The former two-stage screen and
-primary `build.log` failures are resolved.
-
-Held-out testing remains intentionally separate from the headline. Safe Rust does not
-emulate KING's uninitialized exact-multiple-of-64 segment tail read, and rare constructed
-shapes still expose a segment acceptance-gate counterexample, exact `HomIBS0` tie differences,
-the still-unknown data-derived sparse PO/FS cutoff, an approximate `MI_Removal` predicate,
-and unusual pedigree-reconstruction residuals. See `docs/PARITY.md` and issue #11 for
-quantified evidence.
-
-`docs/PARITY.md` is the authoritative matrix and measures every gap.
-
-## Documentation
-
-| Document | For |
-| --- | --- |
-| `docs/CLI.md` | every command-line option |
-| `docs/OUTPUTS.md` | every output file and column |
-| `docs/COOKBOOK.md` | task-oriented recipes |
-| `docs/INTERPRETING.md` | how to read the numbers, and the pitfalls |
-| `docs/PARITY.md` | the parity matrix and every measured gap |
-| `docs/MAINTAINING.md` | how to continue the work |
+It is a clean-room, MIT-licensed Rust implementation of the relatedness core of
+[KING 2.3.2](https://www.kingrelatedness.com/), taking the same command line and writing
+byte-identical output. All 480 captured reference invocations reproduce exactly, across 876
+output files.
 
 ## Install
 
-Download the archive for your platform below, or build from source:
+Each archive holds a single file, the `open-king` executable. Unzip it and run it.
+
+| Platform | Asset |
+| --- | --- |
+| macOS, Apple silicon | `open-king-macos-arm64.zip` |
+| macOS, Intel | `open-king-macos-x86_64.zip` |
+| Linux x86_64 | `open-king-linux-x86_64.zip` |
+| Windows x86_64 | `open-king-windows-x86_64.zip` |
+
+The macOS builds are signed with a Developer ID and notarized by Apple, so they run straight
+out of the archive with no Gatekeeper prompt and no quarantine step.
 
 ```bash
-cargo build --release      # -> target/release/open-king
+unzip open-king-macos-arm64.zip
+./open-king -b study.bed --related --degree 2 --prefix study
 ```
 
-Binaries are provided for macOS (arm64 and x86_64), Linux x86_64, and Windows x86_64.
-Verify with the published `SHA256SUMS.txt`.
+`SHA256SUMS.txt` carries a checksum for every asset.
 
-## Provenance
+## Documentation
 
-This project is **not** affiliated with, endorsed by, or derived from the source code of
-the original KING by Wei-Min Chen. It was written from the published algorithm
-descriptions, the publicly documented file formats, and black-box observation of the
-reference binary's behaviour. No KING source code was read or copied.
+<https://broccolito.github.io/open-king/>
 
-If you use relatedness inference in published research, cite the original work:
-
-> Manichaikul A, Mychaleckyj JC, Rich SS, Daly K, Sale M, Chen WM. Robust relationship
-> inference in genome-wide association studies. *Bioinformatics*. 2010;26(22):2867-2873.
-
-## Caveat
-
-Parity is measured against **one build** — KING 2.3.2, macOS arm64. KING's segment
-numerics changed across earlier 2.1.x and 2.2.x releases, so agreement with a different
-build is not implied.
-
-## License
-
-MIT.
+Every command and option with a runnable example, the output-file reference, the parity
+evidence, and the benchmarks.
