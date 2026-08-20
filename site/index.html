@@ -224,7 +224,7 @@ BF01	B01_F	BF02	B02_C1	50000	0.1560	0.0299	0.2873	0.2261	0.1368	0.5684	0.0000	0.
               <tr>
                 <th scope="row"><a href="usage.html#related"><code>--related</code></a></th>
                 <td>Kinship plus IBD segments and a relationship label per pair</td>
-                <td><code>.kin</code>, <code>.kin0</code>, <code>X.kin</code>, <code>allsegs.txt</code></td>
+                <td><code>.kin</code>, <code>.kin0</code>, <code>X.kin</code>, <code>X.kin0</code>, <code>allsegs.txt</code></td>
               </tr>
               <tr>
                 <th scope="row"><a href="usage.html#duplicate"><code>--duplicate</code></a></th>
@@ -308,8 +308,10 @@ BF01	B01_F	BF02	B02_C1	50000	0.1560	0.0299	0.2873	0.2261	0.1368	0.5684	0.0000	0.
         <h2 id="measured-parity">Measured parity</h2>
 
         <p>
-          All 480 captured reference invocations are byte-identical: every output file,
-          plus stdout, stderr and exit status.
+          All 480 captured reference invocations match: every output file byte for byte,
+          plus exit status, plus stdout and stderr once five lines that cannot be
+          reproduced are normalised on both sides. Those five, and why each one is
+          unreproducible, are listed on the <a href="parity.html">parity page</a>.
         </p>
 
         <div class="table-wrap">

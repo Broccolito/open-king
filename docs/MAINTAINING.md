@@ -340,7 +340,7 @@ captured output, add it there too.
 ```bash
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace                                             # 325 passed, 0 failed
+cargo test --workspace                                             # 355 passed, 0 failed
 cargo clean && cargo build --release            # must work from a clean checkout
 python3 tests/parity/run_parity.py --impl target/release/king      # record the exact count
 python3 tests/parity/run_parity.py --impl target/release/king --baseline   # must MATCH
