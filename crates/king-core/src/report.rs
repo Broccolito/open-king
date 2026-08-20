@@ -580,12 +580,24 @@ mod tests {
         assert_eq!(cross_family.relationship, Relationship::Unrelated);
     }
 
+    /// The `multifam` row this checks is captured from KING 2.3.2, but the genotype
+    /// files it reads are **generated, not committed**: `.gitignore` excludes every
+    /// `tests/parity/golden/**/*.bed`. Run
+    /// `python3 tests/parity/generate_corpus.py --outdir tests/parity/golden` before
+    /// `cargo test` on a fresh clone. CI does exactly that, in that order.
     #[test]
-    fn plink_entrypoint_matches_a_committed_reference_row_without_text_roundtrip() {
+    fn plink_entrypoint_matches_a_reference_row_without_text_roundtrip() {
         let bed =
             Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/parity/golden/multifam.bed");
-        let report = Bundle::from_plink(bed)
-            .expect("committed PLINK fixture loads")
+        let report = Bundle::from_plink(&bed)
+            .unwrap_or_else(|e| {
+                panic!(
+                    "cannot load {}: {e}\nThe golden genotype corpus is generated, not \
+                     committed. Run: python3 tests/parity/generate_corpus.py --outdir \
+                     tests/parity/golden",
+                    bed.display()
+                )
+            })
             .relatedness(&RelatednessOptions {
                 segment_length_bp: None,
                 ..RelatednessOptions::default()

@@ -27,14 +27,21 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo build --workspace --release
-      - run: cargo test --workspace
 
       # The genotype files are never committed (.gitignore), so a fresh checkout has the
-      # golden text but no corpus. Regenerate it from the seed — the scorecard below
+      # golden text but no corpus. Regenerate it from the seed. The scorecard below
       # asserts it measured all 10 datasets, so a missing corpus fails loudly rather
       # than passing while measuring nothing.
+      #
+      # This MUST run before `cargo test`, not after. `king-core`'s
+      # `plink_entrypoint_matches_a_reference_row_without_text_roundtrip`
+      # opens `tests/parity/golden/multifam.bed` directly, so with the old ordering it
+      # panicked on every fresh checkout while passing on any developer machine that had
+      # generated the corpus once. That is what turned all three `test` matrix legs red.
       - name: generate corpus
         run: python3 tests/parity/generate_corpus.py --outdir tests/parity/golden
+
+      - run: cargo test --workspace
 
       # The row-level segment scorecard. docs/PARITY.md §4.4 quotes its "row=" and "est="
       # totals, so a change here is visible in the log of the run that made it.
