@@ -71,7 +71,7 @@
 
         <p class="lede">
           One invocation reads one PLINK1 fileset and runs one or more analyses over it.
-          This page lists every option the binary accepts, what each one changes, and the
+          This page lists every option open-king accepts, what each one changes, and the
           parser behaviour that the flag name does not reveal. Every number and every
           quoted console line below was produced by running the binary.
         </p>
@@ -79,7 +79,7 @@
         <h2 id="synopsis">Synopsis</h2>
 
         <div class="code-block">
-<pre><code>king -b &lt;fileset&gt;.bed [--fam &lt;path&gt;] [--bim &lt;path&gt;] &lt;analysis&gt;... [parameters...]</code></pre>
+<pre><code>open-king -b &lt;fileset&gt;.bed [--fam &lt;path&gt;] [--bim &lt;path&gt;] &lt;analysis&gt;... [parameters...]</code></pre>
         </div>
 
         <p>
@@ -104,7 +104,7 @@
         </ul>
 
         <p>
-          Examples on this page assume <code>king</code> is on the path and that the
+          Examples on this page assume <code>open-king</code> is on the path and that the
           working directory holds the fileset being named. Analyses are switches, so
           repeating one turns it back off: <code>--related --related</code> leaves
           <code>--related</code> off and the run falls through to the "please specify"
@@ -117,13 +117,13 @@
         </p>
 
         <div class="code-block code-block--plain">
-<pre><code>$ king -b multifam.bed --kinship --ibs --duplicate
+<pre><code>$ open-king -b multifam.bed --kinship --ibs --duplicate
 The following analyses will run separately:  --kinship --ibs --duplicate</code></pre>
         </div>
 
         <p>
           <code>--cluster</code> suppresses that line entirely, whatever else was requested.
-          It is absent from <code>king -b multifam.bed --kinship --cluster</code>.
+          It is absent from <code>open-king -b multifam.bed --kinship --cluster</code>.
         </p>
 
         <h2 id="input-options">Input options</h2>
@@ -183,7 +183,7 @@ The following analyses will run separately:  --kinship --ibs --duplicate</code><
             accepted and neither is <code>UPPER.BED</code>.</li>
           <li><code>-b</code> followed by a dash-leading token consumes nothing and
             <strong>clears</strong> the fileset.
-            <code>king -bmultifam.bed -b --kinship</code> exits 1 with
+            <code>open-king -bmultifam.bed -b --kinship</code> exits 1 with
             <code>Genotype files are required</code>.</li>
           <li>Only one fileset per run. A comma in the <code>-b</code>, <code>--fam</code>
             or <code>--bim</code> value is rejected; see
@@ -209,72 +209,72 @@ The following analyses will run separately:  --kinship --ibs --duplicate</code><
             </thead>
             <tbody>
               <tr>
-                <th scope="row"><code>king -b sub/study.bed --kinship</code></th>
+                <th scope="row"><code>open-king -b sub/study.bed --kinship</code></th>
                 <td class="num">1</td>
                 <td><code>Genotype file sub/study.bed cannot be opened</code></td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b plain --kinship</code></th>
+                <th scope="row"><code>open-king -b plain --kinship</code></th>
                 <td class="num">1</td>
                 <td><code>Please use PLINK binary format as input.</code> (valid bed contents, name has no <code>.bed</code>)</td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b UPPER.BED --kinship</code></th>
+                <th scope="row"><code>open-king -b UPPER.BED --kinship</code></th>
                 <td class="num">1</td>
                 <td><code>Please use PLINK binary format as input.</code></td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b bad.bed --kinship</code></th>
+                <th scope="row"><code>open-king -b bad.bed --kinship</code></th>
                 <td class="num">1</td>
                 <td><code>Please use either PLINK or KING binary format as input.</code> (bad magic)</td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b g.bed --kinship</code></th>
+                <th scope="row"><code>open-king -b g.bed --kinship</code></th>
                 <td class="num">1</td>
                 <td><code>Pedigree file g.fam cannot be opened</code> (no <code>g.fam</code>)</td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b multifam.bed --fam nope.fam --kinship</code></th>
+                <th scope="row"><code>open-king -b multifam.bed --fam nope.fam --kinship</code></th>
                 <td class="num">1</td>
                 <td><code>Pedigree file nope.fam cannot be opened</code></td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b h.bed --kinship</code></th>
+                <th scope="row"><code>open-king -b h.bed --kinship</code></th>
                 <td class="num">1</td>
                 <td><code>Map file h.bim cannot be opened</code> (no <code>h.bim</code>)</td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b multifam.bed --bim nope.bim --kinship</code></th>
+                <th scope="row"><code>open-king -b multifam.bed --bim nope.bim --kinship</code></th>
                 <td class="num">1</td>
                 <td><code>Map file nope.bim cannot be opened</code></td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b multifam.bed --fam short.fam --kinship</code></th>
+                <th scope="row"><code>open-king -b multifam.bed --fam short.fam --kinship</code></th>
                 <td class="num">1</td>
                 <td><code>short.fam: line 1 has 5 fields, expected 6</code></td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b multifam.bed --fam dup.fam --kinship</code></th>
+                <th scope="row"><code>open-king -b multifam.bed --fam dup.fam --kinship</code></th>
                 <td class="num">1</td>
                 <td><code>Please correct problems with pedigree structure</code>, preceded by <code>Family FAM1: Person A_F is duplicated</code></td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b multifam.bed --bim nochr.bim --kinship</code></th>
+                <th scope="row"><code>open-king -b multifam.bed --bim nochr.bim --kinship</code></th>
                 <td class="num">1</td>
                 <td><code>No autosome SNPs are available. Please check your map file.</code> (all chr 99)</td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b imajor.bed --kinship</code></th>
+                <th scope="row"><code>open-king -b imajor.bed --kinship</code></th>
                 <td class="num">1</td>
                 <td><code>Currently only SNP-major mode can be analyzed.</code> (mode byte 0)</td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b trunc.bed --kinship</code></th>
+                <th scope="row"><code>open-king -b trunc.bed --kinship</code></th>
                 <td class="num">1</td>
                 <td><code>Not enough genotypes at the 999th marker</code> (bed cut to 5000 bytes)</td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b multifam.bed --kinship --prefix nodir/x</code></th>
+                <th scope="row"><code>open-king -b multifam.bed --kinship --prefix nodir/x</code></th>
                 <td class="num">1</td>
                 <td><code>Cannot open nodir/x$TMP$.ped to write.</code></td>
               </tr>
@@ -323,7 +323,7 @@ The following analyses will run separately:  --kinship --ibs --duplicate</code><
         </p>
 
         <div class="code-block code-block--plain">
-<pre><code>$ king -b major.bed --ibs
+<pre><code>$ open-king -b major.bed --ibs
 FATAL ERROR -
 
 Too many first alleles as the major allele (~98.2%). Please use plink1.9 --make-bed to regenerate the genotype data again.</code></pre>
@@ -351,11 +351,11 @@ Too many first alleles as the major allele (~98.2%). Please use plink1.9 --make-
         </p>
 
         <div class="code-block code-block--plain">
-<pre><code>$ king -b unsortedpos.bed --ibdseg          # exit 0, only kingsplitped.txt written
+<pre><code>$ open-king -b unsortedpos.bed --ibdseg          # exit 0, only kingsplitped.txt written
 Positions unsorted: rs1_1009689 at 65904473, rs1_1055261 at 65851170.
   Note chromosomal positions can be sorted conveniently using other tools such as PLINK.
 
-$ king -b unsortedchr.bed --ibdseg          # exit 0, only kingsplitped.txt written
+$ open-king -b unsortedchr.bed --ibdseg          # exit 0, only kingsplitped.txt written
 Chromosomes unsorted: rs22_14205438 on chr 22, rs21_1002722 on chr 21.
   Note chromosomal positions can be sorted conveniently using other tools such as PLINK.</code></pre>
         </div>
@@ -411,7 +411,7 @@ Chromosomes unsorted: rs22_14205438 on chr 22, rs21_1002722 on chr 21.
         </p>
 
         <div class="code-block code-block--plain">
-<pre><code>$ king -b sexchr.bed --kinship
+<pre><code>$ open-king -b sexchr.bed --kinship
   Genotype data consist of 4150 autosome SNPs (including 150 XY SNPs), 1500 X-chromosome SNPs, 300 Y-chromosome SNPs, 50 mitochondrial SNPs
   PLINK maps loaded: 6000 SNPs</code></pre>
         </div>
@@ -473,7 +473,7 @@ Chromosomes unsorted: rs22_14205438 on chr 22, rs21_1002722 on chr 21.
         <ul>
           <li>N &lt; 10: the run becomes a <code>--kinship</code> run and
             <code>--degree</code> is discarded.
-            <code>king -b trio.bed --related --degree 2</code> prints
+            <code>open-king -b trio.bed --related --degree 2</code> prints
             <code>--related is replaced with --kinship for a small sample size.</code>
             then <code>Options in effect: --kinship</code>.</li>
           <li>N &lt; 100 at degree 1 or 2: the console reports
@@ -483,7 +483,7 @@ Chromosomes unsorted: rs22_14205438 on chr 22, rs21_1002722 on chr 21.
         </ul>
 
         <div class="code-block">
-<pre><code>king -b bigish.bed --related</code></pre>
+<pre><code>open-king -b bigish.bed --related</code></pre>
         </div>
 
         <div class="code-block code-block--plain">
@@ -564,7 +564,7 @@ BF01	B01_F	BF02	B02_F	50000	0.2274	0.0132	0.4855	0.1175	0.2885	0.4575	0.3676	0.5
         </p>
 
         <div class="code-block">
-<pre><code>king -b dups.bed --duplicate</code></pre>
+<pre><code>open-king -b dups.bed --duplicate</code></pre>
         </div>
 
         <div class="code-block code-block--plain">
@@ -637,7 +637,7 @@ MZFAM	MZ_1	MZFAM	MZ_2	10000	9	17	9974	0.99740	0.99862	0.99512</code></pre>
         </p>
 
         <div class="code-block">
-<pre><code>king -b multifam.bed --kinship</code></pre>
+<pre><code>open-king -b multifam.bed --kinship</code></pre>
         </div>
 
         <div class="code-block code-block--plain">
@@ -667,13 +667,13 @@ FAM1	A_C1	A_C2	15000	0.250	0.2500	0.2219	0.0153	0.2721	0</code></pre>
         <p>The X gate on the <code>sexchr</code> fileset:</p>
 
         <div class="code-block code-block--plain">
-<pre><code>king -b sexchr.bed --kinship            -&gt; king.kin king.kin0 kingX.kin kingX.kin0
-king -b sexchr.bed --kinship --degree 2 -&gt; king.kin king.kin0</code></pre>
+<pre><code>open-king -b sexchr.bed --kinship            -&gt; king.kin king.kin0 kingX.kin kingX.kin0
+open-king -b sexchr.bed --kinship --degree 2 -&gt; king.kin king.kin0</code></pre>
         </div>
 
         <p>
           The single-family truncation is reproduced reference behaviour.
-          <code>king -b nuclear.bed --kinship</code>, 6 samples under one FID, leaves a
+          <code>open-king -b nuclear.bed --kinship</code>, 6 samples under one FID, leaves a
           zero-byte <code>king.kin</code>.
         </p>
 
@@ -713,13 +713,13 @@ king -b sexchr.bed --kinship --degree 2 -&gt; king.kin king.kin0</code></pre>
         <p>
           Modified by <code>--degree</code>, <code>--seglength</code>, <code>--cpus</code>,
           <code>--prefix</code> and <code>--sexchr</code>. Under 5 samples it becomes a
-          <code>--kinship</code> run: <code>king -b pair.bed --ibdseg</code> prints
+          <code>--kinship</code> run: <code>open-king -b pair.bed --ibdseg</code> prints
           <code>--kinship analysis carried out instead for such a small sample size.</code>
           and writes <code>king.kin0</code>.
         </p>
 
         <div class="code-block">
-<pre><code>king -b multifam.bed --ibdseg</code></pre>
+<pre><code>open-king -b multifam.bed --ibdseg</code></pre>
         </div>
 
         <div class="code-block code-block--plain">
@@ -747,9 +747,9 @@ FAM1	A_F	FAM1	A_C1	1.0000	0.0000	0.5000	PO</code></pre>
         <p>
           Files written: <code>king.seg</code> with 104 rows,
           <code>kingallsegs.txt</code> with 18 rows, <code>kingsplitped.txt</code> with
-          22 rows. The X gate: <code>king -b sexchr.bed --ibdseg</code> writes no
+          22 rows. The X gate: <code>open-king -b sexchr.bed --ibdseg</code> writes no
           <code>kingX.seg</code>, while
-          <code>king -b sexchr.bed --ibdseg --degree 2</code> writes it.
+          <code>open-king -b sexchr.bed --ibdseg --degree 2</code> writes it.
         </p>
 
         <h3 id="ibs"><code>--ibs</code></h3>
@@ -796,7 +796,7 @@ FAM1	A_F	FAM1	A_C1	1.0000	0.0000	0.5000	PO</code></pre>
         </p>
 
         <div class="code-block">
-<pre><code>king -b multifam.bed --ibs</code></pre>
+<pre><code>open-king -b multifam.bed --ibs</code></pre>
         </div>
 
         <div class="code-block code-block--plain">
@@ -863,7 +863,7 @@ FAM1	A_C1	A_C2	0.250	0.2500	15000	230	3885	10885	3329	7786	5257	5286	1.7103	0.32
         </p>
 
         <div class="code-block">
-<pre><code>king -b bigish.bed --unrelated --degree 2</code></pre>
+<pre><code>open-king -b bigish.bed --unrelated --degree 2</code></pre>
         </div>
 
         <div class="code-block code-block--plain">
@@ -887,7 +887,7 @@ An alternative list of 116 to-be-removed individuals saved in file kingunrelated
 
         <p>
           On a tiny dataset the analysis is skipped and both lists are still written.
-          <code>king -b trio.bed --unrelated</code> prints
+          <code>open-king -b trio.bed --unrelated</code> prints
           <code>This function is currently disabled for tiny dataset with sample size &lt; 10.</code>
           and leaves lists of 2 rows and 1 row.
         </p>
@@ -934,7 +934,7 @@ An alternative list of 116 to-be-removed individuals saved in file kingunrelated
         </p>
 
         <div class="code-block">
-<pre><code>king -b bigish.bed --cluster</code></pre>
+<pre><code>open-king -b bigish.bed --cluster</code></pre>
         </div>
 
         <div class="code-block code-block--plain">
@@ -963,7 +963,7 @@ KING ends at Wed Aug 19 19:35:51 2026</code></pre>
         <p>
           Files written: <code>kingallsegs.txt</code>, <code>kingcluster.kin</code> with
           165 rows, and <code>kingupdateids.txt</code> with 33 rows.
-          <code>king -b trio.bed --cluster</code> writes nothing at all.
+          <code>open-king -b trio.bed --cluster</code> writes nothing at all.
         </p>
 
         <h3 id="build"><code>--build</code></h3>
@@ -1018,7 +1018,7 @@ KING ends at Wed Aug 19 19:35:51 2026</code></pre>
         </div>
 
         <div class="code-block">
-<pre><code>king -b bigish.bed --build</code></pre>
+<pre><code>open-king -b bigish.bed --build</code></pre>
         </div>
 
         <div class="code-block code-block--plain">
@@ -1046,7 +1046,7 @@ KING1	B01_C2	B01_F	B01_M
 KING1	B01_C3	B01_F	B01_M</code></pre>
         </div>
 
-        <p><code>king -b trio.bed --build</code> writes nothing at all.</p>
+        <p><code>open-king -b trio.bed --build</code> writes nothing at all.</p>
 
         <h3 id="bysample"><code>--bysample</code></h3>
 
@@ -1082,7 +1082,7 @@ KING1	B01_C3	B01_F	B01_M</code></pre>
         </p>
 
         <div class="code-block">
-<pre><code>king -b multifam.bed --bysample</code></pre>
+<pre><code>open-king -b multifam.bed --bysample</code></pre>
         </div>
 
         <div class="code-block code-block--plain">
@@ -1139,7 +1139,7 @@ FAM1 A_F 0 0 1 15000 0.0000 0.3505 45000 0 0.0000 45000 0 0.0000 0</code></pre>
         </p>
 
         <div class="code-block">
-<pre><code>king -b multifam.bed --bySNP</code></pre>
+<pre><code>open-king -b multifam.bed --bySNP</code></pre>
         </div>
 
         <div class="code-block code-block--plain">
@@ -1205,7 +1205,7 @@ rs1_1009689 1 1009689 A G 0.3000 20 0 12 8 1.0000 24 4 0 0.0000 0.0000 12 6 0 0.
         </p>
 
         <div class="code-block">
-<pre><code>king -b missing.bed --autoQC</code></pre>
+<pre><code>open-king -b missing.bed --autoQC</code></pre>
         </div>
 
         <div class="code-block code-block--plain">
@@ -1234,7 +1234,7 @@ MIS	M_C3	MissingMoreThan5</code></pre>
 
         <p>
           On <code>missing</code> that run writes the first three files.
-          <code>king -b sexchr.bed --autoQC</code> also writes
+          <code>open-king -b sexchr.bed --autoQC</code> also writes
           <code>king_autoQC_updatesex.txt</code>, because <code>sexchr</code> has samples
           whose <code>.fam</code> sex is <code>0</code>.
         </p>
@@ -1434,11 +1434,18 @@ MIS	M_C3	MissingMoreThan5</code></pre>
         </p>
 
         <div class="code-block code-block--plain">
-<pre><code>king ...                            --noscreen [-1717986816]
-king --minConc 0.9 ...              --noscreen [-858993408]
-king --noscreen 7 --minConc 0.9 ... --noscreen [-858993401]
-king --minConc 0.9 --noscreen 7 ... --noscreen [7]</code></pre>
+<pre><code>open-king ...                            --noscreen [-1717986816]
+open-king --minConc 0.9 ...              --noscreen [-858993408]
+open-king --noscreen 7 --minConc 0.9 ... --noscreen [-858993401]
+open-king --minConc 0.9 --noscreen 7 ... --noscreen [7]</code></pre>
         </div>
+
+        <p>
+          Safe Rust reads no uninitialised memory, so open-king computes those numbers from
+          the overlap rather than inheriting whatever the stack held, and the table is what
+          every build prints. In KING the slot is read before it is written, so the value
+          there can differ between two builds of the same source.
+        </p>
 
         <h3 id="seglength"><code>--seglength</code></h3>
 
@@ -1535,7 +1542,7 @@ king --minConc 0.9 --noscreen 7 ... --noscreen [7]</code></pre>
         <p>Both are read only by <code>--autoQC</code>. Measured on <code>missing</code>:</p>
 
         <div class="code-block">
-<pre><code>king -b missing.bed --autoQC --callrateN 0.99 --callrateM 0.9</code></pre>
+<pre><code>open-king -b missing.bed --autoQC --callrateN 0.99 --callrateM 0.9</code></pre>
         </div>
 
         <div class="code-block code-block--plain">
@@ -1601,7 +1608,7 @@ Auto-QC step 3: Apply SNP call rate filter 90.0% on 5232 SNPs (in 3 samples)
         <h3 id="cpus"><code>--cpus</code></h3>
 
         <div class="code-block">
-<pre><code>king -b multifam.bed --kinship --cpus 3</code></pre>
+<pre><code>open-king -b multifam.bed --kinship --cpus 3</code></pre>
         </div>
 
         <div class="code-block code-block--plain">
@@ -1620,6 +1627,8 @@ Auto-QC step 3: Apply SNP call rate filter 90.0% on 5232 SNPs (in 3 samples)
           <code>--cpus</code> changes no printed digit:
           <code>multifam --kinship</code> at <code>--cpus 1</code> and <code>--cpus 16</code>
           gives identical md5s for both <code>.kin</code> and <code>.kin0</code>.
+          Repetition is stable too: twelve runs of <code>sexchr --kinship</code> produced
+          one distinct checksum for <code>kingX.kin0</code>.
         </p>
 
         <h3 id="sexchr"><code>--sexchr</code></h3>
@@ -1706,19 +1715,19 @@ every other numeric code is dropped</code></pre>
             </thead>
             <tbody>
               <tr>
-                <th scope="row"><code>king -b multifam.bed --kinship --prefix ZZ_</code></th>
+                <th scope="row"><code>open-king -b multifam.bed --kinship --prefix ZZ_</code></th>
                 <td><code>ZZ_.kin</code>, <code>ZZ_.kin0</code></td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b multifam.bed --kinship --prefix sub/x_</code></th>
+                <th scope="row"><code>open-king -b multifam.bed --kinship --prefix sub/x_</code></th>
                 <td><code>sub/x_.kin</code>, <code>sub/x_.kin0</code> (the directory must exist)</td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b multifam.bed --kinship --prefix ""</code></th>
+                <th scope="row"><code>open-king -b multifam.bed --kinship --prefix ""</code></th>
                 <td><code>.kin</code>, <code>.kin0</code></td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b multifam.bed --kinship --prefix nodir/x</code></th>
+                <th scope="row"><code>open-king -b multifam.bed --kinship --prefix nodir/x</code></th>
                 <td>Exit 1, <code>Cannot open nodir/x$TMP$.ped to write.</code></td>
               </tr>
             </tbody>
@@ -1824,7 +1833,7 @@ every other numeric code is dropped</code></pre>
         </p>
 
         <div class="code-block code-block--plain">
-<pre><code>$ king -b dups.bed --duplicate --minConc 0.9 --degree 2 --cpus 2 --prefix q_
+<pre><code>$ open-king -b dups.bed --duplicate --minConc 0.9 --degree 2 --cpus 2 --prefix q_
 Options in effect:
 	--duplicate
 	--degree 2
@@ -1832,7 +1841,7 @@ Options in effect:
 	--cpus 2
 	--prefix q_
 
-$ king -b multifam.bed --kinship --cpus 3 --degree 2 --minConc 0.9 --prefix ZZ_
+$ open-king -b multifam.bed --kinship --cpus 3 --degree 2 --minConc 0.9 --prefix ZZ_
 Options in effect:
 	--kinship
 	--degree 2
@@ -1841,8 +1850,7 @@ Options in effect:
         </div>
 
         <p>
-          This is a stdout-parity detail rather than a defect. Four things are missing from
-          the block by design:
+          The block reproduces KING 2.3.2's echo exactly, including four omissions:
         </p>
 
         <ul>
@@ -1895,7 +1903,7 @@ Options in effect:
         </div>
 
         <div class="code-block code-block--plain">
-<pre><code>$ king -b multifam.bed --callrateN 0.9 --callrateM 0 --seglength 0.005 --degree 0 --cpus 4 --prefix p_
+<pre><code>$ open-king -b multifam.bed --callrateN 0.9 --callrateM 0 --seglength 0.005 --degree 0 --cpus 4 --prefix p_
               Inference Parameter : --degree, --noscreen [-1717986816],
                                     --seglength [5.0e-03], --minConc [0.80]
                      QC Parameter : --callrateN [0.90], --callrateM [0.00]
@@ -1958,7 +1966,7 @@ Options in effect:
             <p>
               <code>--degree 3.0</code> produces <code>--degree [1]</code> plus
               <code>Command line parameter 3.0 (#5) ignored</code>.
-              <code>king -b multifam.bed --prefix --related --kinship</code> sets the
+              <code>open-king -b multifam.bed --prefix --related --kinship</code> sets the
               prefix to the literal string <code>--related</code> and leaves
               <code>--related</code> off, silently: the banner shows
               <code>--prefix [--related]</code>, the run exits 0, and the outputs are named
@@ -1970,14 +1978,14 @@ Options in effect:
           </li>
           <li>
             <strong>Everything else is reported as ignored,</strong> with a 1-based argument
-            index. <code>king -b multifam.bed --kinship -h foo</code> gives
+            index. <code>open-king -b multifam.bed --kinship -h foo</code> gives
             <code>Command line parameter -h (#4) ignored</code> and
             <code>Command line parameter foo (#5) ignored</code>.
           </li>
           <li>
             <strong>A lone <code>--</code> borrows the next non-dash token as an option
             name,</strong> and that option never takes a value.
-            <code>king -b multifam.bed -- related</code> gives
+            <code>open-king -b multifam.bed -- related</code> gives
             <code>Options in effect: --related</code>.
           </li>
           <li>
@@ -2055,11 +2063,11 @@ See docs/SCOPE.md for the product-scope contract.</code></pre>
           <li>It fires on the option being <strong>named</strong>, not on its final value. A
             toggled-off switch still triggers it, so <code>--pca --pca</code> exits 1.</li>
           <li>Multiple excluded requests are listed in one fatal, in table order.
-            <code>king -b multifam.bed --pca --roh</code> reports
+            <code>open-king -b multifam.bed --pca --roh</code> reports
             <code>does not implement: --pca, --roh.</code></li>
           <li>Comma input is rejected the same way.
-            <code>king -b multifam.bed,dups.bed --kinship</code> and
-            <code>king -b multifam.bed --fam a.fam,b.fam --kinship</code> both report
+            <code>open-king -b multifam.bed,dups.bed --kinship</code> and
+            <code>open-king -b multifam.bed --fam a.fam,b.fam --kinship</code> both report
             <code>does not implement: comma-separated multi-fileset input.</code></li>
           <li>Nothing after the banner runs: no <code>KING starts at</code>, no input probe,
             no output file.</li>
@@ -2104,18 +2112,18 @@ See docs/SCOPE.md for the product-scope contract.</code></pre>
               </tr>
             </thead>
             <tbody>
-              <tr><th scope="row"><code>king</code></th><td class="num">1</td></tr>
-              <tr><th scope="row"><code>king -b multifam.bed --kinship</code></th><td class="num">0</td></tr>
-              <tr><th scope="row"><code>king -b multifam.bed</code> (no analysis)</th><td class="num">0</td></tr>
-              <tr><th scope="row"><code>king --xyz -b multifam.bed --kinship</code> (undefined option)</th><td class="num">0</td></tr>
-              <tr><th scope="row"><code>king -b multifam.bed --related --related</code> (toggled back off)</th><td class="num">0</td></tr>
-              <tr><th scope="row"><code>king -b multifam.bed --kinship --degree</code> (bare int)</th><td class="num">0</td></tr>
-              <tr><th scope="row"><code>king -b unsortedpos.bed --ibdseg</code> (unsorted map)</th><td class="num">0</td></tr>
-              <tr><th scope="row"><code>king -b multifam.bed --pca</code> (excluded)</th><td class="num">1</td></tr>
-              <tr><th scope="row"><code>king -b nosuch.bed --kinship</code></th><td class="num">1</td></tr>
-              <tr><th scope="row"><code>king -b multifam.bed --kinship --sexchr 1</code></th><td class="num">1</td></tr>
-              <tr><th scope="row"><code>king -b multifam.bed --kinship --prefix nodir/x</code></th><td class="num">1</td></tr>
-              <tr><th scope="row"><code>king -b major.bed --ibs</code> (A1 major)</th><td class="num">1</td></tr>
+              <tr><th scope="row"><code>open-king</code></th><td class="num">1</td></tr>
+              <tr><th scope="row"><code>open-king -b multifam.bed --kinship</code></th><td class="num">0</td></tr>
+              <tr><th scope="row"><code>open-king -b multifam.bed</code> (no analysis)</th><td class="num">0</td></tr>
+              <tr><th scope="row"><code>open-king --xyz -b multifam.bed --kinship</code> (undefined option)</th><td class="num">0</td></tr>
+              <tr><th scope="row"><code>open-king -b multifam.bed --related --related</code> (toggled back off)</th><td class="num">0</td></tr>
+              <tr><th scope="row"><code>open-king -b multifam.bed --kinship --degree</code> (bare int)</th><td class="num">0</td></tr>
+              <tr><th scope="row"><code>open-king -b unsortedpos.bed --ibdseg</code> (unsorted map)</th><td class="num">0</td></tr>
+              <tr><th scope="row"><code>open-king -b multifam.bed --pca</code> (excluded)</th><td class="num">1</td></tr>
+              <tr><th scope="row"><code>open-king -b nosuch.bed --kinship</code></th><td class="num">1</td></tr>
+              <tr><th scope="row"><code>open-king -b multifam.bed --kinship --sexchr 1</code></th><td class="num">1</td></tr>
+              <tr><th scope="row"><code>open-king -b multifam.bed --kinship --prefix nodir/x</code></th><td class="num">1</td></tr>
+              <tr><th scope="row"><code>open-king -b major.bed --ibs</code> (A1 major)</th><td class="num">1</td></tr>
             </tbody>
           </table>
         </div>
@@ -2179,7 +2187,7 @@ Command line parameter foo (#5) ignored
         <p>
           A completed run closes with <code>KING ends at &lt;time&gt;</code> and a blank
           line. A no-analysis run and a fatal exit never print it.
-          <code>king -b multifam.bed</code> ends at
+          <code>open-king -b multifam.bed</code> ends at
           <code>KING format genotype data successfully converted.</code> and writes no files.
         </p>
 
@@ -2220,8 +2228,8 @@ Command line parameter foo (#5) ignored
           <code>--maxP</code> outside <code>0 &lt; p &lt; 2</code>, and
           <code>Please use --model &lt;file&gt; to specify a risk model.</code> would need
           <code>--risk</code> without <code>--model</code>. Running
-          <code>king -b multifam.bed --kinship --maxP 0</code> or
-          <code>king -b multifam.bed --risk</code> returns the scope message instead.
+          <code>open-king -b multifam.bed --kinship --maxP 0</code> or
+          <code>open-king -b multifam.bed --risk</code> returns the scope message instead.
         </p>
 
         <h3 id="non-fatal-diagnostics">Non-fatal diagnostics</h3>

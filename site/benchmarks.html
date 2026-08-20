@@ -70,21 +70,30 @@
         <h1>Benchmarks</h1>
 
         <p class="lede">
-          The same analyses, the same inputs, one machine, both programs. Two things came
-          out of it: the counting analyses cost about what KING costs, and everything that
-          builds IBD segments costs far more and gets worse as the cohort grows.
+          The same analyses, the same inputs, one machine, both programs. open-king is faster
+          in 72 of the 80 corpus cells and level with KING on the counting analyses at 800
+          samples. The other six analyses cost more, and the gap grows with the cohort. Both
+          results are below, with the method used to take them.
         </p>
 
-        <h2 id="summary">The result in two sentences</h2>
+        <h2 id="summary">The result</h2>
 
         <p>
           On the golden corpus, which is small, open-king finishes first in 72 of 80 cells,
-          because at that size the run is mostly process startup. On a cohort of a few
-          hundred samples that stops being true: <code>--kinship</code> and <code>--ibs</code>
-          stay level with KING on CPU work, while <code>--related</code>,
-          <code>--ibdseg</code>, <code>--unrelated</code>, <code>--cluster</code> and
-          <code>--build</code> take between 5 and 55 times more CPU, and the gap widens with
-          every doubling of the sample count.
+          median 3.7x, because at that size the run is mostly process startup. On 800 samples
+          and 100,000 markers the counting analyses stay level with KING on CPU work:
+          <code>--kinship</code> costs 1.43 CPU seconds against KING's 1.52, and
+          <code>--ibs</code> 1.77 against 1.95.
+        </p>
+
+        <p>
+          The other six analyses do not stay level. <code>--duplicate</code>,
+          <code>--ibdseg</code>, <code>--related</code>, <code>--cluster</code>,
+          <code>--unrelated</code> and <code>--build</code> take between 5 and 55 times more
+          CPU than KING on the same 800 samples, and the gap
+          widens with every doubling of the sample count. That is tracked as
+          <a href="https://github.com/Broccolito/open-king/issues/12">issue 12</a> and
+          reported here in full.
         </p>
 
         <p>
@@ -94,13 +103,20 @@
           dataset.
         </p>
 
+        <p>
+          Two differences hold at every dataset size, and no timing on this page captures
+          either: open-king is MIT licensed, and its macOS binary is 1.1 MB linking one system
+          library, where KING's published macOS binary does not launch on this host. Both are
+          under <a href="#deployment">licence and deployment</a>.
+        </p>
+
         <h2 id="method">What was measured</h2>
 
         <div class="table-wrap">
           <table>
             <tbody>
               <tr><th scope="row">Host</th><td>Apple M4 Max, 16 cores, 128 GB, macOS 26.6.2, arm64</td></tr>
-              <tr><th scope="row">open-king</th><td><code>cargo build --release</code>, default profile</td></tr>
+              <tr><th scope="row">open-king</th><td><code>cargo build --release</code>, default profile, binary at <code>target/release/open-king</code></td></tr>
               <tr><th scope="row">Reference</th><td>KING 2.3.2, compiled locally, see below</td></tr>
               <tr><th scope="row">Repetitions</th><td>5 timed runs per cell, plus one warmup that is discarded</td></tr>
               <tr><th scope="row">Reported</th><td>Median wall time, with min and max recorded alongside</td></tr>
@@ -138,6 +154,49 @@
           goldens were captured from, and the
           <a href="parity.html#independent-rebuild">parity page</a> measures exactly how far
           apart the two builds are.
+        </p>
+
+        <h2 id="deployment">Licence and deployment</h2>
+
+        <p>
+          The reference binary's launch failure is an obstacle to timing, and it is also a
+          deployment difference. Unlike the timings, it holds whatever the dataset.
+          open-king's macOS binary is 1.1 MB and links one library, the operating system's
+          own:
+        </p>
+
+        <div class="code-block">
+<pre><code>otool -L target/release/open-king</code></pre>
+        </div>
+
+        <div class="code-block code-block--plain">
+<pre><code>target/release/open-king:
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)</code></pre>
+        </div>
+
+        <p>
+          KING's published macOS binary links <code>libstdc++</code>, <code>libgomp</code> and
+          <code>libgcc_s</code> from a Homebrew GCC 9 installed under <code>/usr/local</code>,
+          which is where it stops on an arm64 machine. open-king ships prebuilt binaries for
+          macOS arm64, macOS x86_64, Linux x86_64 and Windows x86_64, each a zip holding one
+          file, and needs no compiler and no runtime on any of them.
+        </p>
+
+        <p>
+          The two macOS builds are signed with a Developer ID, hardened runtime and secure
+          timestamp, and notarized by Apple, so they run straight out of the archive with no
+          Gatekeeper warning. Apple staples a notarization ticket to app bundles, disk images
+          and installer packages, but not to a bare command-line executable, so the first run
+          checks with Apple online. The <a href="install.html">install page</a> has the
+          download commands and the published checksums.
+        </p>
+
+        <p>
+          The licence differs in the same direction. open-king is MIT, so it can be vendored
+          into a pipeline, built into a container image, packaged by a distribution, shipped
+          inside a product, or forked. KING's terms are "Feel free to use KING for your
+          research, but please do not redistribute AND make profits", which leaves each of
+          those uses to be negotiated.
         </p>
 
         <h2 id="cpu-work">CPU work by analysis</h2>
@@ -372,7 +431,7 @@
           cap. Computed files are the same at every thread count.
         </p>
 
-        <h2 id="small-inputs">Small inputs measure startup, not algorithms</h2>
+        <h2 id="small-inputs">What the small datasets measure</h2>
 
         <p>
           On the ten corpus datasets, the largest of which is 200 samples by 50,000 markers,
@@ -381,20 +440,21 @@
         </p>
 
         <p>
-          That number is real and it is nearly meaningless. At that size both programs spend
-          most of their time starting up, and open-king starts faster. It says nothing about
-          how either program behaves on a study-sized cohort, which is why the large filesets
-          exist.
+          At that size both programs spend most of their time starting up, and open-king
+          starts faster. So the corpus measures startup rather than the estimators, and it
+          says nothing about how either program behaves on a study-sized cohort. The large
+          filesets exist for that.
         </p>
 
         <h2 id="memory">Memory</h2>
 
         <p>
-          Peak resident set size across the whole matrix: open-king 3.7 MB to 113.2 MB, KING
-          8.6 MB to 68.5 MB. open-king holds more of the fileset in memory, and the widest
-          gap is on <code>--kinship</code>, where it peaks at 3.8 times KING on 200 samples
-          and 2.9 times on 800. Both remain small enough that memory is not the constraint
-          on any machine that would run this work.
+          On a trio, peak resident set size is 3.8 MB for open-king against 8.6 MB for KING.
+          Across the whole matrix open-king ranges 3.7 MB to 113.2 MB and KING 8.6 MB to
+          68.5 MB: open-king holds more of a large fileset in memory, and the widest gap is on
+          <code>--kinship</code>, where it peaks at 3.8 times KING on 200 samples and 2.9
+          times on 800. Both remain small enough that memory is not the constraint on any
+          machine that would run this work.
         </p>
 
         <h2 id="output-agreement">Output agreement</h2>
@@ -445,6 +505,14 @@
           <a href="https://github.com/Broccolito/open-king/issues/11">issue 11</a>.
         </p>
 
+        <p>
+          Determinism was checked beyond that single rerun. Run each program twelve times on
+          one fileset and hash the <code>X.kin0</code> it writes each time: open-king gives
+          one distinct checksum, KING gives two, because several of its threads append to one
+          unlocked file handle. A rerun that reproduces the bytes is a property a pipeline can
+          depend on.
+        </p>
+
         <h2 id="limits">What this does not measure</h2>
 
         <ul>
@@ -463,15 +531,18 @@
 
         <div class="code-block">
           <pre><code>python3 benchmarks/run_benchmark.py \
+  --work-dir /tmp/open-king-bench \
+  --binary-a target/release/open-king \
   --binary-b /path/to/king-2.3.2 \
   --label-b "KING 2.3.2" \
   --reps 5</code></pre>
         </div>
 
         <p>
-          Results land in <code>benchmarks/results/</code> as both JSON and Markdown. The
-          synthetic filesets are rebuilt from a recorded seed and are not committed, so a
-          rerun regenerates the same inputs.
+          Results land in <code>benchmarks/results/</code> as both JSON and Markdown.
+          Generated inputs and every run's output files go to the work directory, which has to
+          sit outside the repository. The synthetic filesets are rebuilt from a recorded seed
+          and are not committed, so a rerun regenerates the same inputs.
         </p>
       </article>
 

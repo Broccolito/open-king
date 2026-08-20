@@ -72,8 +72,9 @@
         <p class="lede">
           open-king estimates how every pair of samples in a PLINK1 fileset is related.
           It is a clean-room, MIT-licensed Rust reimplementation of the relatedness and
-          quality-control workflows in KING 2.3.2, and on its supported surface it aims
-          for the same command line, the same PLINK1 input and byte-identical output files.
+          quality-control workflows in KING 2.3.2. On its supported surface it takes the
+          same command line and the same PLINK1 input, and writes byte-identical output
+          files: all 480 captured reference invocations match.
         </p>
 
         <h2 id="what-it-does">What it does</h2>
@@ -86,8 +87,8 @@
           quality-control reports, unrelated-sample selection, family clustering and pedigree
           reconstruction. Results are written as plain text files, using the file names,
           columns and row order the reference program uses. The same engine is available as
-          a Rust library, <code>king-core</code>, which returns owned data rather than a
-          report to parse.
+          a Rust library, <code>open-king-core</code>, which returns owned data rather
+          than a report to parse.
         </p>
 
         <h2 id="provenance-and-license">Provenance and license</h2>
@@ -112,11 +113,107 @@
           reimplements and measures itself against.
         </p>
 
+        <h2 id="why-open-king">Why open-king</h2>
+
+        <p>
+          open-king computes KING 2.3.2's results, so the choice between the two turns
+          on the license, what has to be installed, whether two runs of the same command
+          agree, and what a run costs.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Property</th>
+                <th scope="col">Measured</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">License</th>
+                <td>
+                  MIT. open-king can be vendored, put in a container, packaged by a
+                  distribution, shipped inside a product, or forked. KING's terms are
+                  "Feel free to use KING for your research, but please do not
+                  redistribute AND make profits".
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Deployment</th>
+                <td>
+                  One file, no runtime dependencies. The macOS binary is 1.1 MB and
+                  links exactly one library, <code>/usr/lib/libSystem.B.dylib</code>.
+                  Prebuilt binaries ship for four platforms, the two macOS ones
+                  notarized by Apple. KING's published macOS binary links
+                  <code>libstdc++</code>, <code>libgomp</code> and <code>libgcc_s</code>
+                  from a Homebrew GCC 9 under <code>/usr/local</code>, and on Apple
+                  silicon it fails to launch with <code>Library not loaded:
+                  /usr/local/opt/gcc/lib/gcc/9/libgomp.1.dylib</code>.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Determinism</th>
+                <td>
+                  Twelve identical runs writing <code>X.kin0</code>: open-king produced
+                  1 distinct checksum, KING produced 2. KING appends from several
+                  threads to one unlocked file handle.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Speed</th>
+                <td>
+                  Faster in 72 of 80 measured cells, median 3.7x. A trio takes 0.004 s
+                  against 0.020 s. On 800 samples and 100,000 markers the counting
+                  analyses are level: <code>--kinship</code> 1.43 CPU seconds against
+                  1.52, <code>--ibs</code> 1.77 against 1.95. Segment-driven analyses
+                  cost more, and the gap grows with sample count; that is tracked as
+                  issue #12 and reported in full on the
+                  <a href="benchmarks.html">benchmarks page</a>.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Memory</th>
+                <td>Peak resident set on a trio: 3.8 MB against 8.6 MB.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Every figure above was measured on one host against one reference build:
+          KING 2.3.2, Mach-O arm64, macOS. The 480-case differential suite behind the
+          parity claim is committed to the repository, needs no reference binary, runs
+          in about two seconds, and runs in CI on Linux, macOS and Windows on every
+          push, so the comparison can be repeated rather than taken on trust.
+        </p>
+
         <h2 id="quick-start">Quick start</h2>
 
         <p>
-          A Rust toolchain (1.75 or newer) is the only requirement to build. Python 3,
-          standard library only, runs the test corpus generator used below.
+          Each release is a zip holding one file, the executable. The two macOS builds
+          are signed with a Developer ID certificate and notarized by Apple, so they run
+          out of the archive:
+        </p>
+
+        <div class="code-block">
+<pre><code>curl -LO https://github.com/Broccolito/open-king/releases/download/v0.1.0/open-king-macos-arm64.zip
+unzip open-king-macos-arm64.zip
+./open-king</code></pre>
+        </div>
+
+        <p>
+          Apple staples a notarization ticket to app bundles, disk images and installer
+          packages, not to a bare command-line executable, so the first run checks with
+          Apple online. The <a href="install.html">install page</a> has the other three
+          platforms and the checksums.
+        </p>
+
+        <p>
+          The walkthrough below builds from source instead, because the test corpus
+          generator it uses ships with the repository. A Rust toolchain (1.75 or newer)
+          is the only requirement to build. Python 3, standard library only, runs the
+          generator.
         </p>
 
         <div class="code-block">
@@ -126,7 +223,7 @@ cargo build --release</code></pre>
         </div>
 
         <p>
-          The binary lands at <code>target/release/king</code>. A run needs a PLINK1
+          The binary lands at <code>target/release/open-king</code>. A run needs a PLINK1
           fileset. If you do not have one to hand, the repository can synthesise thirteen
           of them with no external tools:
         </p>
@@ -138,7 +235,7 @@ cargo build --release</code></pre>
         <p>Then find the relatives, out to second degree:</p>
 
         <div class="code-block">
-<pre><code>target/release/king -b /tmp/kingdocs/bigish.bed --related --degree 2 --prefix demo</code></pre>
+<pre><code>target/release/open-king -b /tmp/kingdocs/bigish.bed --related --degree 2 --prefix demo</code></pre>
         </div>
 
         <p>The run echoes the options in effect and names each file as it writes it.</p>
@@ -361,7 +458,7 @@ BF01	B01_F	BF02	B02_C1	50000	0.1560	0.0299	0.2873	0.2261	0.1368	0.5684	0.0000	0.
 
         <dl>
           <dt><a href="install.html">Install</a></dt>
-          <dd>Requirements, building from source, verifying the build, and putting the binary on your path.</dd>
+          <dd>Prebuilt binaries for four platforms, building from source, verifying a download, and putting the binary on your path.</dd>
           <dt><a href="usage.html">Commands and options</a></dt>
           <dd>Every flag, what it affects, and how the parser really behaves.</dd>
           <dt><a href="outputs.html">Output files</a></dt>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Parity | open-king</title>
-<meta name="description" content="What open-king was compared against, how the comparison is run, which output files are byte-identical, which differences are held out, and the limit of the evidence.">
+<meta name="description" content="All 480 captured KING invocations replay byte for byte. What was compared, how the comparison is run, which output files match, which differences are held out, and the scope of the measurement.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Ctext%20x='3'%20y='25'%20font-family='monospace'%20font-size='26'%20fill='%231c5c8c'%3Ek%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/style.css">
 <script>
@@ -70,9 +70,12 @@
         <h1>Parity</h1>
 
         <p class="lede">
-          Parity here means one operation: replay a captured KING invocation with open-king
-          and compare the result byte for byte. This page gives the measured numbers, names
-          every difference that is known and unfixed, and states where the evidence stops.
+          480 of 480 captured KING invocations replay under open-king byte for byte: 876
+          output files compared and none differing, plus the exit status, the standard output
+          and the standard error of every case. Six kinds of console text cannot be reproduced
+          by any implementation, timestamps and the host's core count among them; those are
+          normalized on both sides before comparison. This page gives that measurement, how it
+          is run, the differences that are known and unfixed, and the scope the numbers cover.
         </p>
 
         <h2 id="the-measured-result">The measured result</h2>
@@ -109,8 +112,8 @@
         </div>
 
         <p>
-          A case passes only when the exit status, the standard output, the standard error,
-          the set of files produced and the bytes of every file all match. The eight
+          A case passes when all five agree: the exit status, the standard output, the
+          standard error, the set of files produced and the bytes of every file. The eight
           exclusions are all the same file, <code>&lt;prefix&gt;X.kin0</code>, on the captures
           taken without <code>--cpus 1</code>. The reason is a race in the reference,
           described below. One timing probe in the Rust suite is marked ignored.
@@ -119,10 +122,13 @@
         <div class="note note--warn">
           <p class="note-title">Scope of every number on this page</p>
           <p>
-            All of it is measured against one KING build: KING 2.3.2, Mach-O 64-bit arm64,
-            on macOS. No cross-build or cross-platform differential has been run. See
-            <a href="#one-reference-build">One reference build, one host</a>, which states
-            the consequences rather than softening them.
+            Every number here was measured against one KING build: KING 2.3.2, Mach-O 64-bit
+            arm64, on macOS. A second, independently compiled build of the same source was
+            replayed against the same 480 captures and is reported in
+            <a href="#independent-rebuild">An independently compiled reference</a>. No other
+            KING version and no other platform has been measured. See
+            <a href="#one-reference-build">One reference build, one host</a> for what follows
+            from that.
           </p>
         </div>
 
@@ -152,7 +158,7 @@
         <h3 id="the-normalization-rules">The six normalization rules</h3>
 
         <p>
-          Six kinds of console output are genuinely not reproducible. They are normalized on
+          Six kinds of console output are not reproducible. They are normalized on
           <strong>both</strong> sides before comparison, never on open-king's side alone. The
           rules apply to standard output and standard error only. No output file is
           normalized: those are compared as raw bytes.
@@ -176,7 +182,9 @@
           makes it deterministic, so no capture made without it can be a golden.
           <code>&lt;prefix&gt;X.kin0</code> is therefore excluded on 8 of the 13 cases that
           produce it, which is the whole of the "8 diff-excluded" figure. The other 5, all
-          captured with <code>--cpus 1</code>, are diffed and are byte-identical.
+          captured with <code>--cpus 1</code>, are diffed and are byte-identical. open-king
+          has no such race on that file: twelve identical runs of the same invocation, without
+          <code>--cpus 1</code>, give one distinct checksum.
         </p>
 
         <p>
@@ -215,7 +223,9 @@
           in either direction: a new failure, a changed reason for an existing failure, or an
           unrecorded improvement. The last of those is deliberate, so that a change which
           fixes a case must also update the file that said it was broken. CI runs it on every
-          push.
+          push to main and on every pull request. The replay needs no reference binary and
+          takes about three seconds; <code>cargo test --workspace</code> runs beside it on
+          Linux, macOS and Windows.
         </p>
 
         <h2 id="the-corpus">The corpus</h2>
@@ -275,7 +285,7 @@
         </p>
 
         <div class="note">
-          <p class="note-title">What the small filesets do not prove</p>
+          <p class="note-title">What the small filesets grade</p>
           <p>
             <code>nuclear</code> (6 samples, 10,000 markers), <code>missing</code> (6,
             10,000), <code>sexchr</code> (10, 6,000) and <code>monomorphic</code> (12, 5,000)
@@ -290,15 +300,15 @@
         <h2 id="byte-identical-per-file">What is byte-identical, per output file</h2>
 
         <p>
-          Counted over every case that produces the file under any <code>--prefix</code>,
-          across all four capture groups. <code>&lt;prefix&gt;</code> stands for the default
+          No compared output file differs anywhere in the 480-case corpus. The table counts
+          every case that produces the file under any <code>--prefix</code>, across all four
+          capture groups. <code>&lt;prefix&gt;</code> stands for the default
           <code>king</code> and for the three <code>--prefix</code> shapes that name a file:
           <code>custom</code> on 16 cases, and <code>cus.tom</code> and <code>custom.</code> on
           one case each. A fourth shape is captured and appears in no row below:
           <code>--prefix sub/pre</code> names a directory that does not exist, so the reference
           exits 1 with <code>Cannot open sub/pre$TMP$.ped to write.</code> and writes no file at
-          all. open-king reproduces that exit status, that message and that empty directory. No
-          compared output file differs anywhere in the 480-case corpus.
+          all. open-king reproduces that exit status, that message and that empty directory.
         </p>
 
         <div class="table-wrap">
@@ -363,7 +373,7 @@
             a proof that the segment caller is right in general, and the corpus can no longer
             tell the difference: it has stopped grading the caller and become a regression
             guard. The measurement that still discriminates is the out-of-sample battery
-            below, and it is not clean.
+            below, where four rows of 6,713 differ.
           </p>
         </div>
 
@@ -494,29 +504,33 @@ rows: 0 extra, 0 missing, 4 value-differing</code></pre>
         </p>
 
         <p>
-          This is a memory-safety bug in the reference, not a caller rule, and safe Rust does
-          not emulate it. The divergence is retained on purpose and asserted by
+          This is a memory-safety bug in the reference, not a caller rule. Safe Rust does not
+          read uninitialized memory, so open-king does not reproduce it, and the divergence is
+          retained on purpose: it is asserted by
           <code>tests/parity/probes/segment_residuals.py::check_safe_tail_divergence</code>,
           which runs all twelve controls. It is not open work and is not part of issue&nbsp;#11.
           Every corpus array ends mid-word, so the corpus cannot reach it at all: 0 corpus rows
-          are affected.
+          are affected. The same class of read appears twice more on this page: the
+          uninitialised integer the reference prints in its own banner for
+          <code>--noscreen</code>, and the behaviour that integer drives, which differs between
+          two builds of the same KING source.
         </p>
 
         <h2 id="independent-rebuild">An independently compiled reference</h2>
 
         <p>
-          The goldens are only as good as the binary that produced them. To test that, KING
-          2.3.2 was compiled independently from the published source with a different compiler,
-          Homebrew GCC 16 on arm64, and all 480 captured invocations were replayed against that
-          build.
+          The goldens carry whatever is specific to the binary that produced them. To test
+          that, KING 2.3.2 was compiled independently from the published source with a
+          different compiler, Homebrew GCC 16 on arm64, and all 480 captured invocations were
+          replayed against that build.
         </p>
 
         <p>
-          Through the project's own runner that replay reports
-          <strong>5 PASS, 475 FAIL of 480</strong>, and every one of the 475 failures is a
-          standard-output difference. Across the 876 output files the runner byte-compared,
-          <strong>not one differed</strong>. So the whole disagreement between the two builds,
-          on the graded corpus, is on standard output, and two lines carry it. The first is the
+          <strong>Not one</strong> of the 876 output files the runner byte-compared differed.
+          Through the project's own runner the replay nevertheless reports
+          <strong>5 PASS, 475 FAIL of 480</strong>, and every one of those 475 failures is a
+          standard-output difference. So the whole disagreement between the two builds, on the
+          graded corpus, is on standard output, and two lines carry it. The first is the
           <code>--noscreen</code> entry in KING's own banner: the capture build prints
           <code>--noscreen [-1717986816],</code> and the second build prints
           <code>--noscreen,</code>, which reflows the wrapped
@@ -564,8 +578,8 @@ rows: 0 extra, 0 missing, 4 value-differing</code></pre>
         <h2 id="out-of-scope">Analyses deliberately not implemented</h2>
 
         <p>
-          open-king is the smallest useful permissively licensed implementation of KING's
-          relatedness workflow. It is not intended to reproduce every analysis that
+          open-king is MIT licensed and implements KING's relatedness workflow, and that
+          workflow is the whole of the product. It does not reproduce every analysis that
           accumulated in the original executable. The following are outside the product
           boundary and are not planned for this package.
         </p>
@@ -607,9 +621,10 @@ rows: 0 extra, 0 missing, 4 value-differing</code></pre>
           <p>
             Every figure on this page was measured against one binary:
             <code>KING 2.3.2 - (c) 2010-2023 Wei-Min Chen</code>, Mach-O 64-bit arm64, run on
-            macOS Darwin 25.5.0, Apple silicon. <strong>No cross-build or cross-platform
-            differential has been run.</strong> That is a gap in the evidence, stated as one,
-            not a claim that no such differences exist.
+            macOS Darwin 25.5.0, Apple silicon. A second build of that same source was
+            replayed and is reported above. <strong>No other KING version and no other
+            platform has been measured.</strong> That is a gap in the evidence, and
+            differences on those axes should be expected rather than ruled out.
           </p>
         </div>
 
@@ -657,9 +672,9 @@ cargo build --release</code></pre>
         <p>These four need nothing but the open-king build.</p>
 
         <div class="code-block">
-<pre><code>python3 tests/parity/run_parity.py --impl ./target/release/king
-python3 tests/parity/run_parity.py --impl ./target/release/king --baseline
-python3 tests/parity/measure_gaps.py --impl ./target/release/king -q
+<pre><code>python3 tests/parity/run_parity.py --impl ./target/release/open-king
+python3 tests/parity/run_parity.py --impl ./target/release/open-king --baseline
+python3 tests/parity/measure_gaps.py --impl ./target/release/open-king -q
 cargo test --workspace</code></pre>
         </div>
 
@@ -671,7 +686,7 @@ cargo test --workspace</code></pre>
 <pre><code>python3 tests/parity/run_parity.py --impl "/path/to/reference/king"
 python3 docs/research/fixtures/oosseg.py --ref "/path/to/reference/king"
 python3 tests/parity/probes/segment_residuals.py \
-    --ref "/path/to/reference/king" --impl target/release/king</code></pre>
+    --ref "/path/to/reference/king" --impl target/release/open-king</code></pre>
         </div>
 
         <div class="table-wrap">
@@ -684,15 +699,15 @@ python3 tests/parity/probes/segment_residuals.py \
             </thead>
             <tbody>
               <tr>
-                <th scope="row"><code>run_parity.py --impl target/release/king</code></th>
+                <th scope="row"><code>run_parity.py --impl target/release/open-king</code></th>
                 <td>480 PASS, 0 FAIL, 480 total; 876 output files byte-compared, 8 diff-excluded</td>
               </tr>
               <tr>
-                <th scope="row"><code>run_parity.py --impl target/release/king --baseline</code></th>
+                <th scope="row"><code>run_parity.py --impl target/release/open-king --baseline</code></th>
                 <td><code>baseline: MATCH</code>, 480 cases against <code>BASELINE.txt</code></td>
               </tr>
               <tr>
-                <th scope="row"><code>measure_gaps.py --impl target/release/king -q</code></th>
+                <th scope="row"><code>measure_gaps.py --impl target/release/open-king -q</code></th>
                 <td>every captured output file reported byte-identical in all its cases</td>
               </tr>
               <tr>

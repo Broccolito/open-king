@@ -93,17 +93,19 @@
         <h2 id="how-files-are-named">How files are named</h2>
 
         <p>
-          <code>--prefix</code> defaults to <code>king</code>. It is glued directly onto the
-          suffix with no separator inserted, so the prefix and the suffix run together in
-          the file name. A prefix containing <code>/</code> writes into that directory,
-          which must already exist.
+          <code>--prefix</code> defaults to <code>king</code>, the reference's default, so
+          an <code>open-king</code> run given no <code>--prefix</code> writes
+          <code>king.kin</code>, <code>king.kin0</code> and the rest under the names KING
+          writes. The prefix is glued directly onto the suffix with no separator inserted,
+          so the prefix and the suffix run together in the file name. A prefix containing
+          <code>/</code> writes into that directory, which must already exist.
         </p>
 
         <div class="code-block">
-<pre><code>king -b sexchr.bed --autoQC  --prefix ZZ_
-king -b sexchr.bed --kinship --prefix ZZ_
-king -b sexchr.bed --ibdseg --degree 2 --prefix ZZ_
-king -b sexchr.bed --kinship --prefix run.2026</code></pre>
+<pre><code>open-king -b sexchr.bed --autoQC  --prefix ZZ_
+open-king -b sexchr.bed --kinship --prefix ZZ_
+open-king -b sexchr.bed --ibdseg --degree 2 --prefix ZZ_
+open-king -b sexchr.bed --kinship --prefix run.2026</code></pre>
         </div>
 
         <div class="code-block code-block--plain">
@@ -320,8 +322,8 @@ run.2026X.kin0</code></pre>
         </p>
 
         <p>
-          The separator column is worth reading before writing a parser. Most files are tab
-          separated, but <code>bySample.txt</code>, <code>bySNP.txt</code> and
+          Read the separator column before writing a parser. Most files are tab separated,
+          but <code>bySample.txt</code>, <code>bySNP.txt</code> and
           <code>splitped.txt</code> are space separated, and
           <code>_autoQC_Summary.txt</code> contains no tab at all. Six files carry no header
           line: <code>unrelated.txt</code>, <code>unrelated_toberemoved.txt</code>,
@@ -413,6 +415,13 @@ run.2026X.kin0</code></pre>
           <code>allsegs.txt</code> is map order; <code>cluster.kin</code> is by cluster then
           the sorted-member upper triangle; <code>updateids.txt</code> is by original
           <code>(FID, IID)</code> while <code>updateparents.txt</code> is in cluster order.
+        </p>
+
+        <p>
+          The order holds from run to run: two runs of the same command produce
+          byte-identical files. Twelve identical runs writing <code>X.kin0</code> gave one
+          distinct checksum from open-king and two from KING, which appends from several
+          threads to one unlocked file handle.
         </p>
 
         <h2 id="relatedness-files">Relatedness files</h2>
@@ -1065,7 +1074,7 @@ run.2026X.kin0</code></pre>
 
         <p>
           The first eight lines of one real log, verbatim and consecutive, from
-          <code>king -b bigish.bed --build --cpus 4 --prefix bd</code>:
+          <code>open-king -b bigish.bed --build --cpus 4 --prefix bd</code>:
         </p>
 
         <div class="code-block code-block--plain">
@@ -1235,8 +1244,8 @@ run.2026X.kin0</code></pre>
         </p>
 
         <p>
-          A run of <code>king -b missing.bed --autoQC</code> produces this. The padding is
-          part of the file, so the block below keeps it: the two count rows and the header
+          A run of <code>open-king -b missing.bed --autoQC</code> produces this. The padding
+          is part of the file, so the block below keeps it: the two count rows and the header
           are 80 characters wide, and <code>3    Generate Final Study Files</code> is
           followed by 29 blanks out to column 60. A row whose only number is a
           parenthesised removal count is not padded past that count.
@@ -1437,7 +1446,7 @@ MM   Het = H (imputed)              KinshipX = 0.75 - IBS0 / (N * H)</code></pre
         </p>
 
         <div class="code-block code-block--plain">
-<pre><code>$ king -b sexchr.bed --related --prefix rx_
+<pre><code>$ open-king -b sexchr.bed --related --prefix rx_
 Within-family X-chr IBD-sharing inference saved in file rx_X.kin
 $ head -2 rx_X.kin
 FID	ID1	ID2	Sex1	Sex2	PhiX	IBD1Seg	IBD2Seg	PropIBD
@@ -1565,7 +1574,7 @@ SEX	S_DAU1	S_DAU2	2	2	0.3750	0.6464	0.3530	0.6762</code></pre>
         </p>
 
         <div class="code-block code-block--plain">
-<pre><code>$ king -b sexchr.bed --ibdseg --degree 2
+<pre><code>$ open-king -b sexchr.bed --ibdseg --degree 2
 $ cat -e kingX.seg
 FID1	ID1	FID2	ID2	Sex1	Sex2	MaxIBD1	MaxIBD2	IBD1Seg	IBD2Seg	PropIBD$
 SEX	S_F	SEX	S_SON1	1	1	0.0000	0.0000	0.0000	$
@@ -1673,7 +1682,7 @@ SEX	S_F	SEX	S_SON2	1	1	0.0000	0.0000	0.0000	$</code></pre>
           A dataset with exactly one distinct FID loses the tail of its <code>.kin</code>.
           Rows are flushed every 65536 bytes and the final partial buffer is never written.
           Under 64 KiB of content that leaves a zero-byte file. Measured:
-          <code>king -b nuclear.bed --kinship</code>, 6 samples in one FID, leaves a
+          <code>open-king -b nuclear.bed --kinship</code>, 6 samples in one FID, leaves a
           zero-byte <code>.kin</code> and exits 0.
         </p>
 

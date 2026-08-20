@@ -70,7 +70,7 @@
         <h1>Install</h1>
 
         <p class="lede">
-          <code>king</code> is a single self-contained executable. It has no runtime
+          <code>open-king</code> is a single self-contained executable. It has no runtime
           dependencies, reads no configuration files, opens no network sockets, and reads
           nothing from stdin. Installing it means putting one file on disk.
         </p>
@@ -79,6 +79,12 @@
           There are two paths. Download a prebuilt archive from the GitHub release, or build
           from source. Both end at the same binary. The version documented here is
           <code>v0.1.0</code>, from the repository <code>Broccolito/open-king</code>.
+        </p>
+
+        <p>
+          The macOS build is 1.1 MB and links one library,
+          <code>/usr/lib/libSystem.B.dylib</code>. Nothing else has to be installed first on
+          any of the four platforms.
         </p>
 
         <h2 id="requirements">Requirements</h2>
@@ -127,9 +133,9 @@
 
         <p>
           The repository is public, so the release assets are fetched with an ordinary
-          unauthenticated request. Verified: <code>curl</code> on an asset URL returns HTTP
-          200, and <code>shasum -a 256 -c SHA256SUMS.txt --ignore-missing</code> reports
-          <code>OK</code> on the downloaded archive.
+          unauthenticated request. Each archive is a zip holding exactly one file, the
+          executable: unzip it and run it. <code>SHA256SUMS.txt</code> is published beside the
+          archives, so a download can be checked before it is run.
         </p>
 
         <h3 id="release-assets">Release assets</h3>
@@ -140,39 +146,33 @@
               <tr>
                 <th scope="col">Asset</th>
                 <th scope="col">Platform</th>
-                <th scope="col" class="num">Bytes</th>
                 <th scope="col">Contains</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <th scope="row"><code>king-macos-arm64.tar.gz</code></th>
+                <th scope="row"><code>open-king-macos-arm64.zip</code></th>
                 <td>macOS, Apple silicon</td>
-                <td class="num">458518</td>
-                <td><code>./king</code>, <code>./LICENSE</code>, <code>./README.md</code></td>
+                <td><code>open-king</code></td>
               </tr>
               <tr>
-                <th scope="row"><code>king-macos-x86_64.tar.gz</code></th>
+                <th scope="row"><code>open-king-macos-x86_64.zip</code></th>
                 <td>macOS, Intel</td>
-                <td class="num">493276</td>
-                <td><code>./king</code>, <code>./LICENSE</code>, <code>./README.md</code></td>
+                <td><code>open-king</code></td>
               </tr>
               <tr>
-                <th scope="row"><code>king-linux-x86_64.tar.gz</code></th>
+                <th scope="row"><code>open-king-linux-x86_64.zip</code></th>
                 <td>Linux x86_64 (gnu)</td>
-                <td class="num">519457</td>
-                <td><code>./king</code>, <code>./README.md</code>, <code>./LICENSE</code></td>
+                <td><code>open-king</code></td>
               </tr>
               <tr>
-                <th scope="row"><code>king-windows-x86_64.zip</code></th>
+                <th scope="row"><code>open-king-windows-x86_64.zip</code></th>
                 <td>Windows x86_64 (msvc)</td>
-                <td class="num">381666</td>
-                <td><code>king.exe</code>, <code>LICENSE</code>, <code>README.md</code></td>
+                <td><code>open-king.exe</code></td>
               </tr>
               <tr>
                 <th scope="row"><code>SHA256SUMS.txt</code></th>
                 <td>all</td>
-                <td class="num">362</td>
                 <td>one <code>sha256&nbsp;&nbsp;filename</code> line per archive</td>
               </tr>
             </tbody>
@@ -180,55 +180,55 @@
         </div>
 
         <p>
-          Archive layouts were listed with <code>tar -tzf</code> and <code>unzip -l</code> on
-          the downloaded files. The tarballs are built with
-          <code>tar -czf … -C dist .</code>, so every member carries a <code>./</code> prefix
-          and extraction drops <code>king</code> directly into the current directory. There is
-          no top-level folder in the tarballs and none in the zip, and no version number
-          inside either.
+          Each archive is packaged in the release workflow from a directory holding the
+          executable alone, with <code>zip -q -X</code> on macOS and Linux and
+          <code>Compress-Archive</code> on Windows. There is no top-level folder to descend
+          into and nothing else to tidy up afterwards. The file inside carries no version
+          number, so the archive name is the only place the version appears. The MIT licence
+          and the README travel with the repository and the release page rather than inside
+          every archive.
         </p>
 
-        <p>The four digests for <code>v0.1.0</code>:</p>
-
-        <div class="code-block">
-<pre><code>1076ff2c74d2c32773a2e3806178cacd517b29e32618747703474580e893351b  king-linux-x86_64.tar.gz
-9d16b91a27f7651c6716d9d8f29b11f9a2433f431882b239d92cdceccb9e324e  king-macos-arm64.tar.gz
-6ddb9b450c20d73a2d2f574927c57a136c363c08d22e7b882354cdb75c5f92b0  king-macos-x86_64.tar.gz
-92d52f22e59d371ebac141330447da6f9f4f88e97477b5e35982004a6e33396d  king-windows-x86_64.zip</code></pre>
-        </div>
+        <p>
+          <code>SHA256SUMS.txt</code> is produced in the same workflow by
+          <code>sha256sum</code> over the four archives, one line each, and is attached to the
+          release beside them. Check a download against it before running it.
+        </p>
 
         <div class="note note--warn">
           <p class="note-title">Keep <code>--ignore-missing</code></p>
           <p>
-            <code>SHA256SUMS.txt</code> has four lines, one per archive. With only one archive
-            on disk, <code>shasum -a 256 -c SHA256SUMS.txt</code> exits 1 and prints
+            <code>SHA256SUMS.txt</code> has four lines, one per archive, and you downloaded
+            one of them. Without <code>--ignore-missing</code>,
+            <code>shasum -a 256 -c SHA256SUMS.txt</code> exits 1 and prints
             <code>FAILED open or read</code> for the three files you did not download.
             Measured. The single-file form works too:
-            <code>grep 'king-macos-arm64.tar.gz' SHA256SUMS.txt | shasum -a 256 -c -</code>.
+            <code>grep 'open-king-macos-arm64.zip' SHA256SUMS.txt | shasum -a 256 -c -</code>.
           </p>
         </div>
 
         <h3 id="macos-apple-silicon">macOS, Apple silicon (arm64)</h3>
 
         <div class="code-block">
-<pre><code>mkdir -p ~/kingdl &amp;&amp; cd ~/kingdl
+<pre><code>mkdir -p ~/open-king-dl &amp;&amp; cd ~/open-king-dl
 BASE=https://github.com/Broccolito/open-king/releases/download/v0.1.0
 
-curl -LO "$BASE/king-macos-arm64.tar.gz"
+curl -LO "$BASE/open-king-macos-arm64.zip"
 curl -LO "$BASE/SHA256SUMS.txt"
 
-shasum -a 256 -c SHA256SUMS.txt --ignore-missing   # king-macos-arm64.tar.gz: OK
+shasum -a 256 -c SHA256SUMS.txt --ignore-missing   # open-king-macos-arm64.zip: OK
 
-tar -xzf king-macos-arm64.tar.gz                   # ./king ./LICENSE ./README.md
-xattr -d com.apple.quarantine ./king 2&gt;/dev/null || true
+unzip open-king-macos-arm64.zip                    # open-king
+./open-king                                        # banner + fatal, exit 1: the file runs
 
-mkdir -p ~/.local/bin &amp;&amp; mv ./king ~/.local/bin/king
-chmod +x ~/.local/bin/king</code></pre>
+mkdir -p ~/.local/bin &amp;&amp; mv ./open-king ~/.local/bin/open-king
+chmod +x ~/.local/bin/open-king</code></pre>
         </div>
 
         <p>
-          <code>/usr/local/bin</code> is the alternative install location and needs
-          <code>sudo mv ./king /usr/local/bin/king</code>.
+          The archive holds the executable and nothing else, so it runs from wherever it was
+          unzipped. <code>/usr/local/bin</code> is the alternative install location and needs
+          <code>sudo mv ./open-king /usr/local/bin/open-king</code>.
         </p>
 
         <h3 id="macos-intel">macOS, Intel (x86_64)</h3>
@@ -236,108 +236,63 @@ chmod +x ~/.local/bin/king</code></pre>
         <p>The same sequence with the other asset name.</p>
 
         <div class="code-block">
-<pre><code>mkdir -p ~/kingdl &amp;&amp; cd ~/kingdl
+<pre><code>mkdir -p ~/open-king-dl &amp;&amp; cd ~/open-king-dl
 BASE=https://github.com/Broccolito/open-king/releases/download/v0.1.0
 
-curl -LO "$BASE/king-macos-x86_64.tar.gz"
+curl -LO "$BASE/open-king-macos-x86_64.zip"
 curl -LO "$BASE/SHA256SUMS.txt"
 
 shasum -a 256 -c SHA256SUMS.txt --ignore-missing
-tar -xzf king-macos-x86_64.tar.gz
-xattr -d com.apple.quarantine ./king 2&gt;/dev/null || true
+unzip open-king-macos-x86_64.zip
 
-mkdir -p ~/.local/bin &amp;&amp; mv ./king ~/.local/bin/king
-chmod +x ~/.local/bin/king</code></pre>
+mkdir -p ~/.local/bin &amp;&amp; mv ./open-king ~/.local/bin/open-king
+chmod +x ~/.local/bin/open-king</code></pre>
         </div>
 
         <div class="note">
           <p class="note-title">Unverified</p>
           <p>
-            The Intel binary was not executed. The documenting machine is Apple silicon, and
-            the x86_64 archive was only downloaded and listed. The arm64 binary from the same
-            release was extracted and run.
+            The Intel binary was not executed. The documenting machine is Apple silicon, so
+            the x86_64 archive was downloaded and listed rather than run. The arm64 build of
+            the same source was run there.
           </p>
         </div>
 
-        <h3 id="macos-gatekeeper">macOS Gatekeeper</h3>
-
-        <p>The released binaries are ad-hoc signed and not notarized.</p>
-
-        <div class="code-block code-block--plain">
-<pre><code>$ codesign -dv king
-Identifier=king-8819f0717292f7ca
-CodeDirectory v=20400 size=8280 flags=0x20002(adhoc,linker-signed)
-Signature=adhoc
-TeamIdentifier=not set</code></pre>
-        </div>
-
-        <p>What was measured on macOS 26.6.2, arm64:</p>
-
-        <div class="table-wrap">
-          <table class="table--wide">
-            <thead>
-              <tr>
-                <th scope="col">Observation</th>
-                <th scope="col">Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th scope="row"><code>xattr -l</code> on the downloaded archive</th>
-                <td>only <code>com.apple.provenance</code>, no <code>com.apple.quarantine</code></td>
-              </tr>
-              <tr>
-                <th scope="row"><code>xattr -l</code> on the binary extracted with <code>/usr/bin/tar</code></th>
-                <td>only <code>com.apple.provenance</code></td>
-              </tr>
-              <tr>
-                <th scope="row">Running the extracted binary</th>
-                <td>exit 0, normal output</td>
-              </tr>
-              <tr>
-                <th scope="row">Running a copy with <code>com.apple.quarantine</code> set by hand</th>
-                <td>exit 0, normal output</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <h3 id="macos-notarization">macOS signing and notarization</h3>
 
         <p>
-          A binary fetched with <code>curl</code> or <code>gh</code> and extracted with
-          <code>tar</code> is not quarantined and needs no Gatekeeper step. The quarantine bit
-          is set by browsers and by Archive Utility, not by <code>gh</code>,
-          <code>curl</code>, or <code>/usr/bin/tar</code>.
+          Both macOS builds are signed with a Developer ID certificate, under the hardened
+          runtime and with a secure timestamp, and are notarized by Apple. Apple returned
+          <code>Accepted</code> with status <code>Ready for distribution</code>, and issued a
+          ticket against each binary's code hash. The binaries run straight out of the
+          archive: no Gatekeeper prompt, and no
+          <code>xattr -d com.apple.quarantine</code> step, whether the archive arrived through
+          a browser or through <code>curl</code>.
         </p>
 
-        <div class="note">
-          <p class="note-title">Unverified</p>
-          <p>
-            That a quarantined copy is actually blocked on a stock machine. The documenting
-            host reports <code>spctl -a -t execute king</code> as
-            <code>accepted, override=security disabled</code>, meaning Gatekeeper assessment
-            is turned off there, so the block could not be reproduced. Keep the
-            <code>xattr -d com.apple.quarantine ./king</code> line anyway: it is a no-op when
-            the attribute is absent, and it is the documented fix for
-            <code>"king" cannot be opened because the developer cannot be verified</code> when
-            the archive came from a browser.
-          </p>
-        </div>
+        <p>
+          A bare command-line executable cannot carry a stapled ticket, because Apple staples
+          tickets to app bundles, disk images and installer packages rather than to loose
+          Mach-O files. The first run therefore checks the ticket with Apple over the network,
+          which is ordinary for a notarized command-line tool. The check is Gatekeeper's, not
+          the program's: <code>open-king</code> opens no sockets of its own.
+        </p>
 
         <h3 id="linux-x86-64">Linux x86_64</h3>
 
         <div class="code-block">
-<pre><code>mkdir -p ~/kingdl &amp;&amp; cd ~/kingdl
+<pre><code>mkdir -p ~/open-king-dl &amp;&amp; cd ~/open-king-dl
 BASE=https://github.com/Broccolito/open-king/releases/download/v0.1.0
 
-curl -LO "$BASE/king-linux-x86_64.tar.gz"
+curl -LO "$BASE/open-king-linux-x86_64.zip"
 curl -LO "$BASE/SHA256SUMS.txt"
 
-sha256sum --ignore-missing -c SHA256SUMS.txt       # king-linux-x86_64.tar.gz: OK
+sha256sum --ignore-missing -c SHA256SUMS.txt       # open-king-linux-x86_64.zip: OK
 
-tar -xzf king-linux-x86_64.tar.gz                  # ./king ./README.md ./LICENSE
+unzip open-king-linux-x86_64.zip                   # open-king
 
-mkdir -p ~/.local/bin &amp;&amp; mv ./king ~/.local/bin/king
-chmod +x ~/.local/bin/king</code></pre>
+mkdir -p ~/.local/bin &amp;&amp; mv ./open-king ~/.local/bin/open-king
+chmod +x ~/.local/bin/open-king</code></pre>
         </div>
 
         <p>
@@ -348,46 +303,46 @@ chmod +x ~/.local/bin/king</code></pre>
           <p class="note-title">Unverified</p>
           <p>
             The minimum glibc version. It is whatever the <code>ubuntu-latest</code> GitHub
-            runner shipped at build time; the workflow pins no older toolchain image. What was
-            verified is that the archive extracts and contains an executable named
-            <code>king</code>. The Linux binary was not executed, because no Linux host was
-            available.
+            runner shipped at build time; the workflow pins no older toolchain image. The
+            Linux binary was not executed either, because no Linux host was available. The
+            archive layout is read from the packaging step in
+            <code>.github/workflows/release.yml</code>.
           </p>
         </div>
 
         <h3 id="windows-x86-64">Windows x86_64</h3>
 
         <p>
-          Download <code>king-windows-x86_64.zip</code> and <code>SHA256SUMS.txt</code> from
-          the release page, or with <code>gh</code>. The zip has no top-level folder:
-          <code>king.exe</code>, <code>LICENSE</code> and <code>README.md</code> sit at the
-          archive root.
+          Download <code>open-king-windows-x86_64.zip</code> and <code>SHA256SUMS.txt</code>
+          from the release page, or with <code>gh</code>. The zip holds one file,
+          <code>open-king.exe</code>, at the archive root.
         </p>
 
         <div class="code-block">
-<pre><code>mkdir $HOME\kingdl; cd $HOME\kingdl
+<pre><code>mkdir $HOME\open-king-dl; cd $HOME\open-king-dl
 gh release download v0.1.0 --repo Broccolito/open-king `
-  --pattern 'king-windows-x86_64.zip' --pattern 'SHA256SUMS.txt' --clobber
+  --pattern 'open-king-windows-x86_64.zip' --pattern 'SHA256SUMS.txt' --clobber
 
-(Get-FileHash king-windows-x86_64.zip -Algorithm SHA256).Hash.ToLower()
-# compare against the line in SHA256SUMS.txt:
-# 92d52f22e59d371ebac141330447da6f9f4f88e97477b5e35982004a6e33396d
+(Get-FileHash open-king-windows-x86_64.zip -Algorithm SHA256).Hash.ToLower()
+# compare against the matching line in SHA256SUMS.txt
 
-Expand-Archive king-windows-x86_64.zip -DestinationPath .\king-bin -Force
+Expand-Archive open-king-windows-x86_64.zip -DestinationPath .\open-king-bin -Force
 mkdir $HOME\bin -Force
-Move-Item .\king-bin\king.exe $HOME\bin\king.exe -Force</code></pre>
+Move-Item .\open-king-bin\open-king.exe $HOME\bin\open-king.exe -Force</code></pre>
         </div>
 
         <p>
-          Windows SmartScreen may warn about an unsigned executable. There is no code-signing
-          certificate in the release pipeline.
+          Signing and notarization cover the two macOS builds. The Windows executable is not
+          signed, so SmartScreen may warn about it; the <code>Get-FileHash</code> comparison
+          above is what establishes that the file is the released build.
         </p>
 
         <div class="note">
           <p class="note-title">Unverified</p>
           <p>
-            No Windows host was available. The commands above follow from the measured zip
-            layout and standard PowerShell usage; they were not executed.
+            No Windows host was available. The commands above follow from the archive layout
+            the release workflow produces and from standard PowerShell usage; they were not
+            executed.
           </p>
         </div>
 
@@ -403,7 +358,7 @@ Move-Item .\king-bin\king.exe $HOME\bin\king.exe -Force</code></pre>
 gh auth status         # confirm
 
 gh release download v0.1.0 --repo Broccolito/open-king \
-  --pattern 'king-macos-arm64.tar.gz' --pattern 'SHA256SUMS.txt' --clobber</code></pre>
+  --pattern 'open-king-macos-arm64.zip' --pattern 'SHA256SUMS.txt' --clobber</code></pre>
         </div>
 
         <h2 id="build-from-source">Build from source</h2>
@@ -439,17 +394,18 @@ cargo build --release</code></pre>
         </p>
 
         <p>
-          The workspace has three crates, <code>king-io</code>, <code>king-core</code> and
-          <code>king-cli</code>. The binary is declared by <code>king-cli</code>, is named
-          <code>king</code>, and lands at <code>target/release/king</code>. The release
-          profile is <code>opt-level = 3</code>, thin LTO, one codegen unit, and
+          The workspace has three crates, <code>open-king-io</code>,
+          <code>open-king-core</code> and <code>open-king-cli</code>. The binary is declared
+          by <code>open-king-cli</code>, is named <code>open-king</code>, and lands at
+          <code>target/release/open-king</code>. The release profile is
+          <code>opt-level = 3</code>, thin LTO, one codegen unit, and
           <code>panic = "abort"</code>.
         </p>
 
         <p>To build only the CLI, which is what the release workflow does per target:</p>
 
         <div class="code-block">
-<pre><code>cargo build --release -p king-cli</code></pre>
+<pre><code>cargo build --release -p open-king-cli</code></pre>
         </div>
 
         <h2 id="verify-the-install">Verify the install</h2>
@@ -459,7 +415,7 @@ cargo build --release</code></pre>
         <p>Run the binary with no arguments.</p>
 
         <div class="code-block">
-<pre><code>king</code></pre>
+<pre><code>open-king</code></pre>
         </div>
 
         <p>
@@ -517,14 +473,14 @@ Genotype files are required. e.g.,
 
         <ul>
           <li>
-            <strong>The path you invoked.</strong> Run the binary by absolute path, or check
-            <code>command -v king</code> first, so the transcript records which file ran.
+            <strong>The path you invoked.</strong> Run the binary by absolute path, or
+            check <code>command -v open-king</code> first, so the transcript records which
+            file ran.
           </li>
           <li>
             <strong>The checksum.</strong> <code>SHA256SUMS.txt</code> covers the release
-            archives, so verifying an archive against it pins the build that was extracted
-            from it. For a binary already on disk, record its own SHA-256 and compare against
-            that.
+            archives, so verifying an archive against it pins the build that was unzipped from
+            it. For a binary already on disk, record its own SHA-256 and compare against that.
           </li>
         </ul>
 
@@ -533,6 +489,12 @@ Genotype files are required. e.g.,
         <div class="code-block">
 <pre><code>cargo test --workspace</code></pre>
         </div>
+
+        <p>
+          The suite is 355 tests. <code>.github/workflows/ci.yml</code> runs the same command
+          on Linux, macOS and Windows for every push to <code>main</code> and every pull
+          request, and runs the 480-case parity suite beside it on Linux.
+        </p>
 
         <div class="note">
           <p class="note-title">Unverified</p>
@@ -555,7 +517,7 @@ Genotype files are required. e.g.,
 
         <div class="code-block">
 <pre><code>python3 tests/parity/generate_corpus.py --outdir tests/parity/work/data
-python3 tests/parity/run_parity.py --impl ./target/release/king -q --baseline</code></pre>
+python3 tests/parity/run_parity.py --impl ./target/release/open-king -q --baseline</code></pre>
         </div>
 
         <p>
@@ -574,8 +536,8 @@ python3 tests/parity/run_parity.py --impl ./target/release/king -q --baseline</c
           </li>
           <li>
             Pre-generating is optional. <code>ensure_inputs()</code> checks the 13 datasets
-            and runs the generator itself for any that are missing. Generating first only
-            makes the first run faster and the failure mode clearer.
+            and runs the generator itself for any that are missing. Generating first makes the
+            first run faster and the failure mode clearer.
           </li>
         </ul>
 
@@ -587,9 +549,9 @@ python3 tests/parity/run_parity.py --impl ./target/release/king -q --baseline</c
         </p>
 
         <div class="code-block code-block--plain">
-<pre><code>$ python3 tests/parity/run_parity.py --impl &lt;king&gt; -q --baseline \
+<pre><code>$ python3 tests/parity/run_parity.py --impl &lt;open-king&gt; -q --baseline \
     --data &lt;corpus&gt; --alt &lt;alt&gt;
-[parity] 480 case(s), impl=/…/king, jobs=8
+[parity] 480 case(s), impl=/…/open-king, jobs=8
 
 parity: 480 PASS, 0 FAIL, 480 total (2.3s wall, 876 output file(s) byte-compared, 8 diff-excluded)
 baseline: MATCH (480 case(s) against BASELINE.txt)
@@ -625,9 +587,9 @@ $ echo $?
 
         <div class="code-block">
 <pre><code>mkdir -p ~/.local/bin
-install -m 0755 target/release/king ~/.local/bin/king
+install -m 0755 target/release/open-king ~/.local/bin/open-king
 export PATH="$HOME/.local/bin:$PATH"   # add to ~/.zshrc or ~/.bashrc to persist
-king                                   # banner + fatal, exit 1: the install is good</code></pre>
+open-king                              # banner + fatal, exit 1: the install is good</code></pre>
         </div>
 
         <p>On Windows:</p>
@@ -658,17 +620,17 @@ $env:Path = "$HOME\bin;$env:Path"
           Both <code>PATH</code> and an absolute path work. An absolute path is the safer
           default for an agent: it is immune to a <code>PATH</code> that differs between the
           agent's shell and a login shell, and it makes the file in use explicit in the
-          transcript. There is no wrapper script and no <code>king</code> subprocess lookup,
-          so nothing else has to resolve the name. <code>PATH</code> is required if the agent
-          hands the command to a tool that reconstructs the argv itself, or if the same recipe
-          has to run on machines with different install locations.
+          transcript. There is no wrapper script and no <code>open-king</code> subprocess
+          lookup, so nothing else has to resolve the name. <code>PATH</code> is required if
+          the agent hands the command to a tool that reconstructs the argv itself, or if the
+          same recipe has to run on machines with different install locations.
         </p>
 
         <p>Resolve once at the top of a session and reuse:</p>
 
         <div class="code-block">
-<pre><code>KING=$(command -v king || echo "$HOME/.local/bin/king")
-[ -x "$KING" ] || { echo "king not installed"; exit 127; }</code></pre>
+<pre><code>OPEN_KING=$(command -v open-king || echo "$HOME/.local/bin/open-king")
+[ -x "$OPEN_KING" ] || { echo "open-king not installed"; exit 127; }</code></pre>
         </div>
 
         <p>
@@ -683,7 +645,7 @@ $env:Path = "$HOME\bin;$env:Path"
           This is the behaviour to plan around first. <code>--prefix</code> defaults to the
           literal string <code>king</code> and is applied by plain string concatenation, not
           by joining a stem to a directory. From
-          <code>crates/king-cli/src/analysis/mod.rs</code>:
+          <code>crates/open-king-cli/src/analysis/mod.rs</code>:
         </p>
 
         <div class="code-block">
@@ -704,15 +666,15 @@ $env:Path = "$HOME\bin;$env:Path"
             </thead>
             <tbody>
               <tr>
-                <th scope="row"><code>king -b …/multifam.bed --kinship</code></th>
+                <th scope="row"><code>open-king -b …/multifam.bed --kinship</code></th>
                 <td><code>king.kin</code>, <code>king.kin0</code></td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b …/multifam.bed --related --degree 2 --prefix demo</code></th>
+                <th scope="row"><code>open-king -b …/multifam.bed --related --degree 2 --prefix demo</code></th>
                 <td><code>demo.kin</code>, <code>demoallsegs.txt</code></td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b …/bigish.bed --related --degree 2 --prefix out/run_</code></th>
+                <th scope="row"><code>open-king -b …/bigish.bed --related --degree 2 --prefix out/run_</code></th>
                 <td><code>out/run_.kin</code>, <code>out/run_.kin0</code>, <code>out/run_allsegs.txt</code></td>
               </tr>
             </tbody>
@@ -723,18 +685,18 @@ $env:Path = "$HOME\bin;$env:Path"
           Note <code>demoallsegs.txt</code>, with no dot. The suffix carries its own
           separator, so <code>--prefix demo</code> gives both <code>demo.kin</code> and
           <code>demoallsegs.txt</code>. An agent must therefore do one of two things: change
-          directory into a scratch directory before invoking <code>king</code>, or pass a
-          <code>--prefix</code> with a directory component such as
+          directory into a scratch directory before invoking <code>open-king</code>, or
+          pass a <code>--prefix</code> with a directory component such as
           <code>--prefix out/run_</code>.
         </p>
 
         <p>
-          The directory named in a prefix must already exist. <code>king</code> does not
-          create it. Measured:
+          The directory named in a prefix must already exist. <code>open-king</code> does
+          not create it. Measured:
         </p>
 
         <div class="code-block code-block--plain">
-<pre><code>$ king -b trio.bed --kinship --prefix nodir/x
+<pre><code>$ open-king -b trio.bed --kinship --prefix nodir/x
 ...
 FATAL ERROR - 
 Cannot open nodir/x$TMP$.ped to write.
@@ -744,10 +706,10 @@ $ echo $?
 
         <p>
           The check is a real write test, performed early, before the pedigree is parsed:
-          <code>king</code> creates <code>&lt;prefix&gt;$TMP$.ped</code>, then removes it. A
-          read-only directory fails it too. The code is
-          <code>crates/king-cli/src/load.rs::probe_tmp_ped</code>. Because output names are a
-          pure function of <code>--prefix</code>, two runs sharing a prefix in the same
+          <code>open-king</code> creates <code>&lt;prefix&gt;$TMP$.ped</code>, then removes it.
+          A read-only directory fails it too. The code is
+          <code>crates/open-king-cli/src/load.rs::probe_tmp_ped</code>. Because output names
+          are a pure function of <code>--prefix</code>, two runs sharing a prefix in the same
           directory overwrite each other, including the transient
           <code>&lt;prefix&gt;$TMP$.ped</code>. Give each concurrent run its own directory or
           its own prefix.
@@ -759,7 +721,7 @@ $ echo $?
           Two statuses are produced. <code>0</code> means the run completed.
           <code>1</code> means a fatal error: a <code>FATAL ERROR</code> block was printed and
           nothing further ran. Only <code>fatal()</code> in
-          <code>crates/king-cli/src/main.rs</code> exits 1; every other termination is
+          <code>crates/open-king-cli/src/main.rs</code> exits 1; every other termination is
           <code>std::process::exit(0)</code>.
         </p>
 
@@ -773,35 +735,35 @@ $ echo $?
             </thead>
             <tbody>
               <tr>
-                <th scope="row"><code>king</code> (no arguments)</th>
+                <th scope="row"><code>open-king</code> (no arguments)</th>
                 <td class="num">1</td>
               </tr>
               <tr>
-                <th scope="row"><code>king --version</code> / <code>-v</code> / <code>--help</code> / <code>-h</code></th>
+                <th scope="row"><code>open-king --version</code> / <code>-v</code> / <code>--help</code> / <code>-h</code></th>
                 <td class="num">1</td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b multifam.bed --kinship</code></th>
+                <th scope="row"><code>open-king -b multifam.bed --kinship</code></th>
                 <td class="num">0</td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b multifam.bed</code> (no analysis requested)</th>
+                <th scope="row"><code>open-king -b multifam.bed</code> (no analysis requested)</th>
                 <td class="num"><strong>0</strong></td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b multifam.bed --kinship --bogus</code> (undefined flag)</th>
+                <th scope="row"><code>open-king -b multifam.bed --kinship --bogus</code> (undefined flag)</th>
                 <td class="num"><strong>0</strong></td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b /nope/missing.bed --kinship</code></th>
+                <th scope="row"><code>open-king -b /nope/missing.bed --kinship</code></th>
                 <td class="num">1</td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b multifam.bed --pca</code> (out of product scope)</th>
+                <th scope="row"><code>open-king -b multifam.bed --pca</code> (out of product scope)</th>
                 <td class="num">1</td>
               </tr>
               <tr>
-                <th scope="row"><code>king -b trio.bed --kinship --prefix nodir/x</code></th>
+                <th scope="row"><code>open-king -b trio.bed --kinship --prefix nodir/x</code></th>
                 <td class="num">1</td>
               </tr>
             </tbody>
@@ -819,9 +781,9 @@ $ echo $?
           </li>
           <li>
             <strong>Requesting no analysis does not fail either.</strong>
-            <code>king -b file.bed</code> loads the fileset, prints a notice, writes nothing,
-            and exits 0. Checking only the exit status reports success for a run that produced
-            no results.
+            <code>open-king -b file.bed</code> loads the fileset, prints a notice, writes
+            nothing, and exits 0. Checking the exit status alone reports success for a run
+            that produced no results.
           </li>
         </ul>
 
@@ -892,9 +854,10 @@ $ echo $?
           </li>
           <li>
             An output file can legitimately be empty. Measured:
-            <code>king -b trio.bed --kinship</code> writes a 0-byte <code>king.kin</code> and
-            exits 0. This matches the captured reference goldens for the same command, which
-            are also 0 bytes, so it is correct behaviour and not a failure.
+            <code>open-king -b trio.bed --kinship</code> writes a 0-byte
+            <code>king.kin</code> and exits 0. This matches the captured reference goldens for
+            the same command, which are also 0 bytes, so it is correct behaviour and not a
+            failure.
           </li>
         </ul>
 
@@ -955,7 +918,7 @@ $ echo $?
 
         <div class="code-block">
 <pre><code>#!/bin/sh
-# Usage: king_run.sh &lt;fileset.bed&gt; &lt;workdir&gt;
+# Usage: open-king-run.sh &lt;fileset.bed&gt; &lt;workdir&gt;
 set -eu
 bed=$1
 work=$2
@@ -964,20 +927,20 @@ mkdir -p "$work/out"
 cd "$work"
 
 status=0
-king -b "$bed" --related --degree 2 --prefix out/run_ &gt; king.log 2&gt;&amp;1 || status=$?
+open-king -b "$bed" --related --degree 2 --prefix out/run_ &gt; run.log 2&gt;&amp;1 || status=$?
 
 if [ "$status" -ne 0 ]; then
-  echo "king failed (exit $status)"
-  sed -n '/FATAL ERROR/,$p' king.log
+  echo "open-king failed (exit $status)"
+  sed -n '/FATAL ERROR/,$p' run.log
   exit "$status"
 fi
 
 # A typo in a flag does not fail the run; it only warns. Note the unanchored pattern:
 # the WARNING line carries a leading BEL byte. A --flag typo reads "is undefined"
 # and a -f typo reads "(#N) ignored", so match both, and tolerate no match under set -e.
-if grep -q 'WARNING - ' king.log; then
-  echo "king warned about the command line:"
-  grep -E 'is undefined|ignored' king.log || true
+if grep -q 'WARNING - ' run.log; then
+  echo "open-king warned about the command line:"
+  grep -E 'is undefined|ignored' run.log || true
 fi
 
 # .kin0 is written only when cross-family relatives were found.
@@ -997,7 +960,7 @@ fi</code></pre>
         </p>
 
         <div class="code-block code-block--plain">
-<pre><code>$ ./king_run.sh /tmp/corpus/bigish.bed /tmp/w1
+<pre><code>$ ./open-king-run.sh /tmp/corpus/bigish.bed /tmp/w1
 cross-family pairs: 26
 BF01/B01_F BF02/B02_F 0.2885
 BF13/B13_F BF14/B14_F 0.2959
@@ -1009,7 +972,7 @@ $ echo $?
         <p>With <code>--bogus</code> inserted into the command line:</p>
 
         <div class="code-block code-block--plain">
-<pre><code>king warned about the command line:
+<pre><code>open-king warned about the command line:
 Command line parameter --bogus is undefined
 cross-family pairs: 26
 ...</code></pre>
@@ -1018,8 +981,8 @@ cross-family pairs: 26
         <p>With a missing input:</p>
 
         <div class="code-block code-block--plain">
-<pre><code>$ ./king_run.sh /nope/x.bed /tmp/w3
-king failed (exit 1)
+<pre><code>$ ./open-king-run.sh /nope/x.bed /tmp/w3
+open-king failed (exit 1)
 FATAL ERROR - 
 Genotype file /nope/x.bed cannot be opened
 $ echo $?
@@ -1043,7 +1006,7 @@ $ echo $?
               </tr>
               <tr>
                 <th scope="row">Create the prefix directory first</th>
-                <td><code>king</code> will not; it exits 1</td>
+                <td><code>open-king</code> will not; it exits 1</td>
               </tr>
               <tr>
                 <th scope="row">Branch on exit status: 0 or 1</th>
