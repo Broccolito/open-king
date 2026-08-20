@@ -1,6 +1,17 @@
 name: Release
 
-# Tagging `v*` builds the `king` binary for every supported platform and attaches the
+# NOTE: this workflow does not sign or notarize the macOS archives. It holds no
+# Apple credential, by design. After it publishes, the macOS pair must be signed
+# and notarized on a trusted machine:
+#
+#   APPLE_ID=... APPLE_APP_PASSWORD=... scripts/notarize-macos-release.sh <tag>
+#   scripts/verify-release-assets.sh <tag>
+#
+# The second command is the guard. The README and the documentation site both
+# state that the macOS builds are notarized, so skipping the first step ships
+# archives that contradict them, and only the verifier will say so.
+
+# Tagging `v*` builds the `open-king` binary for every supported platform and attaches the
 # archives to a GitHub release. The parity suite runs first on the tagged commit, so a
 # release can only be cut from a tree whose measured behaviour matches the committed
 # baseline.

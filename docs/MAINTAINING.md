@@ -1036,3 +1036,44 @@ more than a fitted constant with no law.
 **How to tell you are doing it.** If you cannot name the experiment that pins a constant, you
 fitted it. If your justification is a scorecard delta rather than a bisection, you fitted it.
 If the rule has a knob you set by trying values, you fitted it.
+
+---
+
+## 9. Cutting a release
+
+Tagging `v*` runs [`release.yml`](../.github/workflows/release.yml), which gates on the
+parity suite, builds four platforms, and publishes four archives plus `SHA256SUMS.txt`. Each
+archive holds one file, the executable, so a reader unzips it and runs it.
+
+**CI does not sign the macOS archives, and that is the one step a person has to remember.**
+The workflow holds no Apple credential; `grep -rn 'secrets\.' .github/workflows/` returns
+nothing. So after the workflow publishes:
+
+```bash
+APPLE_ID=... APPLE_APP_PASSWORD=... scripts/notarize-macos-release.sh v0.1.0
+scripts/verify-release-assets.sh v0.1.0
+```
+
+The first downloads the macOS pair CI built, signs each with the Developer ID under the
+hardened runtime and a secure timestamp, submits both to Apple, repackages them flat, and
+re-uploads them with a regenerated `SHA256SUMS.txt`. It signs what CI built rather than a
+local rebuild, so the bytes that ship are the ones the pipeline produced from the tagged
+commit.
+
+The second is the guard, and it is the reason both scripts exist. `README.md` and the
+documentation site both state that the macOS builds are notarized. Skipping the first
+command ships archives that contradict that, and nothing else in the repository would
+notice. The verifier asserts the asset set, the checksums, that every archive holds exactly
+one executable, and that both macOS binaries carry a Developer ID signature, the hardened
+runtime, team `F3YYBXAFJ8` and a timestamp. On a host without `codesign` it says the
+signature assertions did not run rather than passing them silently.
+
+**Do not add an `xcrun stapler` call.** A bare Mach-O cannot carry a stapled ticket; Apple
+staples to app bundles, disk images and installer packages. The ticket stays on Apple's side
+and Gatekeeper resolves it on first run. This is a property of shipping a loose executable
+in a zip, not something left undone.
+
+**Moving a published tag re-runs the workflow.** `git tag -f v0.1.0 HEAD && git push -f
+origin v0.1.0` rebuilds and updates the existing release in place. Assets from an earlier
+packaging scheme are not removed automatically, and the verifier reports any that survive as
+unexpected.
