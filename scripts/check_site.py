@@ -38,6 +38,14 @@ BANNED_WORDS = [
     "unlock", "elevate", "harness", "empower", "streamline", "effortlessly",
     "cutting-edge", "game-changer", "utilize", "myriad", "plethora",
 ]
+# Terms that contain a banned word but are proper names, not register. The
+# estimator really is called KING-robust, in the 2010 paper and in 46 places in
+# this repository's own documentation. Banning the word outright made a page
+# drop the estimator's name, which trades an accuracy loss for a style win.
+# These are removed from the text before the banned-word scan, so bare "robust"
+# as an adjective is still caught.
+ALLOWED_COMPOUNDS = ["KING-robust"]
+
 BANNED_PHRASES = [
     "at its core", "it's worth noting", "it is worth noting", "in today's world",
     "dive in", "a wide range of", "when it comes to", "the world of",
@@ -123,9 +131,13 @@ def check_page(path: Path, css_classes: set[str], failures: list[str]) -> None:
         for m in re.finditer(re.escape(char), source):
             failures.append(f"{rel}:{line_of(source, m.start())}: {name} is not allowed")
 
+    scan = text
+    for allowed in ALLOWED_COMPOUNDS:
+        scan = re.sub(re.escape(allowed), " ", scan, flags=re.I)
+
     for word in BANNED_WORDS:
-        for m in re.finditer(rf"\b{re.escape(word)}\b", text, re.I):
-            failures.append(f"{rel}: banned word {word!r} (near {text[m.start():m.start()+60].strip()!r})")
+        for m in re.finditer(rf"\b{re.escape(word)}\b", scan, re.I):
+            failures.append(f"{rel}: banned word {word!r} (near {scan[m.start():m.start()+60].strip()!r})")
 
     for phrase in BANNED_PHRASES:
         for m in re.finditer(re.escape(phrase), text, re.I):

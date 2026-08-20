@@ -20,10 +20,31 @@ justified in [`docs/MAINTAINING.md`](docs/MAINTAINING.md) §1.
 open-king's own code is **MIT** licensed ([LICENSE](LICENSE)). That covers this code only and
 makes no claim about the original KING, which its authors license separately.
 
+## Documentation
+
+Full documentation is at **<https://broccolito.github.io/open-king/>**: every command and
+option with a runnable example, the output-file reference, installation for each platform,
+the measured parity evidence, and the benchmarks.
+
 ## Install
 
-A Rust toolchain (1.75+) is the only requirement. Python 3, standard library only, runs the
-test corpus and the parity suite.
+Prebuilt binaries for macOS (arm64 and x86_64), Linux x86_64 and Windows x86_64 are attached
+to each [release](https://github.com/Broccolito/open-king/releases). Download, check the
+SHA-256 and extract:
+
+```bash
+curl -LO https://github.com/Broccolito/open-king/releases/download/v0.1.0/king-macos-arm64.tar.gz
+curl -LO https://github.com/Broccolito/open-king/releases/download/v0.1.0/SHA256SUMS.txt
+shasum -a 256 -c SHA256SUMS.txt --ignore-missing
+tar -xzf king-macos-arm64.tar.gz
+```
+
+`--ignore-missing` is needed because `SHA256SUMS.txt` covers all four archives and you
+downloaded one. The tarball extracts `king`, `LICENSE` and `README.md` into the current
+directory with no top-level folder.
+
+To build instead, a Rust toolchain (1.75+) is the only requirement. Python 3, standard
+library only, runs the test corpus and the parity suite.
 
 ```bash
 git clone https://github.com/Broccolito/open-king
@@ -32,6 +53,11 @@ cargo build --release
 ```
 
 The binary lands at **`target/release/king`**. Put it on your `PATH`, or call it by path.
+
+Note that `king` prints KING 2.3.2's own banner, deliberately, so the banner does not tell
+you which of the two programs you are running. Check the path you invoked, or the binary's
+checksum. The [install page](https://broccolito.github.io/open-king/install.html) covers
+platform details and setup for an automated agent.
 
 ## 60-second quickstart
 

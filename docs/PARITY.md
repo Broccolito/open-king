@@ -1343,10 +1343,23 @@ binary: Homebrew GCC 16, `g++-16 -lm -lz -O2 -fopenmp`, arm64. Call it **build B
 binary the goldens were captured from is **build A**. The source was compiled and then
 deleted without being read, so §1's clean-room rule is intact.
 
-All 490 captured invocations were replayed against build B and every output file compared
-byte for byte. **488 of 490 cases produce byte-identical output files.** Six of those are
-`_analysis` captures that store `MD5SUMS.txt` instead of the files themselves; their
-checksums were compared directly and all match. The two exceptions are:
+Two replays were run, and they answer different questions.
+
+**The graded 480, through the project's own harness.**
+`run_parity.py --impl <build B>` is the harness's reference-vs-reference self-check, and it
+reports `5 PASS, 475 FAIL, 480 total (876 output file(s) byte-compared, 8 diff-excluded)`.
+Every one of the 475 failures is `stdout!=`. **Not one is an output-file difference**, over
+all 876 files. So the entire disagreement between the two builds, on the graded corpus, is
+on standard output. Two lines carry it, measured on
+`--related -b multifam.bed`: build A prints `--noscreen [-1717986816],` where build B prints
+`--noscreen,`, which reflows the two-line `Inference Parameter` block and defeats the
+harness's normalization of the integer; and the `N CPU cores are used...` line reports the
+host's core count, which is not a build property at all.
+
+**All 490 captures, compared directly.** Widening past the graded set and comparing output
+files byte for byte outside the harness: **488 of 490 cases produce byte-identical output
+files.** Six of those are `_analysis` captures that store `MD5SUMS.txt` instead of the files
+themselves; their checksums were compared directly and all match. The two exceptions are:
 
 | case | difference | what it is |
 | --- | --- | --- |
