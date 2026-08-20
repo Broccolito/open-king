@@ -50,6 +50,20 @@ jobs:
         env:
           KING_GOLDEN: tests/parity/golden
 
+  # The documentation site is hand-written HTML with no build step, so nothing else
+  # would notice a dangling link, a class with no rule behind it, or a page still
+  # holding its scaffold placeholder. This job is that net. It also enforces the
+  # site's two prose rules (no em dashes, no machine-register vocabulary), which
+  # are exactly the kind of thing that erodes one commit at a time unless checked.
+  site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 scripts/check_site.py
+
   # The differential harness: replay all 480 captured reference invocations and require
   # the outcome to equal tests/parity/BASELINE.txt exactly — per case AND per output
   # file. It fails on a new difference and equally on an unrecorded improvement, so the

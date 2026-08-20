@@ -70,286 +70,409 @@
         <h1>Benchmarks</h1>
 
         <p class="lede">
-          Wall-clock time and peak memory for the same analyses run by both programs on the
-          same inputs, on one machine. The method section states what was measured and what
-          was excluded, so the numbers can be checked.
+          The same analyses, the same inputs, one machine, both programs. Two things came
+          out of it: the counting analyses cost about what KING costs, and everything that
+          builds IBD segments costs far more and gets worse as the cohort grows.
         </p>
 
-        <div class="note note--draft">
-          <p class="note-title">Draft</p>
-          <p>
-            Every number on this page is a placeholder. The charts and tables show the
-            intended presentation, not measured results. Replace the values and the machine
-            description before publishing.
-          </p>
-        </div>
-
-        <h2 id="method">Method</h2>
+        <h2 id="summary">The result in two sentences</h2>
 
         <p>
-          Each case ran five times. The reported figure is the median of the last three runs,
-          which drops the two runs that warm the page cache. Both programs read the same
-          fileset from local disk and wrote to the same directory. Output files were compared
-          after every run, so a timing is only reported for a run that produced correct output.
+          On the golden corpus, which is small, open-king finishes first in 72 of 80 cells,
+          because at that size the run is mostly process startup. On a cohort of a few
+          hundred samples that stops being true: <code>--kinship</code> and <code>--ibs</code>
+          stay level with KING on CPU work, while <code>--related</code>,
+          <code>--ibdseg</code>, <code>--unrelated</code>, <code>--cluster</code> and
+          <code>--build</code> take between 5 and 55 times more CPU, and the gap widens with
+          every doubling of the sample count.
         </p>
+
+        <p>
+          Output does not change with any of this. Across the whole matrix, 206 of 217 output
+          files were byte-identical to KING's. The 11 that were not are listed under
+          <a href="#output-agreement">output agreement</a>, and none of them is on a corpus
+          dataset.
+        </p>
+
+        <h2 id="method">What was measured</h2>
 
         <div class="table-wrap">
           <table>
             <tbody>
-              <tr>
-                <th scope="row">Machine</th>
-                <td>Placeholder: 10 core, 32 GB, NVMe</td>
-              </tr>
-              <tr>
-                <th scope="row">Reference</th>
-                <td>KING 2.3.2, vendor binary</td>
-              </tr>
-              <tr>
-                <th scope="row">Build</th>
-                <td><code>cargo build --release</code>, default profile</td>
-              </tr>
-              <tr>
-                <th scope="row">Threads</th>
-                <td>All cores, unless the case says otherwise</td>
-              </tr>
+              <tr><th scope="row">Host</th><td>Apple M4 Max, 16 cores, 128 GB, macOS 26.6.2, arm64</td></tr>
+              <tr><th scope="row">open-king</th><td><code>cargo build --release</code>, default profile</td></tr>
+              <tr><th scope="row">Reference</th><td>KING 2.3.2, compiled locally, see below</td></tr>
+              <tr><th scope="row">Repetitions</th><td>5 timed runs per cell, plus one warmup that is discarded</td></tr>
+              <tr><th scope="row">Reported</th><td>Median wall time, with min and max recorded alongside</td></tr>
+              <tr><th scope="row">Memory</th><td>Peak resident set size of the child process</td></tr>
+              <tr><th scope="row">Load</th><td>Load average 10.9 at the start, 9.4 at the end, on 16 cores</td></tr>
             </tbody>
           </table>
         </div>
 
-        <h2 id="runtime-by-analysis">Runtime by analysis</h2>
+        <div class="note note--warn">
+          <p class="note-title">Read CPU seconds, not wall seconds, when the two disagree</p>
+          <p>
+            The machine was not idle. Wall times are therefore an upper bound, and
+            <code>cpu/wall</code> is pushed down by descheduling rather than by anything about
+            the binaries. CPU seconds count work done rather than time elapsed, so they
+            survive the contention. Every cell faced the same conditions, so wall times remain
+            comparable with each other.
+          </p>
+        </div>
+
+        <h3 id="reference-binary">The reference binary</h3>
+
+        <p>
+          KING publishes a precompiled macOS binary. It is x86_64, and it does not launch on
+          an arm64 host: it asks for <code>libgomp.1.dylib</code> from an Intel Homebrew GCC 9
+          that is not there. Running it under translation would have meant timing an emulated
+          program against a native one, so KING 2.3.2 was compiled from the published source
+          instead, with <code>g++-16 -lm -lz -O2 -fopenmp</code>, giving a native arm64 binary.
+          Both programs therefore run on the same instruction set.
+        </p>
+
+        <p>
+          The source was compiled and then deleted without being read, so open-king's
+          clean-room rule is intact. That rebuild is not byte-equal to the binary the parity
+          goldens were captured from, and the
+          <a href="parity.html#independent-rebuild">parity page</a> measures exactly how far
+          apart the two builds are.
+        </p>
+
+        <h2 id="cpu-work">CPU work by analysis</h2>
+
+        <p>
+          800 samples, 100,000 markers, every sample in its own family with no declared
+          parents. Total CPU seconds, so thread counts do not distort the comparison.
+        </p>
 
         <figure>
           <div class="chart-scroll">
-            <svg class="chart" viewBox="0 0 700 292" role="img" aria-labelledby="chart1-title chart1-desc">
-              <title id="chart1-title">Wall-clock seconds by analysis</title>
-              <desc id="chart1-desc">Grouped bars comparing open-king with KING 2.3.2 for three analyses on a cohort of 5,000 samples. Values are given beside each bar.</desc>
-
-              <line x1="146" y1="6" x2="146" y2="276" stroke="var(--chart-axis)" stroke-width="1"/>
-
-              <!-- group 1: kinship -->
+            <svg class="chart" viewBox="0 0 700 758" role="img" aria-labelledby="cpu-title cpu-desc">
+              <title id="cpu-title">CPU seconds by analysis on 800 samples</title>
+              <desc id="cpu-desc">Grouped bars comparing total CPU seconds for open-king and KING 2.3.2 across eight analyses on the synth_l fileset. Values are printed beside each bar. The counting analyses are close; the segment-driven ones are not.</desc>
+              <line x1="149" y1="2" x2="149" y2="744" stroke="var(--chart-axis)" stroke-width="1"/>
               <text class="chart-group-label" x="0" y="18" fill="var(--fg)">--kinship</text>
-              <text class="chart-bar-label" x="138" y="42" text-anchor="end" fill="var(--chart-label)">open-king</text>
-              <rect x="146" y="28" width="121" height="20" fill="var(--chart-a)"/>
-              <text class="chart-value" x="277" y="42" fill="var(--chart-value)">31.2 s</text>
-              <text class="chart-bar-label" x="138" y="70" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
-              <rect x="146" y="56" width="343" height="20" fill="var(--chart-b)"/>
-              <text class="chart-value" x="499" y="70" fill="var(--chart-value)">88.4 s</text>
-
-              <!-- group 2: related -->
-              <text class="chart-group-label" x="0" y="116" fill="var(--fg)">--related</text>
-              <text class="chart-bar-label" x="138" y="140" text-anchor="end" fill="var(--chart-label)">open-king</text>
-              <rect x="146" y="126" width="186" height="20" fill="var(--chart-a)"/>
-              <text class="chart-value" x="342" y="140" fill="var(--chart-value)">47.9 s</text>
-              <text class="chart-bar-label" x="138" y="168" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
-              <rect x="146" y="154" width="470" height="20" fill="var(--chart-b)"/>
-              <text class="chart-value" x="626" y="168" fill="var(--chart-value)">121.0 s</text>
-
-              <!-- group 3: ibdseg -->
-              <text class="chart-group-label" x="0" y="214" fill="var(--fg)">--ibdseg</text>
-              <text class="chart-bar-label" x="138" y="238" text-anchor="end" fill="var(--chart-label)">open-king</text>
-              <rect x="146" y="224" width="204" height="20" fill="var(--chart-a)"/>
-              <text class="chart-value" x="360" y="238" fill="var(--chart-value)">52.6 s</text>
-              <text class="chart-bar-label" x="138" y="266" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
-              <rect x="146" y="252" width="374" height="20" fill="var(--chart-b)"/>
-              <text class="chart-value" x="530" y="266" fill="var(--chart-value)">96.3 s</text>
+              <text class="chart-bar-label" x="142" y="45" text-anchor="end" fill="var(--chart-label)">open-king</text>
+              <rect x="150" y="30" width="27" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="185" y="45" fill="var(--chart-value)">1.43 s</text>
+              <text class="chart-bar-label" x="142" y="71" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
+              <rect x="150" y="56" width="28" height="20" fill="var(--chart-b)"/>
+              <text class="chart-value" x="186" y="71" fill="var(--chart-value)">1.52 s</text>
+              <text class="chart-group-label" x="0" y="112" fill="var(--fg)">--ibs</text>
+              <text class="chart-bar-label" x="142" y="139" text-anchor="end" fill="var(--chart-label)">open-king</text>
+              <rect x="150" y="124" width="33" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="191" y="139" fill="var(--chart-value)">1.77 s</text>
+              <text class="chart-bar-label" x="142" y="165" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
+              <rect x="150" y="150" width="36" height="20" fill="var(--chart-b)"/>
+              <text class="chart-value" x="194" y="165" fill="var(--chart-value)">1.95 s</text>
+              <text class="chart-group-label" x="0" y="206" fill="var(--fg)">--duplicate</text>
+              <text class="chart-bar-label" x="142" y="233" text-anchor="end" fill="var(--chart-label)">open-king</text>
+              <rect x="150" y="218" width="24" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="182" y="233" fill="var(--chart-value)">1.29 s</text>
+              <text class="chart-bar-label" x="142" y="259" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
+              <rect x="150" y="244" width="4" height="20" fill="var(--chart-b)"/>
+              <text class="chart-value" x="162" y="259" fill="var(--chart-value)">0.24 s</text>
+              <text class="chart-group-label" x="0" y="300" fill="var(--fg)">--ibdseg</text>
+              <text class="chart-bar-label" x="142" y="327" text-anchor="end" fill="var(--chart-label)">open-king</text>
+              <rect x="150" y="312" width="96" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="254" y="327" fill="var(--chart-value)">5.13 s</text>
+              <text class="chart-bar-label" x="142" y="353" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
+              <rect x="150" y="338" width="14" height="20" fill="var(--chart-b)"/>
+              <text class="chart-value" x="172" y="353" fill="var(--chart-value)">0.74 s</text>
+              <text class="chart-group-label" x="0" y="394" fill="var(--fg)">--related</text>
+              <text class="chart-bar-label" x="142" y="421" text-anchor="end" fill="var(--chart-label)">open-king</text>
+              <rect x="150" y="406" width="208" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="366" y="421" fill="var(--chart-value)">11.12 s</text>
+              <text class="chart-bar-label" x="142" y="447" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
+              <rect x="150" y="432" width="7" height="20" fill="var(--chart-b)"/>
+              <text class="chart-value" x="165" y="447" fill="var(--chart-value)">0.38 s</text>
+              <text class="chart-group-label" x="0" y="488" fill="var(--fg)">--cluster</text>
+              <text class="chart-bar-label" x="142" y="515" text-anchor="end" fill="var(--chart-label)">open-king</text>
+              <rect x="150" y="500" width="369" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="527" y="515" fill="var(--chart-value)">19.76 s</text>
+              <text class="chart-bar-label" x="142" y="541" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
+              <rect x="150" y="526" width="7" height="20" fill="var(--chart-b)"/>
+              <text class="chart-value" x="165" y="541" fill="var(--chart-value)">0.36 s</text>
+              <text class="chart-group-label" x="0" y="582" fill="var(--fg)">--unrelated</text>
+              <text class="chart-bar-label" x="142" y="609" text-anchor="end" fill="var(--chart-label)">open-king</text>
+              <rect x="150" y="594" width="372" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="530" y="609" fill="var(--chart-value)">19.92 s</text>
+              <text class="chart-bar-label" x="142" y="635" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
+              <rect x="150" y="620" width="7" height="20" fill="var(--chart-b)"/>
+              <text class="chart-value" x="165" y="635" fill="var(--chart-value)">0.36 s</text>
+              <text class="chart-group-label" x="0" y="676" fill="var(--fg)">--build</text>
+              <text class="chart-bar-label" x="142" y="703" text-anchor="end" fill="var(--chart-label)">open-king</text>
+              <rect x="150" y="688" width="380" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="538" y="703" fill="var(--chart-value)">20.34 s</text>
+              <text class="chart-bar-label" x="142" y="729" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
+              <rect x="150" y="714" width="9" height="20" fill="var(--chart-b)"/>
+              <text class="chart-value" x="167" y="729" fill="var(--chart-value)">0.46 s</text>
             </svg>
           </div>
           <figcaption>
-            Placeholder figures. Cohort of 5,000 samples and 100,000 markers, all cores.
-            Lower is faster.
+            Total CPU seconds per analysis on 800 samples. The first two pairs are level. The
+            rest are not.
           </figcaption>
         </figure>
-
-        <h2 id="per-case-timings">Per-case timings</h2>
 
         <div class="table-wrap">
           <table class="table--wide table--zebra">
             <thead>
               <tr>
-                <th scope="col">Dataset</th>
-                <th scope="col" class="num">Samples</th>
-                <th scope="col" class="num">Markers</th>
                 <th scope="col">Analysis</th>
-                <th scope="col" class="num">open-king</th>
-                <th scope="col" class="num">KING 2.3.2</th>
-                <th scope="col" class="num">Ratio</th>
+                <th scope="col">open-king CPU</th>
+                <th scope="col">KING 2.3.2 CPU</th>
+                <th scope="col">Ratio</th>
+                <th scope="col">Output files</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <th scope="row">small</th>
-                <td class="num">200</td>
-                <td class="num">20,000</td>
-                <td><code>--kinship</code></td>
-                <td class="num">0.4 s</td>
-                <td class="num">0.9 s</td>
-                <td class="num">2.3</td>
-              </tr>
-              <tr>
-                <th scope="row">small</th>
-                <td class="num">200</td>
-                <td class="num">20,000</td>
-                <td><code>--related</code></td>
-                <td class="num">0.7 s</td>
-                <td class="num">1.6 s</td>
-                <td class="num">2.3</td>
-              </tr>
-              <tr>
-                <th scope="row">bigish</th>
-                <td class="num">2,000</td>
-                <td class="num">50,000</td>
-                <td><code>--kinship</code></td>
-                <td class="num">6.1 s</td>
-                <td class="num">17.4 s</td>
-                <td class="num">2.9</td>
-              </tr>
-              <tr>
-                <th scope="row">bigish</th>
-                <td class="num">2,000</td>
-                <td class="num">50,000</td>
-                <td><code>--related</code></td>
-                <td class="num">9.4 s</td>
-                <td class="num">26.2 s</td>
-                <td class="num">2.8</td>
-              </tr>
-              <tr>
-                <th scope="row">cohort</th>
-                <td class="num">5,000</td>
-                <td class="num">100,000</td>
-                <td><code>--kinship</code></td>
-                <td class="num">31.2 s</td>
-                <td class="num">88.4 s</td>
-                <td class="num">2.8</td>
-              </tr>
-              <tr>
-                <th scope="row">cohort</th>
-                <td class="num">5,000</td>
-                <td class="num">100,000</td>
-                <td><code>--related</code></td>
-                <td class="num">47.9 s</td>
-                <td class="num">121.0 s</td>
-                <td class="num">2.5</td>
-              </tr>
-              <tr>
-                <th scope="row">cohort</th>
-                <td class="num">5,000</td>
-                <td class="num">100,000</td>
-                <td><code>--ibdseg</code></td>
-                <td class="num">52.6 s</td>
-                <td class="num">96.3 s</td>
-                <td class="num">1.8</td>
-              </tr>
-              <tr>
-                <th scope="row">cohort</th>
-                <td class="num">5,000</td>
-                <td class="num">100,000</td>
-                <td><code>--duplicate</code></td>
-                <td class="num">18.7 s</td>
-                <td class="num">44.1 s</td>
-                <td class="num">2.4</td>
-              </tr>
+              <tr><th scope="row"><code>--kinship</code></th><td class="num">1.43 s</td><td class="num">1.52 s</td><td class="num">0.9x</td><td>identical</td></tr>
+              <tr><th scope="row"><code>--ibs</code></th><td class="num">1.77 s</td><td class="num">1.95 s</td><td class="num">0.9x</td><td>identical</td></tr>
+              <tr><th scope="row"><code>--duplicate</code></th><td class="num">1.29 s</td><td class="num">0.24 s</td><td class="num">5x</td><td>identical</td></tr>
+              <tr><th scope="row"><code>--ibdseg</code></th><td class="num">5.13 s</td><td class="num">0.74 s</td><td class="num">7x</td><td>identical</td></tr>
+              <tr><th scope="row"><code>--related</code></th><td class="num">11.12 s</td><td class="num">0.38 s</td><td class="num">29x</td><td>identical</td></tr>
+              <tr><th scope="row"><code>--cluster</code></th><td class="num">19.76 s</td><td class="num">0.36 s</td><td class="num">55x</td><td>see below</td></tr>
+              <tr><th scope="row"><code>--unrelated</code></th><td class="num">19.92 s</td><td class="num">0.36 s</td><td class="num">55x</td><td>identical</td></tr>
+              <tr><th scope="row"><code>--build</code></th><td class="num">20.34 s</td><td class="num">0.46 s</td><td class="num">44x</td><td>see below</td></tr>
             </tbody>
           </table>
         </div>
 
-        <p class="meta">
-          Ratio is reference time divided by open-king time. Higher means open-king finished
-          sooner.
+        <p>
+          The split falls exactly where the segment engine starts. Analyses that only count
+          genotype pairs match KING. Analyses that build IBD segments or run the relatedness
+          screen do not. This is tracked as
+          <a href="https://github.com/Broccolito/open-king/issues/12">issue 12</a>, with the
+          hypothesis that KING prunes the pair set before the expensive per-pair work.
         </p>
 
-        <h2 id="thread-scaling">Thread scaling</h2>
+        <h2 id="scaling">How the gap grows</h2>
 
         <p>
-          The pairwise scan is the part that scales. Past eight threads the run is bounded by
-          reading genotypes rather than by comparing them, so the curve flattens.
+          <code>--unrelated</code>, markers held at 100,000, sample count doubling. Wall time,
+          median of five.
         </p>
 
         <figure>
           <div class="chart-scroll">
-            <svg class="chart" viewBox="0 0 700 180" role="img" aria-labelledby="chart2-title chart2-desc">
-              <title id="chart2-title">Wall-clock seconds by thread count</title>
-              <desc id="chart2-desc">Bars showing open-king runtime falling from 168.4 seconds on one thread to 27.4 seconds on sixteen threads, with most of the gain reached by eight threads.</desc>
-
-              <line x1="146" y1="4" x2="146" y2="170" stroke="var(--chart-axis)" stroke-width="1"/>
-
-              <text class="chart-bar-label" x="138" y="22" text-anchor="end" fill="var(--chart-label)">1 thread</text>
-              <rect x="146" y="8" width="470" height="20" fill="var(--chart-a)"/>
-              <text class="chart-value" x="626" y="22" fill="var(--chart-value)">168.4 s</text>
-
-              <text class="chart-bar-label" x="138" y="56" text-anchor="end" fill="var(--chart-label)">2 threads</text>
-              <rect x="146" y="42" width="257" height="20" fill="var(--chart-a)"/>
-              <text class="chart-value" x="413" y="56" fill="var(--chart-value)">92.1 s</text>
-
-              <text class="chart-bar-label" x="138" y="90" text-anchor="end" fill="var(--chart-label)">4 threads</text>
-              <rect x="146" y="76" width="143" height="20" fill="var(--chart-a)"/>
-              <text class="chart-value" x="299" y="90" fill="var(--chart-value)">51.3 s</text>
-
-              <text class="chart-bar-label" x="138" y="124" text-anchor="end" fill="var(--chart-label)">8 threads</text>
-              <rect x="146" y="110" width="89" height="20" fill="var(--chart-a)"/>
-              <text class="chart-value" x="245" y="124" fill="var(--chart-value)">31.9 s</text>
-
-              <text class="chart-bar-label" x="138" y="158" text-anchor="end" fill="var(--chart-label)">16 threads</text>
-              <rect x="146" y="144" width="76" height="20" fill="var(--chart-a)"/>
-              <text class="chart-value" x="232" y="158" fill="var(--chart-value)">27.4 s</text>
+            <svg class="chart" viewBox="0 0 700 288" role="img" aria-labelledby="scale-title scale-desc">
+              <title id="scale-title">Wall seconds for --unrelated as the cohort doubles</title>
+              <desc id="scale-desc">Grouped bars for 200, 400 and 800 samples at a fixed 100,000 markers. open-king roughly quadruples with each doubling; KING stays close to flat.</desc>
+              <line x1="149" y1="2" x2="149" y2="274" stroke="var(--chart-axis)" stroke-width="1"/>
+              <text class="chart-group-label" x="0" y="18" fill="var(--fg)">200 samples</text>
+              <text class="chart-bar-label" x="142" y="45" text-anchor="end" fill="var(--chart-label)">open-king</text>
+              <rect x="150" y="30" width="25" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="183" y="45" fill="var(--chart-value)">1.311 s</text>
+              <text class="chart-bar-label" x="142" y="71" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
+              <rect x="150" y="56" width="2" height="20" fill="var(--chart-b)"/>
+              <text class="chart-value" x="160" y="71" fill="var(--chart-value)">0.113 s</text>
+              <text class="chart-group-label" x="0" y="112" fill="var(--fg)">400 samples</text>
+              <text class="chart-bar-label" x="142" y="139" text-anchor="end" fill="var(--chart-label)">open-king</text>
+              <rect x="150" y="124" width="115" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="273" y="139" fill="var(--chart-value)">6.096 s</text>
+              <text class="chart-bar-label" x="142" y="165" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
+              <rect x="150" y="150" width="3" height="20" fill="var(--chart-b)"/>
+              <text class="chart-value" x="161" y="165" fill="var(--chart-value)">0.177 s</text>
+              <text class="chart-group-label" x="0" y="206" fill="var(--fg)">800 samples</text>
+              <text class="chart-bar-label" x="142" y="233" text-anchor="end" fill="var(--chart-label)">open-king</text>
+              <rect x="150" y="218" width="380" height="20" fill="var(--chart-a)"/>
+              <text class="chart-value" x="538" y="233" fill="var(--chart-value)">20.081 s</text>
+              <text class="chart-bar-label" x="142" y="259" text-anchor="end" fill="var(--chart-label)">KING 2.3.2</text>
+              <rect x="150" y="244" width="3" height="20" fill="var(--chart-b)"/>
+              <text class="chart-value" x="161" y="259" fill="var(--chart-value)">0.173 s</text>
             </svg>
           </div>
           <figcaption>
-            Placeholder figures. One dataset, <code>--related</code> on 5,000 samples, thread
-            count set with <code>--cpus</code>.
+            open-king multiplies by roughly 4 per doubling, which is quadratic in samples.
+            KING stays near flat.
           </figcaption>
         </figure>
 
-        <h2 id="peak-memory">Peak memory</h2>
+        <p>
+          A constant factor would be a footnote. This is not a constant factor: the ratio is
+          12x at 200 samples, 34x at 400 and 116x at 800. Extrapolating the same curve puts a
+          few thousand samples in the tens of minutes for open-king against seconds for KING.
+          For a cohort of that size, the difference decides whether the program is usable.
+        </p>
+
+        <h2 id="parallelism">Threads are a second, separate gap</h2>
 
         <p>
-          Genotypes are held in packed form and the pairwise scan allocates per thread, so
-          memory tracks sample count rather than the number of pairs.
+          <code>--kinship</code> is the clearest case, because the CPU work is level. KING
+          still finishes it in less than half the wall time, by keeping more cores busy.
         </p>
 
         <div class="table-wrap">
           <table class="table--wide">
             <thead>
               <tr>
-                <th scope="col">Dataset</th>
-                <th scope="col" class="num">Samples</th>
-                <th scope="col" class="num">open-king</th>
-                <th scope="col" class="num">KING 2.3.2</th>
+                <th scope="col">Analysis</th>
+                <th scope="col">open-king cores busy</th>
+                <th scope="col">KING 2.3.2 cores busy</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <th scope="row">small</th>
-                <td class="num">200</td>
-                <td class="num">14 MB</td>
-                <td class="num">31 MB</td>
-              </tr>
-              <tr>
-                <th scope="row">bigish</th>
-                <td class="num">2,000</td>
-                <td class="num">96 MB</td>
-                <td class="num">184 MB</td>
-              </tr>
-              <tr>
-                <th scope="row">cohort</th>
-                <td class="num">5,000</td>
-                <td class="num">421 MB</td>
-                <td class="num">790 MB</td>
-              </tr>
+              <tr><th scope="row"><code>--kinship</code></th><td class="num">2.04</td><td class="num">5.17</td></tr>
+              <tr><th scope="row"><code>--ibs</code></th><td class="num">1.69</td><td class="num">4.38</td></tr>
+              <tr><th scope="row"><code>--ibdseg</code></th><td class="num">0.66</td><td class="num">3.74</td></tr>
+              <tr><th scope="row"><code>--related</code></th><td class="num">0.78</td><td class="num">1.48</td></tr>
+              <tr><th scope="row"><code>--cluster</code></th><td class="num">0.97</td><td class="num">2.35</td></tr>
+              <tr><th scope="row"><code>--unrelated</code></th><td class="num">0.99</td><td class="num">2.09</td></tr>
             </tbody>
           </table>
         </div>
 
-        <h2 id="reproducing-these-numbers">Reproducing these numbers</h2>
+        <p>
+          Cores busy is CPU seconds divided by wall seconds. A value near 1 means the analysis
+          ran serially. So there are two independent things to improve: how much work is done,
+          and how much of it happens at once.
+        </p>
+
+        <h2 id="threads">What <code>--cpus</code> does to each program</h2>
 
         <p>
-          The corpus generator writes the same filesets on any machine from a fixed seed, so
-          a timing run elsewhere compares against the same inputs.
+          Three thread settings on 400 samples. <code>default</code> lets the program choose,
+          <code>matched</code> is <code>--cpus 4</code> on both, <code>single</code> is
+          <code>--cpus 1</code>.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide table--zebra">
+            <thead>
+              <tr>
+                <th scope="col">Analysis</th>
+                <th scope="col">Mode</th>
+                <th scope="col">open-king wall</th>
+                <th scope="col">open-king cores</th>
+                <th scope="col">KING wall</th>
+                <th scope="col">KING cores</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row"><code>--kinship</code></th><td>default</td><td class="num">0.297 s</td><td class="num">1.64</td><td class="num">0.135 s</td><td class="num">3.44</td></tr>
+              <tr><th scope="row"><code>--kinship</code></th><td>matched</td><td class="num">0.306 s</td><td class="num">1.64</td><td class="num">0.176 s</td><td class="num">2.46</td></tr>
+              <tr><th scope="row"><code>--kinship</code></th><td>single</td><td class="num">0.305 s</td><td class="num">1.58</td><td class="num">0.424 s</td><td class="num">1.00</td></tr>
+              <tr><th scope="row"><code>--ibdseg</code></th><td>default</td><td class="num">1.359 s</td><td class="num">1.00</td><td class="num">0.120 s</td><td class="num">2.27</td></tr>
+              <tr><th scope="row"><code>--ibdseg</code></th><td>single</td><td class="num">1.469 s</td><td class="num">0.96</td><td class="num">0.264 s</td><td class="num">0.99</td></tr>
+              <tr><th scope="row"><code>--cluster</code></th><td>default</td><td class="num">5.039 s</td><td class="num">1.00</td><td class="num">0.129 s</td><td class="num">1.86</td></tr>
+              <tr><th scope="row"><code>--cluster</code></th><td>single</td><td class="num">5.097 s</td><td class="num">0.99</td><td class="num">0.204 s</td><td class="num">0.98</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          KING obeys the flag: its cores busy falls to 1.00 at <code>--cpus 1</code>.
+          open-king barely moves, 1.64 to 1.58, which is what
+          <a href="usage.html#cpus">the option reference</a> and
+          <a href="https://github.com/Broccolito/open-king/blob/main/docs/SCOPE.md">SCOPE.md</a>
+          already say: <code>--cpus</code> is accepted and echoed and is not a strict worker
+          cap. Computed files are the same at every thread count.
+        </p>
+
+        <h2 id="small-inputs">Small inputs measure startup, not algorithms</h2>
+
+        <p>
+          On the ten corpus datasets, the largest of which is 200 samples by 50,000 markers,
+          open-king is faster in 72 of 80 cells, median 3.7x. On <code>trio</code>, three
+          samples, it is 0.004 s against 0.020 s.
+        </p>
+
+        <p>
+          That number is real and it is nearly meaningless. At that size both programs spend
+          most of their time starting up, and open-king starts faster. It says nothing about
+          how either program behaves on a study-sized cohort, which is why the large filesets
+          exist.
+        </p>
+
+        <h2 id="memory">Memory</h2>
+
+        <p>
+          Peak resident set size across the whole matrix: open-king 3.7 MB to 113.2 MB, KING
+          8.6 MB to 68.5 MB. open-king holds more of the fileset in memory, and the widest
+          gap is on <code>--kinship</code>, where it peaks at 3.8 times KING on 200 samples
+          and 2.9 times on 800. Both remain small enough that memory is not the constraint
+          on any machine that would run this work.
+        </p>
+
+        <h2 id="output-agreement">Output agreement</h2>
+
+        <p>
+          Every run's output files were compared byte for byte by sha256. Standard output is
+          excluded, because KING's banner carries a timestamp and cannot match across runs.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <tbody>
+              <tr><th scope="row">Files compared</th><td class="num">217</td></tr>
+              <tr><th scope="row">Byte-identical</th><td class="num">206</td></tr>
+              <tr><th scope="row">Different</th><td class="num">11</td></tr>
+              <tr><th scope="row">On a corpus dataset</th><td class="num">0</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          All 11 are on the three synthetic filesets, which no golden capture covers. Both
+          programs were run twice on the same input first, and each agreed with its own rerun,
+          so these are behavioural differences and not races.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr><th scope="col">File</th><th scope="col">Analysis</th><th scope="col">Size of the difference</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row"><code>.kin0</code></th><td><code>--related</code></td><td>open-king emits one row that KING omits, out of 211</td></tr>
+              <tr><th scope="row"><code>.ibs0</code></th><td><code>--ibs</code></td><td>one row of 319,600, one field, last printed digit: <code>HomConc</code> 0.8452 against 0.8453</td></tr>
+              <tr><th scope="row"><code>build.log</code></th><td><code>--build</code></td><td>382 lines against KING's 572</td></tr>
+              <tr><th scope="row"><code>updateparents.txt</code></th><td><code>--build</code></td><td>168 lines on both, 112 differ</td></tr>
+              <tr><th scope="row"><code>cluster.kin</code></th><td><code>--cluster</code></td><td>801 lines on both, 248 rows unique to each side</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The first two are single-row differences of a kind the
+          <a href="parity.html#held-out-differences">held-out list</a> already tracks. The last three are
+          pedigree reconstruction, and they are much larger here than the corpus suggests,
+          because these filesets declare no parents at all and put every relationship through
+          reconstruction. The full account, with the determinism control, is in
+          <a href="https://github.com/Broccolito/open-king/issues/11">issue 11</a>.
+        </p>
+
+        <h2 id="limits">What this does not measure</h2>
+
+        <ul>
+          <li>One host, one architecture, one reference build. No cross-platform comparison was run.</li>
+          <li>A loaded machine. CPU seconds survive that; wall times are an upper bound.</li>
+          <li>Filesets in which no sample declares a parent. That is the shape a cryptic-relatedness study has, and it is also the shape that puts the most work through reconstruction. A cohort with declared families may look different.</li>
+          <li>Disk. Every input was on local SSD and already in the page cache after the warmup run.</li>
+        </ul>
+
+        <h2 id="reproducing">Reproducing these numbers</h2>
+
+        <p>
+          The benchmark script takes both binaries and writes the full matrix, the per-file sha256
+          comparison and the thread calibration.
         </p>
 
         <div class="code-block">
-<pre><code>python3 tests/parity/generate_corpus.py --outdir /tmp/kingbench
-scripts/bench.sh --impl target/release/king --reference /usr/local/bin/king</code></pre>
+          <pre><code>python3 benchmarks/run_benchmark.py \
+  --binary-b /path/to/king-2.3.2 \
+  --label-b "KING 2.3.2" \
+  --reps 5</code></pre>
         </div>
+
+        <p>
+          Results land in <code>benchmarks/results/</code> as both JSON and Markdown. The
+          synthetic filesets are rebuilt from a recorded seed and are not committed, so a
+          rerun regenerates the same inputs.
+        </p>
       </article>
 
       <nav class="page-nav" aria-label="Page navigation">
