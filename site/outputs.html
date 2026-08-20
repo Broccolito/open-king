@@ -313,9 +313,10 @@ run.2026X.kin0</code></pre>
         </div>
 
         <p>
-          <code>--kinship</code> and <code>--duplicate</code> are the only analyses that
-          never write <code>allsegs.txt</code>, because they are the only two that skip the
-          segment pre-pass. <code>--autoQC</code> writes only its own four reports.
+          Three of the eleven analyses never write <code>allsegs.txt</code>:
+          <code>--kinship</code> and <code>--duplicate</code>, which skip the segment
+          pre-pass, and <code>--autoQC</code>, which writes only its own reports. The other
+          eight write it on every run.
         </p>
 
         <p>
@@ -533,7 +534,7 @@ run.2026X.kin0</code></pre>
               <tr><td class="num">5</td><th scope="row"><code>N_SNP</code></th><td>Markers called in both.</td><td><code>%d</code></td></tr>
               <tr><td class="num">6</td><th scope="row"><code>HetHet</code></th><td>Proportion of <code>N_SNP</code> het in both.</td><td><code>%.4f</code></td></tr>
               <tr><td class="num">7</td><th scope="row"><code>IBS0</code></th><td>Proportion of <code>N_SNP</code> opposite-homozygous.</td><td><code>%.4f</code></td></tr>
-              <tr><td class="num">8</td><th scope="row"><code>Kinship</code></th><td>Between-family estimator, <code>0.5 + (2*HetHet - 4*IBS0 - Het1 - Het2) / (4*min(Het1, Het2))</code>.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">8</td><th scope="row"><code>Kinship</code></th><td>Between-family estimator (KING-robust), <code>0.5 + (2*HetHet - 4*IBS0 - Het1 - Het2) / (4*min(Het1, Het2))</code>.</td><td><code>%.4f</code></td></tr>
             </tbody>
           </table>
         </div>
@@ -631,9 +632,11 @@ run.2026X.kin0</code></pre>
 
         <p>
           Within-family IBS and concordance statistics from <code>--ibs</code>, as raw
-          counts. 20 columns, or 22 when the usable autosomal segment total reaches 100 Mb:
-          <code>MaxIBD2</code> and <code>Pr_IBD2</code> are appended on that trigger and
-          absent otherwise.
+          counts. 20 columns, or 22 in the long form, which is what the file becomes when
+          the usable autosomal segment total reaches 100 Mb: <code>MaxIBD2</code> and
+          <code>Pr_IBD2</code> are appended on that trigger and absent otherwise.
+          <code>.ibs0</code> gains and loses its own pair on the same trigger, so the two
+          files are always both short or both long.
         </p>
 
         <div class="code-block">
@@ -669,8 +672,8 @@ run.2026X.kin0</code></pre>
               <tr><td class="num">18</td><th scope="row"><code>Het1|2</code></th><td><code>NHetHet / N_Het2</code>.</td><td><code>%.4f</code></td></tr>
               <tr><td class="num">19</td><th scope="row"><code>HomConc</code></th><td><code>(NHomHom - N_IBS0) / NHomHom</code>.</td><td><code>%.4f</code></td></tr>
               <tr><td class="num">20</td><th scope="row"><code>Kinship</code></th><td>Within-family estimator.</td><td><code>%.4f</code></td></tr>
-              <tr><td class="num">21</td><th scope="row"><code>MaxIBD2</code></th><td>Longest IBD2 segment, in base pairs.</td><td><code>%.3f</code></td></tr>
-              <tr><td class="num">22</td><th scope="row"><code>Pr_IBD2</code></th><td>Proportion of the usable genome shared IBD2.</td><td><code>%.4f</code></td></tr>
+              <tr><td class="num">21</td><th scope="row"><code>MaxIBD2</code></th><td>Longest IBD2 segment, in base pairs. Present in the long form only.</td><td><code>%.3f</code></td></tr>
+              <tr><td class="num">22</td><th scope="row"><code>Pr_IBD2</code></th><td>Proportion of the usable genome shared IBD2. Present in the long form only.</td><td><code>%.4f</code></td></tr>
             </tbody>
           </table>
         </div>
@@ -687,7 +690,7 @@ run.2026X.kin0</code></pre>
           Between-family IBS statistics from <code>--ibs</code>. 19 columns, or 21 in the
           long form. The same statistics as <code>.ibs</code>, with <code>FID1 ID1 FID2
           ID2</code> replacing <code>FID ID1 ID2</code> and no <code>Z0</code> or
-          <code>Phi</code>. <code>Kinship</code> is the between-family estimator. Written
+          <code>Phi</code>. <code>Kinship</code> is the between-family estimator (KING-robust). Written
           when at least two distinct FIDs exist.
         </p>
 
@@ -941,7 +944,7 @@ run.2026X.kin0</code></pre>
               <tr><td class="num">1</td><th scope="row"><code>FID</code></th><td>The new cluster ID: <code>KING1</code>, <code>KING2</code>, and so on.</td><td>text</td></tr>
               <tr><td class="num">2</td><th scope="row"><code>ID1</code></th><td>First member of the pair.</td><td>text</td></tr>
               <tr><td class="num">3</td><th scope="row"><code>ID2</code></th><td>Second member.</td><td>text</td></tr>
-              <tr><td class="num">4</td><th scope="row"><code>Sex1</code></th><td><code>.fam</code> sex code of <code>ID1</code>. This column and the next appear in no other file.</td><td><code>%d</code></td></tr>
+              <tr><td class="num">4</td><th scope="row"><code>Sex1</code></th><td><code>.fam</code> sex code of <code>ID1</code>. The same <code>Sex1</code> and <code>Sex2</code> pair appears in <code>X.kin</code>'s <code>--related</code> form and in <code>X.seg</code>.</td><td><code>%d</code></td></tr>
               <tr><td class="num">5</td><th scope="row"><code>Sex2</code></th><td><code>.fam</code> sex code of <code>ID2</code>.</td><td><code>%d</code></td></tr>
               <tr><td class="num">6</td><th scope="row"><code>N_SNP</code></th><td>Markers called in both.</td><td><code>%d</code></td></tr>
               <tr><td class="num">7</td><th scope="row"><code>HetHet</code></th><td>Proportion of <code>N_SNP</code> het in both.</td><td><code>%.4f</code></td></tr>
@@ -1036,13 +1039,44 @@ run.2026X.kin0</code></pre>
 
         <p>
           A free-text record of what <code>--build</code> reconstructed. It has no columns
-          and no header, and holds two line kinds.
+          and no header. The one non-empty log the corpus produces holds five line shapes,
+          and the last two of them carry no family name, so a parser keyed on the
+          <code>Family</code> prefix drops them:
+        </p>
+
+        <div class="table-wrap">
+          <table class="table--wide">
+            <thead>
+              <tr>
+                <th scope="col">Line shape</th>
+                <th scope="col">Indent</th>
+                <th scope="col">What it is</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row"><code>Family &lt;FID&gt;:</code></th><td>none</td><td>Opens a family block.</td></tr>
+              <tr><th scope="row"><code>Family &lt;FID&gt; RULE &lt;name&gt;: ...</code></th><td>2 spaces</td><td>A rule fired, naming the people it applied to.</td></tr>
+              <tr><th scope="row"><code>Family &lt;FID&gt; INFERENCE &lt;name&gt;: ...</code></th><td>2 spaces</td><td>An inference, usually with the statistic behind it.</td></tr>
+              <tr><th scope="row"><code>HS &lt;id&gt; unrelated to &lt;id&gt;</code></th><td>4 spaces</td><td>Carries no <code>Family &lt;FID&gt;</code> prefix at all.</td></tr>
+              <tr><th scope="row">an empty line</th><td>none</td><td>Occurs inside a family block, and can occur twice in a row.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The first eight lines of one real log, verbatim and consecutive, from
+          <code>king -b bigish.bed --build --cpus 4 --prefix bd</code>:
         </p>
 
         <div class="code-block code-block--plain">
 <pre><code>Family KING1:
   Family KING1 RULE FS0: Sibship (B01_F B02_F)'s parents are (1 2)
-  Family KING1 INFERENCE AV.FS: B01_F is uncle of B02_C3 and B02_C4, Join3/Join2=0.801</code></pre>
+
+  Family KING1 INFERENCE AV.FS: B02_F is uncle of B01_C2 and B01_C3, Join3/Join2=0.778
+  Family KING1 INFERENCE AV.FS: B01_F is uncle of B02_C3 and B02_C4, Join3/Join2=0.801
+    HS B02_C4 unrelated to B01_M
+    HS B01_C3 unrelated to B02_M
+  Family KING1 INFERENCE HS.UN2: B01_C3 and B02_C4 are HS</code></pre>
         </div>
 
         <p>Zero bytes when nothing was reconstructed.</p>
@@ -1200,15 +1234,23 @@ run.2026X.kin0</code></pre>
           subject counter. A parenthesised number is a removal count.
         </p>
 
+        <p>
+          A run of <code>king -b missing.bed --autoQC</code> produces this. The padding is
+          part of the file, so the block below keeps it: the two count rows and the header
+          are 80 characters wide, and <code>3    Generate Final Study Files</code> is
+          followed by 29 blanks out to column 60. A row whose only number is a
+          parenthesised removal count is not padded past that count.
+        </p>
+
         <div class="code-block code-block--plain">
-<pre><code>Step Description                                            Subjects  SNPs
-1    Raw data counts                                        6         10000
+<pre><code>Step Description                                            Subjects  SNPs      
+1    Raw data counts                                        6         10000     
 1.1  SNPs with very low call rate &lt; 80% (removed)                     (1569)
 1.2  Monomorphic SNPs (removed)                                       (3199)
 1.3  Sample call rate &lt; 95% (removed)                       (2)
 1.4  SNPs with call rate &lt; 95% (removed)                              (130)
-3    Generate Final Study Files
-     Final QC'ed data                                       4         5086</code></pre>
+3    Generate Final Study Files                             
+     Final QC'ed data                                       4         5086      </code></pre>
         </div>
 
         <p>

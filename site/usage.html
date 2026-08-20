@@ -325,6 +325,7 @@ The following analyses will run separately:  --kinship --ibs --duplicate</code><
         <div class="code-block code-block--plain">
 <pre><code>$ king -b major.bed --ibs
 FATAL ERROR -
+
 Too many first alleles as the major allele (~98.2%). Please use plink1.9 --make-bed to regenerate the genotype data again.</code></pre>
         </div>
 
@@ -508,6 +509,12 @@ Relationship inference across families starts at Wed Aug 19 19:35:49 2026
                                Screening ends at Wed Aug 19 19:35:50 2026
   Final Stage (with 50000 SNPs): 3 pairs of relatives (up to 1st-degree) are confirmed
                                Inference ends at Wed Aug 19 19:35:50 2026
+
+Relationship summary (total relatives: 0 by pedigree, 3 by inference)
+        	MZ	PO	FS	2nd	3rd	4th
+  =========================================================
+  Inference	0	0	3	0	0	0
+
 
 Between-family relatives (kinship &gt;= 0.17678) saved in file king.kin0
 
@@ -740,7 +747,7 @@ FAM1	A_F	FAM1	A_C1	1.0000	0.0000	0.5000	PO</code></pre>
         <p>
           Files written: <code>king.seg</code> with 104 rows,
           <code>kingallsegs.txt</code> with 18 rows, <code>kingsplitped.txt</code> with
-          21 rows. The X gate: <code>king -b sexchr.bed --ibdseg</code> writes no
+          22 rows. The X gate: <code>king -b sexchr.bed --ibdseg</code> writes no
           <code>kingX.seg</code>, while
           <code>king -b sexchr.bed --ibdseg --degree 2</code> writes it.
         </p>
@@ -955,7 +962,7 @@ KING ends at Wed Aug 19 19:35:51 2026</code></pre>
 
         <p>
           Files written: <code>kingallsegs.txt</code>, <code>kingcluster.kin</code> with
-          165 rows, and <code>kingupdateids.txt</code> with 32 rows.
+          165 rows, and <code>kingupdateids.txt</code> with 33 rows.
           <code>king -b trio.bed --cluster</code> writes nothing at all.
         </p>
 
@@ -1577,9 +1584,18 @@ Auto-QC step 3: Apply SNP call rate filter 90.0% on 5232 SNPs (in 3 samples)
         </div>
 
         <p>
-          The reason strings in the removal files do track the values:
-          <code>MissingMoreThan&lt;round(100*(1-callrateN))&gt;</code> and
-          <code>CallRateLessThan&lt;round(100*callrateM)&gt;</code>.
+          The reason strings in the removal files do track the values, but the SNP file
+          carries one string per stage. Sample removals read
+          <code>MissingMoreThan&lt;round(100*(1-callrateN))&gt;</code>:
+          <code>MissingMoreThan1</code> for the run above, <code>MissingMoreThan5</code> at
+          the 0.95 default. SNP removals read <code>CallRateLessThan&lt;n&gt;</code>, where
+          <code>n</code> is the percentage of whichever step dropped the marker, so step 3
+          gives <code>round(100*callrateM)</code> while step 1 gives the smaller pre-filter
+          percentage from the table above. That run leaves 1569 rows reading
+          <code>CallRateLessThan80</code>, 22 reading <code>CallRateLessThan90</code> and
+          3199 reading <code>Monomorphic</code>; at <code>--callrateM 0.5</code> the step-1
+          rows read <code>CallRateLessThan40</code> and the step-3 rows
+          <code>CallRateLessThan50</code>.
         </p>
 
         <h3 id="cpus"><code>--cpus</code></h3>
@@ -1721,8 +1737,11 @@ every other numeric code is dropped</code></pre>
         <h2 id="option-index">Every option at a glance</h2>
 
         <p>
-          All 47 spellings. Excluded options are recognised by the parser, printed in the
-          banner, and then rejected at exit 1 before any input file is opened; see
+          All 47 spellings. The Category column is finer than the Synopsis count: the 11
+          modifiers are split into Input (<code>--fam</code>, <code>--bim</code>), Output
+          (<code>--prefix</code>) and the 8 rows labelled Parameter. Excluded options are
+          recognised by the parser, printed in the banner, and then rejected at exit 1
+          before any input file is opened; see
           <a href="#excluded-options">excluded options</a> for the exact message.
         </p>
 
@@ -1939,8 +1958,14 @@ Options in effect:
             <p>
               <code>--degree 3.0</code> produces <code>--degree [1]</code> plus
               <code>Command line parameter 3.0 (#5) ignored</code>.
-              <code>--trait --related --kinship</code> sets the trait to the literal
-              <code>--related</code> and leaves <code>--related</code> off, silently.
+              <code>king -b multifam.bed --prefix --related --kinship</code> sets the
+              prefix to the literal string <code>--related</code> and leaves
+              <code>--related</code> off, silently: the banner shows
+              <code>--prefix [--related]</code>, the run exits 0, and the outputs are named
+              <code>--related.kin</code> and <code>--related.kin0</code>. The same swallow
+              happens with <code>--trait</code>, but <code>--trait</code> is an excluded
+              option, so that command line exits 1 on the product-scope gate before any
+              analysis runs.
             </p>
           </li>
           <li>
@@ -2114,6 +2139,13 @@ FATAL ERROR -
 &lt;message&gt;
 </code></pre>
         </div>
+
+        <p>
+          One message does not sit on the line under the header. The A1-major gate prints a
+          blank line between <code>FATAL ERROR -</code> and
+          <code>Too many first alleles as the major allele …</code>; every other fatal on
+          this page puts its text on the next line.
+        </p>
 
         <p>The warning block, preceded by a <code>0x07</code> BEL byte, never aborting:</p>
 

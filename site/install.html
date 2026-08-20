@@ -475,14 +475,14 @@ The following parameters are in effect:
                    Binary File :                 (-bname)
 
 Additional Options
-         Close Relative Inference : --related [ON], --duplicate
+         Close Relative Inference : --related, --duplicate
 ...</code></pre>
         </div>
 
-        <p>and, at the end of the same output:</p>
+        <p>and, near the end of the same output, with three citation lines after it:</p>
 
         <div class="code-block code-block--plain">
-<pre><code>FATAL ERROR -
+<pre><code>FATAL ERROR - 
 Genotype files are required. e.g.,
   king -b ex.bed --related</code></pre>
         </div>
@@ -495,14 +495,24 @@ Genotype files are required. e.g.,
           <code>--version</code>, <code>-v</code>, <code>--help</code> and <code>-h</code>
           with that same banner. This is deliberate: the project targets drop-in stdout
           parity, and the banner is part of stdout. Each of those four flags prints the
-          banner, then a <code>WARNING</code> block reporting the flag as undefined, then the
+          banner, then a <code>WARNING</code> block, then the
           <code>Genotype files are required</code> fatal, and exits 1. There is no flag that
           prints <code>0.1.0</code>.
         </p>
 
         <p>
-          So the banner does not tell you which of the two programs you are running. Two
-          things do:
+          The wording inside that warning block splits on the number of dashes, which matters
+          if you grep for it. Measured: <code>--version</code> and <code>--help</code> report
+          <code>Command line parameter --version is undefined</code>, while <code>-v</code>
+          and <code>-h</code> report <code>Command line parameter -v (#1) ignored</code>. The
+          number is the argv position of the flag. A single-dash typo is never called
+          undefined.
+        </p>
+
+        <p>
+          <code>KING 2.3.2</code> is the version of the reference program open-king
+          reimplements, and open-king prints it verbatim, so on a machine that has both, the
+          banner does not tell you which of the two is on your path. Two things do:
         </p>
 
         <ul>
@@ -726,7 +736,7 @@ $env:Path = "$HOME\bin;$env:Path"
         <div class="code-block code-block--plain">
 <pre><code>$ king -b trio.bed --kinship --prefix nodir/x
 ...
-FATAL ERROR -
+FATAL ERROR - 
 Cannot open nodir/x$TMP$.ped to write.
 $ echo $?
 1</code></pre>
@@ -938,7 +948,9 @@ $ echo $?
 
         <p>
           An agent-shaped wrapper, run and verified in all three branches: success,
-          undefined-flag warning, and fatal input error.
+          flag-typo warning, and fatal input error. The warning branch was checked with
+          both a <code>--bogus</code> and a <code>-x</code> typo, because the two produce
+          different wording.
         </p>
 
         <div class="code-block">
@@ -961,10 +973,11 @@ if [ "$status" -ne 0 ]; then
 fi
 
 # A typo in a flag does not fail the run; it only warns. Note the unanchored pattern:
-# the WARNING line carries a leading BEL byte.
+# the WARNING line carries a leading BEL byte. A --flag typo reads "is undefined"
+# and a -f typo reads "(#N) ignored", so match both, and tolerate no match under set -e.
 if grep -q 'WARNING - ' king.log; then
   echo "king warned about the command line:"
-  grep 'is undefined' king.log
+  grep -E 'is undefined|ignored' king.log || true
 fi
 
 # .kin0 is written only when cross-family relatives were found.
@@ -1007,7 +1020,7 @@ cross-family pairs: 26
         <div class="code-block code-block--plain">
 <pre><code>$ ./king_run.sh /nope/x.bed /tmp/w3
 king failed (exit 1)
-FATAL ERROR -
+FATAL ERROR - 
 Genotype file /nope/x.bed cannot be opened
 $ echo $?
 1</code></pre>

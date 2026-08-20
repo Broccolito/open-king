@@ -149,11 +149,13 @@
           are included only with <code>--include-analysis</code>.
         </p>
 
-        <h3 id="the-five-normalized-lines">The five normalized lines</h3>
+        <h3 id="the-normalization-rules">The six normalization rules</h3>
 
         <p>
-          Five kinds of line are genuinely not reproducible. They are normalized on
-          <strong>both</strong> sides before comparison, never on open-king's side alone.
+          Six kinds of console output are genuinely not reproducible. They are normalized on
+          <strong>both</strong> sides before comparison, never on open-king's side alone. The
+          rules apply to standard output and standard error only. No output file is
+          normalized: those are compared as raw bytes.
         </p>
 
         <ul>
@@ -162,6 +164,7 @@
           <li>Progress tokens, the carriage-return separated <code>10%20%…</code> sequences, whose granularity follows timing.</li>
           <li>Absolute input paths, which the reference echoes back for the <code>.bed</code>, <code>.bim</code> and <code>.fam</code> it was given.</li>
           <li>The <code>--noscreen [&lt;int&gt;]</code> value, which is uninitialised memory in the reference's own banner. Across the 484 captured stdouts that print it, it takes three values: <code>-1717986816</code> 469 times, <code>-858993408</code> 14 times and <code>-515396096</code> once.</li>
+          <li>The layout of the <code>The following parameters are in effect:</code> block. KING word-wraps it at a fixed column, so the length of the input path decides where the breaks fall and which entries share a line. Continuation lines are folded back into their entry, leading indentation is dropped and interior runs of spaces are collapsed, so the block is compared entry by entry rather than column by column.</li>
         </ul>
 
         <p>
@@ -177,17 +180,22 @@
         </p>
 
         <p>
-          Nothing else is normalized. Row order is compared, not sorted. Trailing whitespace
-          is compared. Column widths are compared. Two of the rules open-king implements were
+          Nothing else is normalized. Row order is compared, not sorted. Trailing whitespace is
+          compared. Column widths are compared, in every output file and everywhere in the
+          console streams except the wrapped banner block above.
+          Two of the rules open-king implements were
           found only because the comparison is a byte diff: the row order of
           <code>&lt;prefix&gt;.seg</code>, and the fact that its <code>PropIBD</code> column is
           computed differently from the identically named column in
           <code>&lt;prefix&gt;.kin</code>. Every row-level grader in the project matches rows on
           their identifier columns before comparing, and had reported 0 extra and 0 missing
           rows on a file whose rows were in the wrong order for the entire life of the
-          project. 486 of the goldens contain bare carriage returns, so
-          <code>.gitattributes</code> marks the golden tree, the baseline and the fixture
-          caches <code>-text</code> to stop a platform's git rewriting them on checkout.
+          project. 486 of the captured stdouts contain bare carriage returns, so
+          <code>.gitattributes</code> carries one rule, <code>* -text</code>, marking every
+          path in the repository as binary for end-of-line purposes and stopping a platform's
+          git rewriting them on checkout. It is deliberately not narrowed to particular
+          extensions, because the corpus grows and a fixture that silently gains a carriage
+          return fails for a reason that has nothing to do with the program.
         </p>
 
         <h3 id="the-runner-checks-itself">The runner checks itself</h3>
@@ -283,10 +291,14 @@
 
         <p>
           Counted over every case that produces the file under any <code>--prefix</code>,
-          across all four capture groups. <code>&lt;prefix&gt;</code> stands for
-          <code>king</code>, <code>custom</code>, <code>cus.tom</code> and
-          <code>custom.</code> alike. No compared output file differs anywhere in the 480-case
-          corpus.
+          across all four capture groups. <code>&lt;prefix&gt;</code> stands for the default
+          <code>king</code> and for the three <code>--prefix</code> shapes that name a file:
+          <code>custom</code> on 16 cases, and <code>cus.tom</code> and <code>custom.</code> on
+          one case each. A fourth shape is captured and appears in no row below:
+          <code>--prefix sub/pre</code> names a directory that does not exist, so the reference
+          exits 1 with <code>Cannot open sub/pre$TMP$.ped to write.</code> and writes no file at
+          all. open-king reproduces that exit status, that message and that empty directory. No
+          compared output file differs anywhere in the 480-case corpus.
         </p>
 
         <div class="table-wrap">
@@ -500,13 +512,19 @@ rows: 0 extra, 0 missing, 4 value-differing</code></pre>
         </p>
 
         <p>
-          Every one of the 876 output files was byte-identical to the golden capture. The only
-          differences were on standard output, on two lines: the uninitialised value in KING's
-          own banner, which differs between compilations, and the reported CPU core count. On
-          the stdout comparison alone, <strong>475 of the 480 cases were marked FAIL</strong>,
-          with <strong>zero output-file differences</strong>. Those two lines are the same ones
-          the replay normalization targets, so the recorded failures show that the
-          normalization did not absorb the cross-build form of them.
+          Through the project's own runner that replay reports
+          <strong>5 PASS, 475 FAIL of 480</strong>, and every one of the 475 failures is a
+          standard-output difference. Across the 876 output files the runner byte-compared,
+          <strong>not one differed</strong>. So the whole disagreement between the two builds,
+          on the graded corpus, is on standard output, and two lines carry it. The first is the
+          <code>--noscreen</code> entry in KING's own banner: the capture build prints
+          <code>--noscreen [-1717986816],</code> and the second build prints
+          <code>--noscreen,</code>, which reflows the wrapped
+          <code>Inference Parameter</code> entry and defeats the runner's normalization of the
+          integer. The second is the <code>N CPU cores are used</code> line, which reports the
+          host's core count and is not a build property at all. Both lines are ones the replay
+          normalization targets, so the recorded failures show that the normalization did not
+          absorb the cross-build form of them.
         </p>
 
         <p>
@@ -526,9 +544,12 @@ rows: 0 extra, 0 missing, 4 value-differing</code></pre>
           storage. An undefined value reaching a branch is how one source yields two
           behaviours. So open-king treating <code>--noscreen</code> as inert is a deliberate
           match to the capture binary and not a gap: no implementation satisfies both builds,
-          because the reference does not agree with itself. The remaining difference across
-          those 490 cases is <code>X.kin0</code> on <code>sexchr</code>, which is KING's own
-          race between threads and differs between two runs of one binary.
+          because the reference does not agree with itself. Comparing all 490 captures directly,
+          outside the runner, 488 of them produce byte-identical output files. Besides the
+          <code>--noscreen</code> case, the only other difference is <code>kingX.kin0</code> on
+          <code>core/sexchr__kinship</code>, which is KING's own race between threads and
+          differs between two runs of one binary. That file is one of the eight the runner
+          diff-excludes, which is why it is not among the 876 compared above.
         </p>
 
         <p>

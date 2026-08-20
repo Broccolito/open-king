@@ -189,8 +189,12 @@ BF01	B01_F	BF02	B02_C1	50000	0.1560	0.0299	0.2873	0.2261	0.1368	0.5684	0.0000	0.
             gives <code>demo.kin</code> and <code>demoallsegs.txt</code>.
           </p>
           <p>
-            On a cohort of any size, pass <code>--degree</code>. Unfiltered,
-            <code>.kin0</code> is every pair in the dataset.
+            <code>--degree</code> is what bounds <code>--kinship</code>. Without it,
+            <code>.kin0</code> holds every between-family pair, which on this
+            200-sample fileset is 19,327 rows against 24 at <code>--degree 2</code>.
+            <code>--related</code> runs the other way and defaults to first degree, so
+            leaving <code>--degree</code> off narrows its <code>.kin0</code> to 3 rows
+            rather than widening it.
           </p>
         </div>
 
@@ -240,27 +244,27 @@ BF01	B01_F	BF02	B02_C1	50000	0.1560	0.0299	0.2873	0.2261	0.1368	0.5684	0.0000	0.
               <tr>
                 <th scope="row"><a href="usage.html#unrelated"><code>--unrelated</code></a></th>
                 <td>A maximal mutually unrelated subset, and its complement</td>
-                <td><code>unrelated.txt</code>, <code>unrelated_toberemoved.txt</code></td>
+                <td><code>unrelated.txt</code>, <code>unrelated_toberemoved.txt</code>, <code>allsegs.txt</code></td>
               </tr>
               <tr>
                 <th scope="row"><a href="usage.html#cluster"><code>--cluster</code></a></th>
                 <td>Merges families connected by inferred relatedness</td>
-                <td><code>cluster.kin</code>, <code>updateids.txt</code></td>
+                <td><code>cluster.kin</code>, <code>updateids.txt</code>, <code>allsegs.txt</code></td>
               </tr>
               <tr>
                 <th scope="row"><a href="usage.html#build"><code>--build</code></a></th>
                 <td>Reconstructs pedigrees from the genotypes</td>
-                <td><code>updateparents.txt</code>, <code>updateids.txt</code>, <code>build.log</code></td>
+                <td><code>updateparents.txt</code>, <code>updateids.txt</code>, <code>build.log</code>, <code>allsegs.txt</code></td>
               </tr>
               <tr>
                 <th scope="row"><a href="usage.html#bysample"><code>--bysample</code></a></th>
                 <td>Per-sample QC: call rate, heterozygosity, Mendelian errors</td>
-                <td><code>bySample.txt</code></td>
+                <td><code>bySample.txt</code>, <code>allsegs.txt</code></td>
               </tr>
               <tr>
                 <th scope="row"><a href="usage.html#bysnp"><code>--bySNP</code></a></th>
                 <td>Per-marker QC: frequency, genotype counts, error rates</td>
-                <td><code>bySNP.txt</code></td>
+                <td><code>bySNP.txt</code>, <code>allsegs.txt</code></td>
               </tr>
               <tr>
                 <th scope="row"><a href="usage.html#autoqc"><code>--autoQC</code></a></th>
