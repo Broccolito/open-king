@@ -186,7 +186,7 @@ exact-40,000-marker inputs and are KING's uninitialised multiple-of-64 tail read
 behavior. Rare held-out differences in a segment acceptance gate, the unknown data-derived
 sparse PO/FS cutoff, `HomIBS0` tie rendering, `MI_Removal`, and unusual pedigree
 reconstruction shapes remain quantified under
-[issue #3](https://github.com/Broccolito/open-king/issues/3) and in `docs/PARITY.md`.
+[issue #11](https://github.com/Broccolito/open-king/issues/11) and in `docs/PARITY.md`.
 
 Every number above is measured against **one** reference build: KING 2.3.2, Mach-O arm64,
 macOS. KING's segment algorithm is unpublished and its release notes record repeated changes

@@ -53,7 +53,7 @@ quoted**, so any claim here can be re-run rather than taken on trust.
 > exact 40,000-marker array and reproduce KING's uninitialized multiple-of-64 tail read.
 > Safe Rust deliberately does not emulate that undefined behavior. Rare held-out residuals
 > in a segment acceptance gate, the sparse PO/FS cutoff, `HomIBS0` ties, `MI_Removal`, and
-> unusual reconstruction pedigrees remain quantified in §5/§6 and tracked by issue #3.
+> unusual reconstruction pedigrees remain quantified in §5/§6 and tracked by issue #11.
 
 ---
 

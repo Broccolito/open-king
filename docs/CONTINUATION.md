@@ -12,7 +12,7 @@ the measurements behind every claim.
 | Regression baseline | `MATCH (480 cases)` |
 | Rust verification | all workspace tests pass; clippy `-D warnings`, formatting, release build, and `king-core` docs pass |
 | Library surface | typed `Bundle -> RelatednessReport` API in `king-core`; see [`API.md`](API.md) |
-| Live issues | only [#3](https://github.com/Broccolito/open-king/issues/3), the held-out supported-core umbrella |
+| Live issues | only [#11](https://github.com/Broccolito/open-king/issues/11), the five held-out supported-core residuals |
 
 Reproduce the primary gates:
 
@@ -52,30 +52,35 @@ comma-separated multi-fileset merging, and a strict `--cpus` worker cap are not 
 minimal product. Their recognized CLI spellings fail clearly before input is opened. These
 are product boundaries, not remaining parity defects.
 
+## Settled, and not carried forward
+
+**Exact-multiple-of-64 segment tail.** Four value differences among 6,713 rows in the
+24-fileset battery, all at exactly 40,000 markers; the 39,999 and 40,001 controls are exact
+and the row sets are exact. This is a deliberate safety divergence: KING reads uninitialized
+memory there, which safe Rust must not emulate. It is retained on purpose and asserted by
+`tests/parity/probes/segment_residuals.py::check_safe_tail_divergence`, so it is not open
+work and is not part of issue #11.
+
 ## Remaining supported-core work
 
 The 480-case corpus is saturated, so every remaining item needs a held-out discriminator.
-All are tracked by issue #3.
+All five are tracked by issue #11.
 
-1. **Exact-multiple-of-64 segment tail:** four value differences among 6,713 rows in the
-   24-fileset battery, all at exactly 40,000 markers; 39,999/40,001 controls are exact and
-   row sets are exact. This is a deliberate safety divergence: KING reads uninitialized
-   memory, which safe Rust must not emulate.
-2. **Segment acceptance gate:** one constructed brother/sister pair is emitted by open-king
+1. **Segment acceptance gate:** one constructed brother/sister pair is emitted by open-king
    and omitted by KING. It does not occur in the captured corpus. The existing `>=10`
    informative-marker rule has a measured counterexample and needs a new discriminator.
-3. **`HomIBS0` exact ties:** zero golden rows differ; two of 1,189 random-pedigree rows and
+2. **`HomIBS0` exact ties:** zero golden rows differ; two of 1,189 random-pedigree rows and
    four of nine hand-placed exact ties differ in the last printed digit. Integer counts and
    the algebraic ratio are correct; no tested floating evaluation reproduces all reference
    perturbations.
-4. **`MI_Removal`:** the greedy pair-error cover matches six of seven focused probes, while
+3. **`MI_Removal`:** the greedy pair-error cover matches six of seven focused probes, while
    every golden row is zero. The seventh reference flag at a 0.18% rate refutes the current
    monotone threshold rule.
-5. **Sparse PO/FS cutoff:** the segment-unavailable fallback currently uses `0.0050`, while
+4. **Sparse PO/FS cutoff:** the segment-unavailable fallback currently uses `0.0050`, while
    reference probes show a deterministic data-derived value in roughly `[0.0035, 0.0060]`.
    The application rule is known, but the value derivation is not; a held-out fileset that
    changes the reference cutoff must pin the rule before replacing the constant.
-6. **Rare pedigree reconstruction shapes:** the cached `build.log` replay is 277/347
+5. **Rare pedigree reconstruction shapes:** the cached `build.log` replay is 277/347
    byte-identical; another 52 have the same distinct lines with repetition/count residue.
    Remaining semantic work includes cross-family named-parent materialization and
    `<FID>-><IID>` renaming plus rare inference-loop trigger/repetition shapes. Two cached
@@ -84,7 +89,7 @@ All are tracked by issue #3.
 Do not weaken the headline by mixing these held-out results into the 480-case denominator,
 and do not hide them because the headline is green. A fix should add a probe that rejects a
 plausible wrong rule, pass the held-out comparison, preserve the 480-case baseline, and then
-update issue #3 and `PARITY.md`.
+update issue #11 and `PARITY.md`.
 
 ## Working rules
 

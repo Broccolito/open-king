@@ -54,7 +54,7 @@ Held-out testing remains intentionally separate from the headline. Safe Rust doe
 emulate KING's uninitialized exact-multiple-of-64 segment tail read, and rare constructed
 shapes still expose a segment acceptance-gate counterexample, exact `HomIBS0` tie differences,
 the still-unknown data-derived sparse PO/FS cutoff, an approximate `MI_Removal` predicate,
-and unusual pedigree-reconstruction residuals. See `docs/PARITY.md` and issue #3 for
+and unusual pedigree-reconstruction residuals. See `docs/PARITY.md` and issue #11 for
 quantified evidence.
 
 `docs/PARITY.md` is the authoritative matrix and measures every gap.

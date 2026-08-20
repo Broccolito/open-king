@@ -56,6 +56,6 @@ A difference remains in scope when it changes a supported command's accepted inp
 relationship result, report contents, output-file set or documented console contract.
 Examples include a segment acceptance-gate counterexample, rare `HomIBS0` ties,
 the data-derived sparse PO/FS cutoff, `MI_Removal`, and unusual reconstruction pedigrees.
-Those held-out differences are tracked in [PARITY.md](PARITY.md) and GitHub issue #3 and
+Those held-out differences are tracked in [PARITY.md](PARITY.md) and GitHub issue #11 and
 remain work even though all 480 captured cases pass and the excluded analyses above do not
 count as product defects.
