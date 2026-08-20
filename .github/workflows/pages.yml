@@ -1,0 +1,51 @@
+name: Pages
+
+# Publishes the static documentation site in `site/` to GitHub Pages.
+#
+# The site is plain HTML and CSS with no build step, so there is nothing to
+# compile: the job uploads the directory as-is. Keep it that way. A build step
+# here would mean the site served to readers is not the site in the repository,
+# and the two would drift.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+# GITHUB_TOKEN needs `pages: write` to deploy and `id-token: write` for the
+# deployment's OIDC attestation. `contents: read` is enough to check out.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time. `cancel-in-progress: false` so a queued deploy
+# finishes rather than being dropped by the next push.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Fail loudly rather than publishing an empty site. `upload-pages-artifact`
+      # is happy to upload a directory containing nothing, which would take the
+      # live site down without any job turning red.
+      - name: check the site has an entry point
+        run: test -f site/index.html
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
