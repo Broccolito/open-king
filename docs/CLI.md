@@ -634,7 +634,7 @@ callers and legitimately disagree — that is faithful to the reference, not a b
 
 #### `--makeGRM`
 
-*Switch, default off.* **Not implemented** — see [§8](#8-accepted-but-not-implemented).
+*Switch, default off.* **Not implemented** — see [§8](#8-accepted-compatibility-spellings-outside-product-scope).
 
 ### Inference Parameter
 
@@ -699,12 +699,23 @@ $ king -b bigish.bed --related --degree 3
 *Int.* **Accepted and echoed; it changes nothing.** In the reference it was meant to disable
 the two-stage screen. Running `bigish --related --degree 2` with and without
 `--noscreen 1` gives byte-identical output files and an identical screening line on stdout;
-the only difference anywhere is the banner echo.
+the only difference anywhere is the banner echo. It has no reader in the codebase outside
+the parser: no analysis pass consults the value, so accepting it is a parse-surface
+obligation and nothing else.
 
 Its default is the notorious `-1717986816`. That is not a value — in the reference it is
 uninitialised memory that overlaps `--minConc`'s storage, and open-king reproduces the
 overlap byte for byte, including the way `--minConc 0.9` changes it to `-858993408`.
 Ignore it.
+
+**Being inert here is a deliberate match to the capture binary, not an omission.** A second
+compilation of KING 2.3.2 from the published source behaves differently: on
+`multifam --related --degree 1 --noscreen` it bypasses the screen and writes a `king.kin0`
+with eight between-family pairs, where the binary the goldens were captured from writes no
+such file and reports `No close relatives are inferred.` open-king matches the capture
+binary. Since the option carries an undefined value, its effect is undefined too, and no
+single behaviour satisfies both builds. The full measurement is in
+[`PARITY.md` §5.13](PARITY.md#513-a-second-build-of-king-232-agrees-on-every-output-file-but-one-and-that-one-is---noscreen).
 
 #### `--seglength <Mb>`
 
@@ -735,6 +746,21 @@ revert is genuine, not cosmetic — on `bigish` the `.seg` md5 for `--seglength 
 `4fdddc6b00be91bf9a29bd5df51b2a15`. (That stray `.` on the next line is the reference's own
 missing newline, reproduced.)
 
+**`--seglength` is never echoed under `Options in effect:`**, by any analysis, even on the
+runs where it changes the output bytes. The `Minimum segment length is set as <n> bp` line
+above the block is the only report of the value:
+
+```
+$ king -b bigish.bed --ibdseg --seglength 5
+Minimum segment length is set as 5000000 bp
+...
+Options in effect:
+	--ibdseg
+```
+
+That is reference behaviour, not an omission here. See [`--minConc`](#--minconc-x) for the
+rest of the echo rules.
+
 #### `--minConc <x>`
 
 *Double, default 0.80.* Heterozygote-concordance floor for `--duplicate`. Echoed to two
@@ -752,6 +778,26 @@ $ king -b dups.bed --duplicate --minConc 1.5
 minConc value is out of range and not specified.
 No duplicates are found with heterozygote concordance rate > 150%.
 ```
+
+**It is echoed under `Options in effect:` for eight analyses and dropped by three.** The
+eight that echo it are `--duplicate`, `--ibs`, `--autoQC`, `--unrelated`, `--build`,
+`--bysample`, `--bySNP` and `--cluster`, which share one echo list. `--kinship`, `--related`
+and `--ibdseg` build their own lists, which carry only `--degree`, `--cpus` and `--prefix`,
+so the value is dropped there without a word:
+
+```
+$ king -b bigish.bed --duplicate --minConc 0.9
+Options in effect:
+	--duplicate
+	--minConc 0.9
+
+$ king -b bigish.bed --kinship --minConc 0.9
+Options in effect:
+	--kinship
+```
+
+The value is in effect either way; only the echo differs. Both halves are reference
+behaviour, and both matter to anyone diffing stdout.
 
 ### Relationship Application
 
@@ -790,6 +836,29 @@ Unlike every other analysis, selecting `--cluster` suppresses the
 families merge. `build.log` is the one output file in the project that is not byte-identical
 to the reference everywhere — see [PARITY.md §6.2](PARITY.md).
 
+**`--build` announces `updateids.txt` on runs where it writes no such file.** The file is
+written once, at the point family clustering merges two or more families, and announced there
+with the `The following families are found to be connected` table above it. The line in the
+reconstruction tail is printed unconditionally, whether or not that write happened, so a run
+with no merges names a file that is not on disk:
+
+```
+$ king -b multifam.bed --build     # no families merge
+Details of pedigree reconstruction are available in log file kingbuild.log
+Update-ID information is saved in file kingupdateids.txt
+No pedigrees can be reconstructed.
+$ ls king*
+kingallsegs.txt  kingbuild.log  kingupdateparents.txt
+
+$ king -b bigish.bed --build      # three pairs of families merge
+$ ls king*
+kingallsegs.txt  kingbuild.log  kingupdateids.txt  kingupdateparents.txt
+```
+
+On `bigish` the line therefore appears twice, once per site. This is reference behaviour,
+reproduced deliberately. [`--cluster`](#--cluster) does not share it: it writes and announces
+the file at the same point, so its line and the file always agree.
+
 ### QC Report
 
 #### `--bysample`
@@ -810,7 +879,7 @@ Note the spelling: the option is `--bySNP`, matched case-insensitively, but it i
 
 #### `--roh`
 
-*Switch, default off.* **Not implemented** — see [§8](#8-accepted-but-not-implemented).
+*Switch, default off.* **Not implemented** — see [§8](#8-accepted-compatibility-spellings-outside-product-scope).
 
 #### `--autoQC`
 
@@ -851,7 +920,37 @@ Step Description                                            Subjects  SNPs
 #### `--callrateM <x>`
 
 *Double, default 0.95.* The **SNP** call-rate threshold used by `--autoQC` step 3. Only
-`--autoQC` reads it. (Step 1's 80 % pre-filter is fixed and neither option moves it.)
+`--autoQC` reads it.
+
+**It also sets step 1's pre-filter, which is not the fixed 80 % it looks like.** The rule is
+`min(0.8, 0.1 * (trunc(callrateM * 10) - 1))`: one decimal digit of `--callrateM`, truncated
+toward zero, less one tenth, capped at 80 %. It reads as fixed only because it saturates from
+`--callrateM 0.9` upward, which is where the 0.95 default and every other example on this
+page sit. Swept on `missing`:
+
+| `--callrateM` | step 1 filter | step 3 filter |
+| --- | ---: | ---: |
+| 0.1 | 0.0% | 10.0% |
+| 0.3 | 20.0% | 30.0% |
+| 0.5 | 40.0% | 50.0% |
+| 0.7 | 60.0% | 70.0% |
+| 0.75 | 60.0% | 75.0% |
+| 0.8 | 70.0% | 80.0% |
+| 0.85 | 70.0% | 85.0% |
+| 0.9 | 80.0% | 90.0% |
+| 0.95 | 80.0% | 95.0% |
+| 1.0 | 80.0% | 100.0% |
+
+```
+$ king -b missing.bed --autoQC --callrateM 0.5
+Auto-QC step 1: Apply SNP call rate filter 40.0% on 10000 SNPs (in 6 samples)
+  220 autosome SNPs have call rate < 40.0%
+  0 X-chr SNPs have call rate < 40.0%
+```
+
+There is no floor, only the 80 % ceiling: `--callrateM 0` gives a step 1 filter of `-10.0%`
+and `--callrateM -0.55` gives `-60.0%`, which is also what pins the truncation as toward zero
+rather than downward. `--callrateN` does not move step 1; only `--callrateM` does.
 
 Both together:
 
@@ -879,15 +978,16 @@ the reference, and reproduced:
 #### `--mds`
 
 *Switches, default off.* **Not implemented** — see
-[§8](#8-accepted-but-not-implemented).
+[§8](#8-accepted-compatibility-spellings-outside-product-scope).
 
 ### Structure Parameter
 
 #### `--projection [n]`
 #### `--pcs [n]`
 
-*Ints, default 0.* Parameters of `--pca`/`--mds`. Accepted and echoed; they change nothing,
-because the analyses they parameterise do nothing.
+*Ints, default 0.* Parameters of `--pca`/`--mds`. Parsed and echoed in the banner, then
+**rejected**: naming either one is fatal, exit 1, before the input is opened.
+See [§8](#8-accepted-compatibility-spellings-outside-product-scope).
 
 ### Quantitative Trait GWAS
 
@@ -908,70 +1008,90 @@ separately" line.
 #### `--trait <name>`
 #### `--covariate <name>`
 
-*Strings, default empty.* Parameters of the association analyses. Accepted and echoed;
-they change nothing. Note that a string option swallows whatever follows it, including
-another option — `--trait --related` sets the trait to the literal `--related` and leaves
-`--related` off, with no warning. See [§6](#6-how-the-parser-behaves).
+*Strings, default empty.* Parameters of the association analyses. Parsed and echoed in the
+banner, then **rejected**: naming either one is fatal, exit 1, before the input is opened.
+See [§8](#8-accepted-compatibility-spellings-outside-product-scope).
+
+The string-swallowing rule of [§6](#6-how-the-parser-behaves) still decides *which* name the
+fatal reports. A string option takes the next token unconditionally, option or not, so
+`--trait --related` sets the trait to the literal `--related`, leaves `--related` off, and
+the run is rejected for `--trait` alone:
+
+```
+$ king -b multifam.bed --trait --related --kinship
+
+FATAL ERROR - 
+open-king's minimal relatedness product does not implement: --trait.
+Supported analyses: --related, --duplicate, --kinship, --ibdseg, --ibs, --unrelated, --cluster, --build, --bysample, --bySNP, and --autoQC.
+See docs/SCOPE.md for the product-scope contract.
+```
 
 #### `--maxP <p>`
 
-*Double, unset by default.* Parameter of the association analyses. It changes no result, but
-it **is validated**, and a bad value is fatal before anything loads:
+*Double, unset by default.* Parameter of the association analyses. Parsed and echoed in the
+banner, then **rejected**: naming it is fatal, exit 1, before the input is opened, whatever
+value follows.
 
 ```
-$ king -b multifam.bed --kinship --maxP 0
+$ king -b multifam.bed --kinship --maxP 0.05
 
 FATAL ERROR - 
-p-value [0] outside range in ninv()
+open-king's minimal relatedness product does not implement: --maxP.
+Supported analyses: --related, --duplicate, --kinship, --ibdseg, --ibs, --unrelated, --cluster, --build, --bysample, --bySNP, and --autoQC.
+See docs/SCOPE.md for the product-scope contract.
 ```
 
-Both tails (`p/2` and `1 − p/2`) go through the inverse normal and the first non-positive
-one aborts, so the accepted range is `0 < p < 2`. Measured:
+Measured, `0`, `0.05`, `1`, `2`, `3`, `-1` and a bare `--maxP` all produce that same block and
+exit 1. The gate fires on the option's presence, not on its value.
 
-```
---maxP 0     exit=1  p-value [0] outside range in ninv()
---maxP 0.05  exit=0
---maxP 1     exit=0
---maxP 2     exit=1  p-value [0] outside range in ninv()
---maxP 3     exit=1  p-value [-0.5] outside range in ninv()
---maxP -1    exit=1  p-value [-0.5] outside range in ninv()
-```
+A range check on `p` does exist in `main.rs`, and it is **unreachable**: it sits after the
+product-scope gate, so `p-value [x] outside range in ninv()` and the `0 < p < 2` window it
+enforces cannot be observed from the command line. See
+[§7](#7-exit-status-and-fatal-errors).
 
 ### Association Method Parameter
 
 #### `--invnorm`
 
-*Switch, default off.* Parameter of the association analyses. Accepted and echoed; changes
-nothing.
+*Switch, default off.* Parameter of the association analyses. Parsed and echoed in the
+banner, then **rejected**: naming it is fatal, exit 1, before the input is opened.
+See [§8](#8-accepted-compatibility-spellings-outside-product-scope).
 
 ### Genetic Risk Score
 
 #### `--risk`
 
-*Switch, default off.* **Not implemented**, but it is validated: `--risk` without
-`--model` is fatal.
+*Switch, default off.* **Outside the minimal product scope.** Naming it is fatal, exit 1,
+before the input is opened:
 
 ```
 $ king -b multifam.bed --risk
 
 FATAL ERROR - 
-Please use --model <file> to specify a risk model.
+open-king's minimal relatedness product does not implement: --risk.
+Supported analyses: --related, --duplicate, --kinship, --ibdseg, --ibs, --unrelated, --cluster, --build, --bysample, --bySNP, and --autoQC.
+See docs/SCOPE.md for the product-scope contract.
 ```
 
-`--risk --model <file>` also changes one unrelated thing, faithfully to the reference: it
-skips the early `.bed` probe, so a missing fileset is reported as
-`Pedigree file <name>.fam cannot be opened` instead of `Genotype file <name>.bed cannot be
-opened`.
+`--risk --model m.txt` names both options in one fatal. Two reference behaviours around
+`--risk` sit behind that gate and are therefore **unreachable**: the
+`Please use --model <file> to specify a risk model.` fatal for `--risk` without `--model`,
+and the `--risk --model` path in the loader that skips the early `.bed` probe, which in the
+reference reports a missing fileset as `Pedigree file <name>.fam cannot be opened` rather
+than `Genotype file <name>.bed cannot be opened`. Both are implemented; no command line
+reaches either. See [§7](#7-exit-status-and-fatal-errors).
 
 #### `--model <file>`
 
-*String, default empty.* The risk model file. Its only observable effect is satisfying
-`--risk`'s check above.
+*String, default empty.* The risk model file. Parsed and echoed in the banner, then
+**rejected**: naming it is fatal, exit 1, before the input is opened. It is never read.
 
 #### `--prevalence <x>`
 #### `--noflip`
 
-*Double / switch.* Parameters of `--risk`. Accepted and echoed; change nothing.
+*Double / switch.* Parameters of `--risk`. Parsed and echoed in the banner, then
+**rejected**: naming either one is fatal, exit 1, before the input is opened.
+See [§8](#8-accepted-compatibility-spellings-outside-product-scope).
 
 ### Computing Parameter
 
@@ -1026,8 +1146,10 @@ The `.bed` path is always exactly what `-b` said; there is no `--bed`.
 #### `--covfile <file>`
 #### `--prunedsnp <file>`
 
-*Strings, default empty.* Inputs to the association and structure analyses. Accepted and
-echoed; they change nothing. None of the three is read — a nonexistent path is not an error.
+*Strings, default empty.* Inputs to the association and structure analyses. Parsed and
+echoed in the banner, then **rejected**: naming any of the three is fatal, exit 1, before the
+input is opened. The path itself is never looked at, so a nonexistent one gives the same
+fatal as a real one. See [§8](#8-accepted-compatibility-spellings-outside-product-scope).
 
 #### `--sexchr <n>`
 
@@ -1102,8 +1224,14 @@ plotting request exits 1 before opening the input:
 
 ```
 $ king -b multifam.bed --rplot
-FATAL ERROR - --rplot is outside open-king's minimal relatedness/QC product scope.
+
+FATAL ERROR - 
+open-king's minimal relatedness product does not implement: --rplot.
+Supported analyses: --related, --duplicate, --kinship, --ibdseg, --ibs, --unrelated, --cluster, --build, --bysample, --bySNP, and --autoQC.
+See docs/SCOPE.md for the product-scope contract.
 ```
+
+`--pngplot` gives the same block with its own name in place of `--rplot`.
 
 #### `--plink`
 
@@ -1112,7 +1240,11 @@ pre-I/O scope gate:
 
 ```
 $ king -b multifam.bed --plink
-FATAL ERROR - --plink is outside open-king's minimal relatedness/QC product scope.
+
+FATAL ERROR - 
+open-king's minimal relatedness product does not implement: --plink.
+Supported analyses: --related, --duplicate, --kinship, --ibdseg, --ibs, --unrelated, --cluster, --build, --bysample, --bySNP, and --autoQC.
+See docs/SCOPE.md for the product-scope contract.
 ```
 
 ### Output Parameter
@@ -1135,8 +1267,9 @@ Cannot open nodir/x$TMP$.ped to write.
 
 #### `--rpath <path>`
 
-*String, default empty.* Path to the R installation for the plotting flags. Accepted and
-echoed; changes nothing.
+*String, default empty.* Path to the R installation for the plotting flags. Parsed and
+echoed in the banner, then **rejected**: naming it is fatal, exit 1, before the input is
+opened. See [§8](#8-accepted-compatibility-spellings-outside-product-scope).
 
 ---
 
@@ -1306,8 +1439,8 @@ Measured, on the corpus:
 | `king --xyz -b multifam.bed --kinship` (bad option) | 0 |
 | `king -b nosuch.bed --kinship` | 1 |
 | `king -b multifam.bed --kinship --sexchr 1` | 1 |
-| `king -b multifam.bed --kinship --maxP 0` | 1 |
-| `king -b multifam.bed --risk` (no `--model`) | 1 |
+| `king -b multifam.bed --kinship --maxP 0` (excluded parameter) | 1 |
+| `king -b multifam.bed --risk` (excluded analysis) | 1 |
 | `king -b multifam.bed --kinship --prefix no/such/` | 1 |
 
 Two things a shell script must not infer from the exit status:
@@ -1323,9 +1456,8 @@ The fatal messages, in the order they can fire:
 | message | cause |
 | --- | --- |
 | `Genotype files are required. e.g., …` | no `-b` |
-| `p-value [x] outside range in ninv()` | `--maxP` outside `0 < p < 2` |
+| `open-king's minimal relatedness product does not implement: …` | any option or input form in [§8](#8-accepted-compatibility-spellings-outside-product-scope) |
 | `Sex chromosome n out of range.` | `--sexchr` below 2 |
-| `Please use --model <file> to specify a risk model.` | `--risk` without `--model` |
 | `Genotype file <path> cannot be opened` | `.bed` missing or unreadable |
 | `Please use PLINK binary format as input.` | `-b` argument does not end in `.bed` |
 | `Please use either PLINK or KING binary format as input.` | bad `.bed` magic |
@@ -1338,21 +1470,40 @@ The fatal messages, in the order they can fire:
 | `Currently only SNP-major mode can be analyzed.` | `.bed` mode byte is 0 |
 | `Not enough genotypes at the Nth marker` | `.bed` shorter than the map requires |
 
+**Two of the reference's fatal messages cannot fire here, and one of its quirks cannot be
+observed.** All three sit after the product-scope gate, which rejects an excluded option on
+its presence alone, whatever value follows it, so nothing reaches them:
+
+* `p-value [x] outside range in ninv()`, the `0 < p < 2` check on `--maxP`.
+* `Please use --model <file> to specify a risk model.`, for `--risk` without `--model`.
+* the `--risk --model` path in the loader that skips the early `.bed` probe, which reports a
+  missing fileset as `Pedigree file <name>.fam cannot be opened` rather than
+  `Genotype file <name>.bed cannot be opened`.
+
+The code is kept for reference fidelity. It is listed here so nobody hunts for a command line
+that reaches it; there is none.
+
 ---
 
 ## 8. Accepted compatibility spellings outside product scope
 
-Twelve options and one input form are outside open-king's deliberately minimal relatedness
-and QC scope. They are parsed and echoed only so the banner and parse surface stay
+Twenty-four options and one input form are outside open-king's deliberately minimal
+relatedness and QC scope. They are parsed and echoed only so the banner and parse surface stay
 byte-exact against the reference. They are not planned functionality and are not limitations
 of the supported core; see [SCOPE.md](SCOPE.md).
 
-`--pca` · `--mds` · `--roh` · `--lmm` · `--tdt` · `--gdt` · `--risk` · `--makeGRM` ·
-`--plink` · `--rplot` · `--pngplot` · `--rpath` · multi-dataset input
+Eleven analyses and output modes, plus the input form:
 
-Their associated parameters are rejected too: `--projection`, `--pcs`, `--trait`,
-`--covariate`, `--model`, `--prevalence`, `--noflip`, `--invnorm`, `--phefile`, `--covfile`,
-`--prunedsnp`, `--rpath`, and `--maxP`.
+`--pca` · `--mds` · `--roh` · `--lmm` · `--tdt` · `--gdt` · `--risk` · `--makeGRM` ·
+`--plink` · `--rplot` · `--pngplot` · multi-dataset input
+
+Their associated parameters are rejected too, thirteen of them: `--projection`, `--pcs`,
+`--trait`, `--covariate`, `--maxP`, `--invnorm`, `--model`, `--prevalence`, `--noflip`,
+`--phefile`, `--covfile`, `--prunedsnp` and `--rpath`.
+
+The list is `Options::unsupported_requests()` in `crates/king-cli/src/cli.rs`, and the two
+groups above are its 24 entries. Nothing in [§5](#5-option-reference) is exempt from it: an
+option described there as parsed and echoed is still rejected if it appears here.
 
 The parser continues to recognize and echo these names for a familiar KING surface. After
 the banner, open-king emits one fatal block naming every excluded request, exits 1, and does
@@ -1373,6 +1524,8 @@ $ king -b multifam.bed,dups.bed --kinship          # open-king, exit 1
 
 FATAL ERROR -
 open-king's minimal relatedness product does not implement: comma-separated multi-fileset input.
+Supported analyses: --related, --duplicate, --kinship, --ibdseg, --ibs, --unrelated, --cluster, --build, --bysample, --bySNP, and --autoQC.
+See docs/SCOPE.md for the product-scope contract.
 
 $ king -b multifam.bed,dups.bed --kinship          # KING 2.3.2
 Read in PLINK bim files
@@ -1524,7 +1677,7 @@ bim, fam, bed = read("multifam")
 (OUT / "alt.map").write_text("".join("\t".join(r) + "\n" for r in bim))
 ```
 
-The `c1`/`c16` and `n1`/`n2` directories in [§5](#--cpus-n) and [§8](#8-accepted-but-not-implemented)
+The `c1`/`c16` and `n1`/`n2` directories in [§5](#--cpus-n) and [§8](#8-accepted-compatibility-spellings-outside-product-scope)
 are just two empty directories per comparison, each holding one run of the command quoted
 beside them.
 

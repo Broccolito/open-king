@@ -1331,6 +1331,59 @@ exempt. For maps shorter than 4,096 markers the reference reads unstable tail st
 abort valid data nondeterministically; open-king deliberately skips that unsafe check.
 [`CLI.md` §3](CLI.md#two-hard-requirements-that-are-easy-to-miss) states the input contract.
 
+### 5.13 A second build of KING 2.3.2 agrees on every output file but one, and that one is `--noscreen`
+
+§5.3 records that the reference prints uninitialised memory in its own banner, and notes the
+value "is stable within one build and environment". That sentence understates the
+consequence, so here is the cross-build measurement it implies.
+
+KING 2.3.2 was compiled a second time from the published `KINGcode.tar.gz`
+(sha256 `b6c636ac…`) with a different compiler from the one that produced the capture
+binary: Homebrew GCC 16, `g++-16 -lm -lz -O2 -fopenmp`, arm64. Call it **build B**; the
+binary the goldens were captured from is **build A**. The source was compiled and then
+deleted without being read, so §1's clean-room rule is intact.
+
+All 490 captured invocations were replayed against build B and every output file compared
+byte for byte. **488 of 490 cases produce byte-identical output files.** Six of those are
+`_analysis` captures that store `MD5SUMS.txt` instead of the files themselves; their
+checksums were compared directly and all match. The two exceptions are:
+
+| case | difference | what it is |
+| --- | --- | --- |
+| `core/sexchr__kinship` | `kingX.kin0` differs | the documented threads>1 race on the X between-family writer, §5.2. Not a build difference; the file differs between two runs of the same binary. |
+| `core/_analysis/multifam__related_degree1__noscreen` | build B writes a `king.kin0` that build A does not | a real behavioural difference between the two builds. |
+
+The second one is worth stating plainly, because it is the one option whose banner value is
+undefined:
+
+* **Build A** on `--related --degree 1 --noscreen`: writes `king.kin` and `kingallsegs.txt`,
+  no `king.kin0`, and stdout ends `No close relatives are inferred.`
+* **Build B**, same invocation: additionally writes `king.kin0` with eight between-family
+  pairs, including `FS` and `PO` calls.
+* **open-king** matches build A.
+
+So `--noscreen` bypasses the two-stage screen in build B and does not in build A. `--noscreen`
+takes an integer, and §5.3 establishes that the integer it carries is uninitialised memory. An
+undefined value reaching a branch is exactly how the same source yields two behaviours, so
+this is best read as one symptom rather than two: the option's value is undefined, and
+therefore so is its effect.
+
+Two consequences for this project:
+
+1. **open-king treating `--noscreen` as inert is not a gap.** It reproduces build A, which is
+   the only build the corpus can speak for. Making it bypass the screen would reproduce
+   build B and fail 480 cases. There is no implementation that satisfies both, because the
+   reference does not agree with itself.
+2. **§5.7's screening derivation must not be pushed further using a rebuilt reference.** A
+   probe compiled locally may answer `--noscreen` questions differently from the binary the
+   goldens came from, and would look like a discovery rather than a build artifact.
+
+The wider reading is the encouraging one. KING's *computed* output is reproducible across
+independent compilations: every kinship, IBS, segment and QC file in the corpus is byte-equal
+between build A and build B. What is not reproducible is its banner and one option whose
+value was never initialised. That strengthens the goldens as a target and narrows the
+standing "one build" caveat at the end of §5.0 to the places where it actually bites.
+
 ---
 
 ## 6. Structural analyses and held-out residuals
