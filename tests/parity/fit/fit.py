@@ -73,7 +73,7 @@ def report(t):
 def main():
     what = sys.argv[1] if len(sys.argv) > 1 else "baseline"
     if what == "baseline":
-        print("baseline (mirrors crates/king-core/src/ibdseg.rs):")
+        print("baseline (mirrors crates/open-king-core/src/ibdseg.rs):")
         score(verbose=True)
     elif what == "sweep":
         knob = sys.argv[2]

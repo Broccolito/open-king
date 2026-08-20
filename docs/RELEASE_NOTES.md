@@ -7,7 +7,7 @@ The goal is drop-in replacement: the same command line, the same input files, an
 byte-identical output.
 
 ```bash
-king -b study.bed --related --prefix study
+open-king -b study.bed --related --prefix study
 ```
 
 ## Parity
@@ -21,7 +21,7 @@ taking our word for it:
 
 ```bash
 cargo build --release
-python3 tests/parity/run_parity.py --impl ./target/release/king
+python3 tests/parity/run_parity.py --impl ./target/release/open-king
 ```
 
 Running the harness against the *reference* binary scores 480/480, which is what
@@ -75,7 +75,7 @@ quantified evidence.
 Download the archive for your platform below, or build from source:
 
 ```bash
-cargo build --release      # -> target/release/king
+cargo build --release      # -> target/release/open-king
 ```
 
 Binaries are provided for macOS (arm64 and x86_64), Linux x86_64, and Windows x86_64.

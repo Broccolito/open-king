@@ -2,7 +2,7 @@
 
 The scorecards in this directory grade a *Python* model against the reference.  That is
 only useful if the shipped engine computes the same thing, so this runs
-`target/release/king --ibdseg` on every corpus fileset and compares its four printed `.seg`
+`target/release/open-king --ibdseg` on every corpus fileset and compares its four printed `.seg`
 columns against `seg19.call_pair` for the same pair — not against the reference, against
 the model.  Any disagreement is a porting bug and is reported as such.
 
@@ -19,7 +19,7 @@ import kingdata as kd
 import seg19 as S19
 
 KING = os.environ.get("OPENKING",
-                      os.path.join(kd.ROOT, "target", "release", "king"))
+                      os.path.join(kd.ROOT, "target", "release", "open-king"))
 FLOORS = [(3_000_000, []), (5_000_000, ["--seglength", "5"]),
           (10_000_000, ["--seglength", "10"])]
 

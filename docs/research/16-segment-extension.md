@@ -1,6 +1,6 @@
 # How an IBD2 run is started, extended and ended — solved for `--ibs`
 
-**Status: COMMITTED.** `Scan::ibd2_words` in `crates/king-core/src/ibdseg.rs` is the rule
+**Status: COMMITTED.** `Scan::ibd2_words` in `crates/open-king-core/src/ibdseg.rs` is the rule
 below; the harness went 397 → **403 of 480** with zero regressions (§8.3). Solved for the
 `--ibs` IBD2 caller — exactly on the corpus, about 93 % out of sample on adversarial
 constructed sequences (§10.3). **Not** solved for the `.seg` caller, which is a different
@@ -266,7 +266,7 @@ which is why the corpus is exact and this is not.
 
 ### 8.3 What this was worth to the implementation — **committed**
 
-`Scan::ibd2_words` in `crates/king-core/src/ibdseg.rs` now *is* §6. The harness moved
+`Scan::ibd2_words` in `crates/open-king-core/src/ibdseg.rs` now *is* §6. The harness moved
 **397 → 403 of 480**, and the six cases are exactly `core/{nuclear,multifam,missing,
 monomorphic,sexchr,bigish}__ibs` — every remaining `--ibs` failure, and nothing else.
 Diffing the before and after FAIL lists gives **zero regressions**: the other 77 lines are
@@ -371,7 +371,7 @@ whatever `$KING` names, which is how §8.4 points the same rig at our own build:
 
 ```bash
 cd docs/research/fixtures
-KING=../../../target/release/king python3 segfit.py 6    # 60/60 — our binary is the model
+KING=../../../target/release/open-king python3 segfit.py 6    # 60/60 — our binary is the model
 
 cd ../../../tests/parity/fit
 python3 check_mirror.py    # `engine.py` is the committed Rust engine: MIRROR OK

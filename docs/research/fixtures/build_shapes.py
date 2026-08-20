@@ -8,7 +8,7 @@ undeclared full sibs between founders, between mothers, or between children; a
 parent-offspring link; a duplicate; a half-sib link that is too weak to merge at all;
 sibships that already declare a couple; several independent merges in one run.  Running
 the reference over the set is what pinned every clause of the writer in
-`crates/king-cli/src/analysis/build.rs`, none of which is visible in `bigish` alone.
+`crates/open-king-cli/src/analysis/build.rs`, none of which is visible in `bigish` alone.
 
     python3 build_shapes.py                 # score our binary against the reference
     python3 build_shapes.py --dump fs_kids  # show one shape's reference outputs
@@ -45,7 +45,7 @@ import importlib.util, os, subprocess, sys
 ROOT = os.path.normpath(os.path.join(_HERE, "..", "..", ".."))
 KING = os.environ.get(
     "KING", "/Users/wgu/Desktop/GeneQuire Project/GeneQuire/software/king/king")
-IMPL = os.environ.get("OPEN_KING", os.path.join(ROOT, "target", "release", "king"))
+IMPL = os.environ.get("OPEN_KING", os.path.join(ROOT, "target", "release", "open-king"))
 OUT = os.path.join(_HERE, "work", "buildshapes")
 
 def gc():

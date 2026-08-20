@@ -17,7 +17,7 @@ Generated 2026-08-20T06:20:53Z by `benchmarks/run_benchmark.py`.
 | `ru_maxrss` unit detected | bytes |
 | load average at start | 10.87 / 9.64 / 15.95 (1/5/15 min) |
 | load average at end | 9.44 / 16.18 / 18.55 (1/5/15 min) |
-| binary `open-king` | `/Users/wgu/Desktop/open-king/target/release/king` |
+| binary `open-king` | `/Users/wgu/Desktop/open-king/target/release/open-king` |
 | banner `open-king` | KING 2.3.2 - (c) 2010-2023 Wei-Min Chen |
 | binary `KING 2.3.2` | `/private/tmp/claude-501/-Users-wgu-Desktop-BioRouter--claude-worktrees-github-issue-review-sync-d6484d/68faa205-ad38-4314-9f5c-e0a114175c32/scratchpad/kingref/king-ref` |
 | banner `KING 2.3.2` | KING 2.3.2 - (c) 2010-2023 Wei-Min Chen |

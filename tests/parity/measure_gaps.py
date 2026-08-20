@@ -15,9 +15,9 @@ Rows are matched on the identifier columns (``FID``/``FID1``/``FID2``/``ID``/
 ``ID1``/``ID2``), so a pair only one side reports is never mistaken for a numeric
 disagreement, and column error is measured only over pairs both sides report.
 
-    python3 tests/parity/measure_gaps.py --impl target/release/king
-    python3 tests/parity/measure_gaps.py --impl target/release/king --filter ibdseg/
-    python3 tests/parity/measure_gaps.py --impl target/release/king --by-dataset king.seg
+    python3 tests/parity/measure_gaps.py --impl target/release/open-king
+    python3 tests/parity/measure_gaps.py --impl target/release/open-king --filter ibdseg/
+    python3 tests/parity/measure_gaps.py --impl target/release/open-king --by-dataset king.seg
 
 Python 3 standard library only.
 """

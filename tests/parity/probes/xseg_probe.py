@@ -15,7 +15,7 @@ rules cannot be validated there without fitting to them. This probe builds fresh
 filesets instead: eight pedigree shapes crossed with five X maps, two seeds each,
 thirteen flag combinations, 1 040 reference-vs-open-king runs.
 
-    python3 tests/parity/probes/xseg_probe.py --impl target/release/king
+    python3 tests/parity/probes/xseg_probe.py --impl target/release/open-king
 
 Reports four numbers:
 
@@ -32,7 +32,7 @@ docs/PARITY.md §5.11 and neither an X.seg property:
 
   * an X array whose length is an exact multiple of 64 — the reference reads past the
     end and adds an absolute coordinate to the pair's IBD2 total, in X.kin as well;
-  * a `.fam` SEX field outside {0, 1, 2}, which the reference and `king-io` read
+  * a `.fam` SEX field outside {0, 1, 2}, which the reference and `open-king-io` read
     differently.
 
 Python 3 standard library only.  The genotype simulator is `xgen.py` beside this file.

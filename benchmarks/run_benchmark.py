@@ -23,10 +23,10 @@ The detected unit is recorded in the results as "ru_maxrss_unit".
 Usage
 -----
     # measure open-king alone
-    ./run_benchmark.py --binary-a ../target/release/king
+    ./run_benchmark.py --binary-a ../target/release/open-king
 
     # measure open-king against the reference KING 2.3.2 build and diff outputs
-    ./run_benchmark.py --binary-a ../target/release/king \\
+    ./run_benchmark.py --binary-a ../target/release/open-king \\
                        --binary-b /path/to/king-2.3.2 \\
                        --label-a open-king --label-b king-2.3.2
 
@@ -669,15 +669,15 @@ def main(argv=None):
     ap = argparse.ArgumentParser(
         description="Benchmark one or two KING-compatible binaries.")
     ap.add_argument("--binary-a", default=os.path.join(REPO_ROOT, "target",
-                                                       "release", "king"),
+                                                       "release", "open-king"),
                     help="first binary (default: the repo release build)")
     ap.add_argument("--binary-b", default=None,
                     help="optional second binary, for timing and output diffs")
     ap.add_argument("--label-a", default="open-king")
     ap.add_argument("--label-b", default="reference")
     ap.add_argument("--work-dir", required=False,
-                    default=os.environ.get("KING_BENCH_WORKDIR",
-                                           "/tmp/king-bench"),
+                    default=os.environ.get("OPEN_KING_BENCH_WORKDIR",
+                                           "/tmp/open-king-bench"),
                     help="scratch directory for generated inputs and outputs; "
                          "keep it outside the repository")
     ap.add_argument("--results-dir",

@@ -1,6 +1,6 @@
 """Score the full `.seg` corpus with the committed IBD1 rule and a candidate IBD2 rule.
 
-IBD1 is mirrored from `crates/king-core/src/ibdseg.rs` unchanged (IBS0-free words, run of
+IBD1 is mirrored from `crates/open-king-core/src/ibdseg.rs` unchanged (IBS0-free words, run of
 >= 2, boundaries refined by the flanking word's last IBS0, usable-segment fringes).  IBD2
 is the rule fitted against `--ibs`'s MaxIBD2 in `maxfit.py` / `maxrule.py`:
 

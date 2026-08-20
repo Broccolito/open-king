@@ -324,7 +324,7 @@ The same thing measured from the shipped binary against the goldens, with `.seg`
 **Every one of the 982 rows at 5 Mb is now byte-exact**, against 947 before
 (`20-…` §9's note gives the same runs as 947 and 943 exact under this rule).
 
-`python3 tests/parity/run_parity.py --impl ./target/release/king`: **472 → 475 of 480.**
+`python3 tests/parity/run_parity.py --impl ./target/release/open-king`: **472 → 475 of 480.**
 Closed: `ibdseg/bigish__ibdseg_seglength5`, `ibdseg/missing__ibdseg_seglength5` and
 `ibdseg/missing__ibdseg_seglength10`. Still open: `ibdseg/bigish__ibdseg_seglength10`,
 `ibdseg/multifam__ibdseg_seglength10`, and the three non-`.seg` cases that predate this
@@ -413,7 +413,7 @@ python3 seg21.py                # the corpus scorecard at 3 / 5 / 10 Mb, 20 vs 2
 python3 seg21.py grid           # each of the four clauses dropped in turn
 python3 check_mirror.py         # engine.py still equals the shipped binary
 cd ../../..
-python3 tests/parity/run_parity.py --impl ./target/release/king
+python3 tests/parity/run_parity.py --impl ./target/release/open-king
 ```
 
 `push1.py` drives the KING 2.3.2 reference by default and shares `mergelab_measured.json`.

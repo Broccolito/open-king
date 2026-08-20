@@ -301,7 +301,7 @@ rule (`python3 tests/parity/fit/scorecard.py`):
 **Every row at every captured floor is byte-exact.** Before this campaign 10 Mb stood at
 970 exact rows.
 
-`python3 tests/parity/run_parity.py --impl ./target/release/king`: **475 → 477 of 480.**
+`python3 tests/parity/run_parity.py --impl ./target/release/open-king`: **475 → 477 of 480.**
 Closed: `ibdseg/bigish__ibdseg_seglength10` and `ibdseg/multifam__ibdseg_seglength10` — the
 last two `.seg` cases in the suite. Still open: `apps/bigish__build`,
 `core/bigish__related_degree2` and `ibdseg/bigish__related_degree2_ibdseg`, none of them a
@@ -375,7 +375,7 @@ python3 seg23.py grid                          # each clause dropped in turn
 python3 scorecard.py                           # the same from the shipped binary
 python3 check_mirror.py                        # engine.py still equals that binary
 cd ../../..
-python3 tests/parity/run_parity.py --impl ./target/release/king
+python3 tests/parity/run_parity.py --impl ./target/release/open-king
 ```
 
 `window1.py` shares `mergelab_measured.json`; `chrprobe.py` caches nothing and drives the

@@ -155,7 +155,7 @@ integers, or values already quantised to the fourth decimal — and forms `PropI
 scaling them, rather than by halving a full-precision proportion. This document does not
 claim to know which; the rule is what is measured, and it is exact.
 
-Committed as `king_core::ibdseg::seg_prop_ibd`, used by the `.seg` writer only.
+Committed as `open_king_core::ibdseg::seg_prop_ibd`, used by the `.seg` writer only.
 `InfType`, the `--degree` filter, `--unrelated`'s greedy and `--related`'s `Error` grader
 all still read the full-precision value: this reaches one column of one file.
 

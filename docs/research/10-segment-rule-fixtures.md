@@ -154,7 +154,7 @@ tested except this one, which is why `MIN_RUN1 = 2` fits the corpus as well as i
   `k` het-vs-hom disagreements into one interior word of an 8-word IBD2 block leaves the
   call untouched for every `k` from 1 to 64 — including a word in which *all* 64 markers
   disagree. This is consistent with, and independently confirms, the two-word contingency
-  table already in `king_core::ibdseg::Scan::het_break` (`a ≥ 2` on the left of a boundary
+  table already in `open_king_core::ibdseg::Scan::het_break` (`a ≥ 2` on the left of a boundary
   *and* `b ≥ 1` on the right): with `b = 0` there is no break however large `a` is.
 * A forced IBS0 inside an IBD2 block splits the IBD2 run on word boundaries and leaves an
   IBD1 remainder, as expected. The remainder's exact size is off by ±1 marker from the
@@ -307,7 +307,7 @@ candidate rule.
 ## 7. Actionable now
 
 Independently of the open items, three of these are corrections to
-`crates/king-core/src/ibdseg.rs` that are pinned to the byte:
+`crates/open-king-core/src/ibdseg.rs` that are pinned to the byte:
 
 * `PairSegments::reported()` uses `longest_bp > LONG_SEGMENT_BP`; the measurement says
   **`>=`** (§4).

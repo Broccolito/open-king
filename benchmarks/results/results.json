@@ -27,7 +27,7 @@
   "binaries": [
     {
       "label": "open-king",
-      "path": "/Users/wgu/Desktop/open-king/target/release/king",
+      "path": "/Users/wgu/Desktop/open-king/target/release/open-king",
       "banner": "KING 2.3.2 - (c) 2010-2023 Wei-Min Chen"
     },
     {

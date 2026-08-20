@@ -1,6 +1,6 @@
 # Interpreting the output
 
-How to read the numbers `king` writes, and how to avoid reading them wrongly.
+How to read the numbers `open-king` writes, and how to avoid reading them wrongly.
 
 This page is for the person holding a `.kin`, `.kin0`, `.seg` or `.ibs` file who has to
 decide what it means. It assumes you know what a kinship coefficient is. It does **not**
@@ -18,7 +18,7 @@ output here is invented or predicted. Every command is reproducible from a clean
 
 ```
 cd /path/to/open-king
-cargo build --release                                    # -> target/release/king
+cargo build --release                                    # -> target/release/open-king
 python3 tests/parity/generate_corpus.py --outdir /tmp/kingdocs
 ```
 
@@ -101,7 +101,7 @@ Three existence rules surprise people, and all three are faithful reproductions 
   stdout and then writes nothing:
 
   ```
-  $ king -b /tmp/kingdocs/threegen.bed --kinship --prefix tg
+  $ open-king -b /tmp/kingdocs/threegen.bed --kinship --prefix tg
   Within-family kinship data saved in file tg.kin
 
   Relationship summary (total relatives: 39 by pedigree, 38 by inference)
@@ -158,9 +158,9 @@ The denominator uses the **minimum** heterozygosity of the pair.
 ### The arithmetic, on real rows
 
 ```
-$ king -b /tmp/kingdocs/admixed.bed --ibs --prefix fam
+$ open-king -b /tmp/kingdocs/admixed.bed --ibs --prefix fam
 $ awk '{$1=$2; print}' /tmp/kingdocs/admixed.fam > allsplit.fam   # every sample its own FID
-$ king -b /tmp/kingdocs/admixed.bed --fam allsplit.fam --ibs --prefix nofam
+$ open-king -b /tmp/kingdocs/admixed.bed --fam allsplit.fam --ibs --prefix nofam
 ```
 
 ```
@@ -280,7 +280,7 @@ site (`AA` vs `aa`) is genetically impossible: `IBS0 = 0` exactly. Full siblings
 IBS0 rate is clearly non-zero.
 
 ```
-$ king -b /tmp/kingdocs/multifam.bed --kinship --prefix mfk
+$ open-king -b /tmp/kingdocs/multifam.bed --kinship --prefix mfk
 ```
 
 `multifam` declares four families and contains undeclared cross-family relatives. Within
@@ -361,7 +361,7 @@ printed 4-decimal columns; 87 of the corpus's 982 `.seg` rows disagree with the 
 recomputation in the last digit.
 
 ```
-$ king -b /tmp/kingdocs/threegen.bed --ibdseg --prefix tgs
+$ open-king -b /tmp/kingdocs/threegen.bed --ibdseg --prefix tgs
 Total length of 21 chromosomal segments usable for IBD segment analysis is 982.7 Mb.
 ```
 
@@ -399,10 +399,10 @@ Read the shape, not just the number:
 `multifam` family FAM2 contains a sib pair that realised unusually little sharing:
 
 ```
-$ king -b /tmp/kingdocs/multifam.bed --kinship --prefix mfk
+$ open-king -b /tmp/kingdocs/multifam.bed --kinship --prefix mfk
 FAM2	B_C1	B_C2	15000	0.250	0.2500	0.1791	0.0295	0.1708	0.5
 
-$ king -b /tmp/kingdocs/multifam.bed --related --prefix mfr
+$ open-king -b /tmp/kingdocs/multifam.bed --related --prefix mfr
 FAM2	B_C1	B_C2	15000	0.250	0.2500	0.1791	0.0295	0.3420	0.2642	0.1708	0.4582	0.1273	0.3564	FS	0
 ```
 
@@ -449,7 +449,7 @@ fall below the bar, as does any genome-wide fileset thinned much past ~20,000 ma
 
 ```
 $ python3 reshape.py /tmp/kingdocs/bigish thin4 --every 4       # 200 samples x 12500 SNPs
-$ king -b thin4.bed --ibdseg --prefix oks
+$ open-king -b thin4.bed --ibdseg --prefix oks
 No informative IBD segments.
 ```
 
@@ -462,7 +462,7 @@ So the check below is not optional here. Fall back to reading kinship and IBS0 a
 [§3](#3-the-relationship-cutoffs) and [§4](#4-parentoffspring-vs-full-siblings), and treat
 the relationship calls with corresponding caution.
 
-This is one more reason not to LD-prune or MAF-filter before running `king`: thinning
+This is one more reason not to LD-prune or MAF-filter before running `open-king`: thinning
 markers destroys the density the segment caller depends on, and it does so silently.
 
 ---
@@ -535,7 +535,7 @@ three possible causes, and telling them apart is your job:
    listed in one family with no stated relationship, so `Phi` is `0.0000`:
 
 ```
-$ king -b /tmp/kingdocs/dups.bed --related --prefix dup
+$ open-king -b /tmp/kingdocs/dups.bed --related --prefix dup
 $ cat dup.kin
 FID	ID1	ID2	N_SNP	Z0	Phi	HetHet	IBS0	HetConc	HomIBS0	Kinship	IBD1Seg	IBD2Seg	PropIBD	InfType	Error
 MZFAM	MZ_1	MZ_2	10000	1.000	0.0000	0.3468	0.0009	0.9951	0.0164	0.4962	0.0436	0.9223	0.9441	Dup/MZ	1
@@ -564,7 +564,7 @@ re-running:
 ```
 $ for k in 1 4 20 40 100; do
     python3 reshape.py /tmp/kingdocs/unrelated u$k --every $k
-    king -b u$k.bed --kinship --prefix ku$k
+    open-king -b u$k.bed --kinship --prefix ku$k
   done
 ```
 
@@ -617,7 +617,7 @@ The `missing` dataset is one nuclear family with per-sample missingness of 0 %, 
 20 %, 50 % and 0 %, over 10,000 SNPs:
 
 ```
-$ king -b /tmp/kingdocs/missing.bed --ibs --prefix misi
+$ open-king -b /tmp/kingdocs/missing.bed --ibs --prefix misi
 FID	ID1	ID2	Z0	Phi	N_SNP	N_IBS0	N_IBS1	N_IBS2	NHetHet	NHomHom	N_Het1	N_Het2	IBS	Dist	HetConc	Het2|1	Het1|2	HomConc	Kinship	MaxIBD2	Pr_IBD2
 MIS	M_C1	M_C2	0.250	0.2500	7417	172	2267	4978	1420	3730	2532	2575	1.6480	0.3984	0.3851	0.5608	0.5515	0.9539	0.2107	76753302.000	0.1727
 MIS	M_C1	M_C3	0.250	0.2500	4546	118	1627	2801	742	2177	1541	1570	1.5902	0.4617	0.3132	0.4815	0.4726	0.9458	0.1626	9548806.000	0.0000
@@ -646,7 +646,7 @@ MIS	M_F	M_M	1.000	0.0000	9650	658	4026	4966	1332	4292	3384	3306	1.4464	0.6899	0.
 Read `N_SNP` on every row you are about to act on, and get the per-sample picture first:
 
 ```
-$ king -b /tmp/kingdocs/missing.bed --bysample --prefix q
+$ open-king -b /tmp/kingdocs/missing.bed --bysample --prefix q
 $ cat qbySample.txt
 FID IID FA MO SEX N_SNP Missing Heterozygosity N_pair N_MIp Err_MIp N_trio N_MIt Err_MIt MI_Removal
 MIS M_F 0 0 1 9784 0.0216 0.3505 31542 0 0.0000 31219 0 0.0000 0
@@ -677,7 +677,7 @@ six unrelated founders with ancestry fractions α = 0.10, 0.25, 0.40, 0.50, 0.60
 one of these people is unrelated to every other; true kinship is 0 throughout.
 
 ```
-$ king -b /tmp/kingdocs/admixed.bed --ibs --prefix adm
+$ open-king -b /tmp/kingdocs/admixed.bed --ibs --prefix adm
 ```
 
 The unrelated founders of `adm.ibs0` (between-family estimator), grouped by which population
@@ -749,7 +749,7 @@ three families under `--related` (columns trimmed to `FID ID1 ID2 Phi Kinship IB
 IBD2Seg PropIBD InfType`):
 
 ```
-$ king -b /tmp/kingdocs/admixed.bed --related --prefix admr
+$ open-king -b /tmp/kingdocs/admixed.bed --related --prefix admr
 $ cut -f1,2,3,6,11,12,13,14,15 admr.kin
 FID	ID1	ID2	Phi	Kinship	IBD1Seg	IBD2Seg	PropIBD	InfType
 FAMX	X_C1	X_C2	0.2500	0.2727	0.5298	0.2884	0.5532	FS
@@ -789,7 +789,7 @@ Error creates opposite homozygotes out of nothing. Because the PO signature *is*
 per-genotype error rate:
 
 ```
-$ king -b /tmp/kingdocs/dups.bed --duplicate --prefix dupd
+$ open-king -b /tmp/kingdocs/dups.bed --duplicate --prefix dupd
 FID1	ID1	FID2	ID2	N	N_IBS0	N_IBS1	N_IBS2	Concord	HomConc	HetConc
 DUPA	DUP_A	DUPB	DUP_A_COPY	10000	0	0	10000	1.00000	1.00000	1.00000
 MZFAM	MZ_1	MZFAM	MZ_2	10000	9	17	9974	0.99740	0.99862	0.99512
@@ -801,10 +801,10 @@ MZFAM	MZ_1	MZFAM	MZ_2	10000	9	17	9974	0.99740	0.99862	0.99512
 Now the same experiment on a parent–offspring pair, injecting error into the child only:
 
 ```
-$ king -b /tmp/kingdocs/dups.bed --related --prefix R0            # the rate-0 baseline
+$ open-king -b /tmp/kingdocs/dups.bed --related --prefix R0            # the rate-0 baseline
 $ for r in 0.001 0.002 0.005 0.01 0.02 0.05; do
     python3 reshape.py /tmp/kingdocs/dups g$r --error $r --samples PO_C --seed 7
-    king -b g$r.bed --related --prefix R$r
+    open-king -b g$r.bed --related --prefix R$r
   done
 ```
 
@@ -851,7 +851,7 @@ unfiltered:
 $ python3 reshape.py /tmp/kingdocs/bigish rare   --maf-max 0.15 --first 12000
 $ python3 reshape.py /tmp/kingdocs/bigish common --maf-min 0.35 --first 12000
 $ python3 reshape.py /tmp/kingdocs/bigish allmaf                --first 12000
-$ for t in rare common allmaf; do king -b $t.bed --kinship --prefix k_$t; done
+$ for t in rare common allmaf; do open-king -b $t.bed --kinship --prefix k_$t; done
 ```
 
 ```
@@ -888,7 +888,7 @@ below 5 % — `N_SNP` reads a confident `5000` for every pair, while the six tru
 estimate:
 
 ```
-$ king -b /tmp/kingdocs/monomorphic.bed --related --prefix mono
+$ open-king -b /tmp/kingdocs/monomorphic.bed --related --prefix mono
 $ head -1 mono.kin; awk -F'\t' '$3 ~ /^P_C/' mono.kin
 FID	ID1	ID2	N_SNP	Z0	Phi	HetHet	IBS0	HetConc	HomIBS0	Kinship	IBD1Seg	IBD2Seg	PropIBD	InfType	Error
 MONO	P_C1	P_C2	5000	0.250	0.2500	0.1576	0.0008	0.5194	0.0284	0.3384	0.9800	0.0000	0.4900	PO	1
@@ -906,7 +906,7 @@ correctly — the PO signature survives what the FS signature does not. If you w
 much information your marker set really carries, get it from `--bySNP`, whose `Freq_A` and
 `CallRate` columns give the per-marker picture, not from `N_SNP`.
 
-**Do not prune or filter before running `king`.** KING's own guidance is not to LD-prune or
+**Do not prune or filter before running `open-king`.** KING's own guidance is not to LD-prune or
 MAF-filter inputs, and the reasons are on this page: filtering shifts the IBS0 scale that
 PO/FS discrimination depends on, and thinning destroys the marker density the segment engine
 requires ([§5](#5-ibd1seg-ibd2seg-and-propibd)). Give it your QC-passing SNP set as-is.
@@ -965,7 +965,7 @@ that is not in the genotypes. `--build`, which reconstructs pedigrees from the i
 relationships, says so out loud:
 
 ```
-$ king -b /tmp/kingdocs/multifam.bed --build --prefix bl
+$ open-king -b /tmp/kingdocs/multifam.bed --build --prefix bl
 Reconstructing pedigree...
 Age information not provided.
 ```

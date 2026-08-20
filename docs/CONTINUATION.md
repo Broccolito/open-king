@@ -10,8 +10,8 @@ the measurements behind every claim.
 | --- | --- |
 | Captured differential | **480 PASS / 0 FAIL / 480**, 876 output files byte-compared, 8 documented diff-exclusions |
 | Regression baseline | `MATCH (480 cases)` |
-| Rust verification | all workspace tests pass; clippy `-D warnings`, formatting, release build, and `king-core` docs pass |
-| Library surface | typed `Bundle -> RelatednessReport` API in `king-core`; see [`API.md`](API.md) |
+| Rust verification | all workspace tests pass; clippy `-D warnings`, formatting, release build, and `open-king-core` docs pass |
+| Library surface | typed `Bundle -> RelatednessReport` API in `open-king-core`; see [`API.md`](API.md) |
 | Live issues | only [#11](https://github.com/Broccolito/open-king/issues/11), the five held-out supported-core residuals |
 
 Reproduce the primary gates:
@@ -20,7 +20,7 @@ Reproduce the primary gates:
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo build --release
-python3 tests/parity/run_parity.py --impl ./target/release/king --baseline
+python3 tests/parity/run_parity.py --impl ./target/release/open-king --baseline
 ```
 
 ## Completed development-plan milestones

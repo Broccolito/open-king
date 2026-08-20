@@ -43,7 +43,7 @@ KING = os.environ.get(
 CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seglocal_measured.json")
 WORD = 64
 
-# A1 dosage -> PLINK1 two-bit code (0 = A1A1 hom-major slot in king-io's reading)
+# A1 dosage -> PLINK1 two-bit code (0 = A1A1 hom-major slot in open-king-io's reading)
 CODE = {0: 0b11, 1: 0b10, 2: 0b00, 3: 0b01}
 
 #: The carrier word: IBD1-clean (no opposite homozygote), IBD2-unusable (34 het-vs-hom

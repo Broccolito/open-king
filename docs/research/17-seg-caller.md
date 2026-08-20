@@ -349,10 +349,10 @@ families of §5, every push canvas of §6 and every interior-IBS0 canvas — agr
 ### 10.3 What it is not
 
 **It was not committed to Rust.** The rule is right about the corpus's numbers but wrong
-about one canvas in eight, and `crates/king-core/src/ibdseg.rs` is a byte-parity engine;
+about one canvas in eight, and `crates/open-king-core/src/ibdseg.rs` is a byte-parity engine;
 `tests/parity/run_parity.py` grades whole files, and at 709 of 982 rows no `*__ibdseg`
 case becomes byte-identical, so landing it moves the harness by zero. That is the only
-reason it is not in `crates/king-core/src/ibdseg.rs`: on every gradient that can see it —
+reason it is not in `crates/open-king-core/src/ibdseg.rs`: on every gradient that can see it —
 mean, tail, and the `IBD2Seg` column — it beats the committed rule by a wide margin, and
 `seg17.py` makes the port mechanical once §11.1 closes.
 

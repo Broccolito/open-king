@@ -1,6 +1,6 @@
 # open-king cookbook
 
-Task-oriented recipes for `king`. Each one states the goal, gives the exact command, shows
+Task-oriented recipes for `open-king`. Each one states the goal, gives the exact command, shows
 the real output, and explains how to read it.
 
 **Every command on this page was run, and every output block is pasted from that run.**
@@ -53,17 +53,17 @@ Reference material this page deliberately does not duplicate:
 
 ```
 $ cargo build --release
-   Compiling king-io v0.1.0 (/Users/wgu/Desktop/open-king/crates/king-io)
+   Compiling open-king-io v0.1.0 (/Users/wgu/Desktop/open-king/crates/open-king-io)
    Compiling rayon v1.12.0
-   Compiling king-core v0.1.0 (/Users/wgu/Desktop/open-king/crates/king-core)
-   Compiling king-cli v0.1.0 (/Users/wgu/Desktop/open-king/crates/king-cli)
+   Compiling open-king-core v0.1.0 (/Users/wgu/Desktop/open-king/crates/open-king-core)
+   Compiling open-king-cli v0.1.0 (/Users/wgu/Desktop/open-king/crates/open-king-cli)
     Finished `release` profile [optimized] target(s) in 19.18s
 real 19.27
 ```
 
 A clean build from an empty target directory, on an Apple-silicon Mac. No toolchain beyond
-Rust is needed. The binary lands at `target/release/king`; the recipes below assume it is on
-your `PATH` as `king`.
+Rust is needed. The binary lands at `target/release/open-king`; the recipes below assume it is on
+your `PATH` as `open-king`.
 
 ### Demo data
 
@@ -108,7 +108,7 @@ recipes below use as ground truth. The datasets used here:
 `king`, which is why files below are called `king.kin` and `kingallsegs.txt`:
 
 ```
-$ king -b /tmp/kingdocs/dups.bed --kinship --prefix pfx
+$ open-king -b /tmp/kingdocs/dups.bed --kinship --prefix pfx
 Within-family kinship data saved in file pfx.kin
 Between-family kinship data saved in file pfx.kin0
 
@@ -161,7 +161,7 @@ Kinship bands, used by every relationship label in every file:
 mix-up, a re-hybridised sample, or a genuine MZ twin pair.
 
 ```
-$ king -b /tmp/kingdocs/dups.bed --duplicate
+$ open-king -b /tmp/kingdocs/dups.bed --duplicate
 [... 27-line startup banner and the genotype-loading block elided ...]
 Options in effect:
 	--duplicate
@@ -202,7 +202,7 @@ It is informational.
 **Tightening or loosening the cutoff** with `--minConc`:
 
 ```
-$ king -b /tmp/kingdocs/dups.bed --duplicate --minConc 0.30 --prefix loose_
+$ open-king -b /tmp/kingdocs/dups.bed --duplicate --minConc 0.30 --prefix loose_
 3 pairs of duplicates with heterozygote concordance rate > 30% are saved in file loose_.con
 
 $ cat loose_.con
@@ -219,7 +219,7 @@ is not a delicate choice — but do not lower it hoping to catch "near-duplicate
 **A clean cohort** produces a header-only file, not a missing one:
 
 ```
-$ king -b /tmp/kingdocs/unrelated.bed --duplicate --prefix clean_
+$ open-king -b /tmp/kingdocs/unrelated.bed --duplicate --prefix clean_
 No duplicates are found with heterozygote concordance rate > 80%.
 
 $ cat clean_.con
@@ -245,7 +245,7 @@ pedigree does not declare.
 Using `bigish` (200 samples, 50 000 SNPs, with undeclared cross-family sibships built in):
 
 ```
-$ king -b /tmp/kingdocs/bigish.bed --related --degree 2
+$ open-king -b /tmp/kingdocs/bigish.bed --related --degree 2
 [... startup banner and loading block elided ...]
 Options in effect:
 	--related
@@ -329,7 +329,7 @@ what that costs.
 **A cohort that really is unrelated** gives an empty (header-only) file, and says so:
 
 ```
-$ king -b /tmp/kingdocs/unrelated.bed --kinship --degree 3 --prefix unr_
+$ open-king -b /tmp/kingdocs/unrelated.bed --kinship --degree 3 --prefix unr_
 Between-family kinship data (up to degree 3, 0 pairs in total) saved in file unr_.kin0
 
 $ cat unr_.kin0
@@ -342,7 +342,7 @@ FID1	ID1	FID2	ID2	N_SNP	HetHet	IBS0	Kinship
 sentence and writes nothing — **even when the data contains an exact duplicate pair**:
 
 ```
-$ king -b /tmp/kingdocs/dups.bed --related --prefix rel_
+$ open-king -b /tmp/kingdocs/dups.bed --related --prefix rel_
 No close relatives are inferred.
 
 $ ls rel_.kin0
@@ -352,7 +352,7 @@ ls: rel_.kin0: No such file or directory
 `--kinship` has no such gate. On the same 10-sample fileset:
 
 ```
-$ king -b /tmp/kingdocs/dups.bed --kinship --prefix kin_
+$ open-king -b /tmp/kingdocs/dups.bed --kinship --prefix kin_
 Between-family kinship data saved in file kin_.kin0
 
 $ grep -E 'DUP_A_COPY' kin_.kin0
@@ -386,7 +386,7 @@ in the last column of `.kin`. Using `dups`, where `MZ_1` and `MZ_2` share a FID 
 declared as unrelated founders:
 
 ```
-$ king -b /tmp/kingdocs/dups.bed --kinship
+$ open-king -b /tmp/kingdocs/dups.bed --kinship
 [... startup banner and loading block elided ...]
 Options in effect:
 	--kinship
@@ -432,7 +432,7 @@ POFAM	PO_C	PO_P	10000	0.000	0.2500	0.1680	0.0000	0.2445	0
 On `multifam` (four declared families):
 
 ```
-$ king -b /tmp/kingdocs/multifam.bed --kinship --prefix mf_
+$ open-king -b /tmp/kingdocs/multifam.bed --kinship --prefix mf_
 Relationship summary (total relatives: 36 by pedigree, 36 by inference)
   Source	MZ	PO	FS	2nd	3rd	OTHER
   ===========================================================
@@ -449,7 +449,7 @@ boundary, so it is graded 2nd degree and flagged `0.5`. Run the same fileset thr
 `--related`, which decides using IBD segments rather than the kinship point estimate:
 
 ```
-$ king -b /tmp/kingdocs/multifam.bed --related --prefix mfr_
+$ open-king -b /tmp/kingdocs/multifam.bed --related --prefix mfr_
 $ awk -F'\t' 'NR==1 || $2=="B_C1" && $3=="B_C2"' mfr_.kin
 FID	ID1	ID2	N_SNP	Z0	Phi	HetHet	IBS0	HetConc	HomIBS0	Kinship	IBD1Seg	IBD2Seg	PropIBD	InfType	Error
 FAM2	B_C1	B_C2	15000	0.250	0.2500	0.1791	0.0295	0.3420	0.2642	0.1708	0.4582	0.1273	0.3564	FS	0
@@ -493,7 +493,7 @@ Eight first-degree pairs across family boundaries. Note the `IBS0` column, which
 **Goal:** drop the smallest number of samples such that no two survivors are related.
 
 ```
-$ king -b /tmp/kingdocs/bigish.bed --unrelated
+$ open-king -b /tmp/kingdocs/bigish.bed --unrelated
 [... startup banner and loading block elided ...]
 Options in effect:
 	--unrelated
@@ -556,7 +556,7 @@ grandparents and two in-marrying spouses, here), they all survive.
 kinship run:
 
 ```
-$ king -b /tmp/kingdocs/bigish.bed --kinship --prefix all_
+$ open-king -b /tmp/kingdocs/bigish.bed --kinship --prefix all_
 
 $ python3 check_unrelated.py kingunrelated.txt all_.kin all_.kin0
 kept samples           : 84
@@ -630,7 +630,7 @@ which those three families are split into singleton FIDs, which forces the betwe
 form onto exactly the same pairs:
 
 ```
-$ king -b /tmp/kingdocs/admixed.bed --ibs --prefix fam_
+$ open-king -b /tmp/kingdocs/admixed.bed --ibs --prefix fam_
 Within-family IBS data saved in file fam_.ibs
 Between-family IBS data saved in file fam_.ibs0
 
@@ -641,7 +641,7 @@ AP1_01 A1_01 0 0 1 -9
 AP1_02 A1_02 0 0 2 -9
 40
 
-$ king -b /tmp/kingdocs/admixed.bed --fam split.fam --kinship --prefix split_
+$ open-king -b /tmp/kingdocs/admixed.bed --fam split.fam --kinship --prefix split_
 Between-family kinship data saved in file split_.kin0
 ```
 
@@ -767,7 +767,7 @@ structurally impossible except through genotyping error. Full siblings have Pr[I
 Using `multifam`, whose four declared families contain both kinds:
 
 ```
-$ king -b /tmp/kingdocs/multifam.bed --kinship
+$ open-king -b /tmp/kingdocs/multifam.bed --kinship
 $ awk -F'\t' 'NR==1 || $9+0 > 0.177' king.kin | cut -f1-3,6,8,9 | head -20
 FID	ID1	ID2	Phi	IBS0	Kinship
 FAM1	A_C1	A_C2	0.2500	0.0153	0.2721
@@ -830,7 +830,7 @@ grandchild and avuncular pairs are all φ = 0.125. Can the segment output tell t
 `--ibdseg` calls the IBD segments each pair shares and summarises them per pair:
 
 ```
-$ king -b /tmp/kingdocs/threegen.bed --ibdseg
+$ open-king -b /tmp/kingdocs/threegen.bed --ibdseg
 [... startup banner and loading block elided ...]
 kingsplitped.txt is generated for certain pedigree plot applications.
 
@@ -857,7 +857,7 @@ estimate and the segment summary (kinship comes from `--ibs`, because a single-f
 comes out empty — see [Traps](#traps)):
 
 ```
-$ king -b /tmp/kingdocs/threegen.bed --ibs --prefix ibs_
+$ open-king -b /tmp/kingdocs/threegen.bed --ibs --prefix ibs_
 $ python3 by_relationship.py
 true phi    pair         Kinship   IBD1Seg   IBD2Seg  PropIBD InfType
 PO   0.2500 C1/P1         0.2499    1.0000    0.0000   0.5000 PO
@@ -966,7 +966,7 @@ single 2nd-versus-3rd-degree call as a coin-flip-ish call, and look at the whole
 `--seglength` sets the reporting floor for a segment, in Mb (default 3):
 
 ```
-$ for l in 3 10; do king -b /tmp/kingdocs/threegen.bed --ibdseg --seglength $l --prefix sl$l\_ >/dev/null; done
+$ for l in 3 10; do open-king -b /tmp/kingdocs/threegen.bed --ibdseg --seglength $l --prefix sl$l\_ >/dev/null; done
 
 $ diff sl3_.seg sl10_.seg | head -14
 11c11
@@ -998,7 +998,7 @@ anything else.
 ### `--bysample`
 
 ```
-$ king -b /tmp/kingdocs/missing.bed --bysample
+$ open-king -b /tmp/kingdocs/missing.bed --bysample
 QC-by-sample starts at Fri Aug 14 22:50:34 2026
 There are 8 parent-offspring pairs and 4 trios, and 6 full-sibling pairs according to the pedigree.
 QC starts...
@@ -1030,7 +1030,7 @@ On a fileset that has X and Y markers the header grows, and those extra columns 
 check:
 
 ```
-$ king -b /tmp/kingdocs/sexchr.bed --bysample --prefix sex_
+$ open-king -b /tmp/kingdocs/sexchr.bed --bysample --prefix sex_
 $ cat sex_bySample.txt
 FID IID FA MO SEX N_SNP Missing Heterozygosity N_xSNP xHeterozygosity N_ySNP N_yHetero N_mtSNP N_mtHetero N_pair N_MIp Err_MIp N_trio N_MIt Err_MIt MI_Removal
 SEX S_F 0 0 1 4150 0.0000 0.3489 1500 0.0000 300 0 50 0 16600 0 0.0000 16600 0 0.0000 0
@@ -1057,7 +1057,7 @@ sex column.
 ### `--bySNP`
 
 ```
-$ king -b /tmp/kingdocs/missing.bed --bySNP --prefix snp_
+$ open-king -b /tmp/kingdocs/missing.bed --bySNP --prefix snp_
 QC statistics by SNPs saved in file snp_bySNP.txt
 
 $ head -3 snp_bySNP.txt
@@ -1083,7 +1083,7 @@ IBS and segment number on this page — uses **every** marker in the `.bim` with
 MAF or monomorphic filter at all.
 
 ```
-$ king -b /tmp/kingdocs/missing.bed --autoQC --prefix qc_
+$ open-king -b /tmp/kingdocs/missing.bed --autoQC --prefix qc_
 Auto-QC step 1: Apply SNP call rate filter 80.0% on 10000 SNPs (in 6 samples)
   1569 autosome SNPs have call rate < 80.0%
   0 X-chr SNPs have call rate < 80.0%
@@ -1176,7 +1176,7 @@ array. Full rules, including several genuinely surprising boundary behaviours, a
 connected, and it infers parent–child links inside the merged families.
 
 ```
-$ king -b /tmp/kingdocs/bigish.bed --build
+$ open-king -b /tmp/kingdocs/bigish.bed --build
 [... startup banner, loading, and the clustering block elided ...]
 Pedigree reconstruction starts at Fri Aug 14 22:50:35 2026
 Reconstructing pedigree...
@@ -1264,7 +1264,7 @@ Nothing extra is needed on the command line. If the `.bim` carries X markers, KI
 separate X pass and writes extra files. Load-time reporting tells you what it found:
 
 ```
-$ king -b /tmp/kingdocs/sexchr.bed --kinship --cpus 1
+$ open-king -b /tmp/kingdocs/sexchr.bed --kinship --cpus 1
 Loading genotype data in PLINK binary format...
 Read in PLINK fam file /tmp/kingdocs/sexchr.fam...
   PLINK pedigrees loaded: 10 samples
@@ -1278,7 +1278,7 @@ while `23`/`X`, `24`/`Y` and `26`/`MT` are held aside. Any other chromosome code
 `chr1` — is dropped at map load and never counted.
 
 ```
-$ king -b /tmp/kingdocs/sexchr.bed --kinship --cpus 1 --prefix x_
+$ open-king -b /tmp/kingdocs/sexchr.bed --kinship --cpus 1 --prefix x_
 X-chromosome analysis...
 X-chromosome genotypes stored in 24 64-bit words for each of 10 individuals.
 Within-family kinship data saved in file x_X.kin
@@ -1354,7 +1354,7 @@ appear in 17 rows of the autosomal `.kin0` and in none of `X.kin0`. Fill in the 
 ### X IBD segments
 
 ```
-$ king -b /tmp/kingdocs/sexchr.bed --ibdseg --degree 2 --cpus 1 --prefix xs_
+$ open-king -b /tmp/kingdocs/sexchr.bed --ibdseg --degree 2 --cpus 1 --prefix xs_
   Genotype data consist of 4150 autosome SNPs (including 150 XY SNPs), 1500 X-chromosome SNPs, 300 Y-chromosome SNPs, 50 mitochondrial SNPs
   In addition to autosomes, 1 segments of length 75.0 Mb on X-chr can be further used.
 Additional summary statistics of X-Chr IBD segments saved in file xs_X.seg
@@ -1410,8 +1410,8 @@ The relatedness computation is O(N²) in samples: 200 people is 19 900 pairs, 20
 (200 samples: 19 900 pairs, of which 19 327 cross a family boundary and so are `.kin0`'s):
 
 ```
-$ king -b /tmp/kingdocs/bigish.bed --kinship --prefix d0_ >/dev/null
-$ for d in 1 2 3 4; do king -b /tmp/kingdocs/bigish.bed --kinship --degree $d --prefix d$d\_ >/dev/null; done
+$ open-king -b /tmp/kingdocs/bigish.bed --kinship --prefix d0_ >/dev/null
+$ for d in 1 2 3 4; do open-king -b /tmp/kingdocs/bigish.bed --kinship --degree $d --prefix d$d\_ >/dev/null; done
 
 $ for f in d0_ d1_ d2_ d3_ d4_; do
       printf '%-4s %6d rows  %8d bytes\n' $f $(($(wc -l < $f.kin0)-1)) $(wc -c < $f.kin0)
@@ -1435,7 +1435,7 @@ against the full-precision estimate, not the printed four decimals.
 ### `--cpus` — free, and does not change the answer
 
 ```
-$ for c in 1 2 4 8 16; do king -b /tmp/kingdocs/bigish.bed --kinship --cpus $c --prefix c$c\_ >/dev/null; done
+$ for c in 1 2 4 8 16; do open-king -b /tmp/kingdocs/bigish.bed --kinship --cpus $c --prefix c$c\_ >/dev/null; done
 
 $ for c in 2 4 8 16; do for f in .kin .kin0; do
       cmp -s c1_$f c$c\_$f && echo "--cpus $c $f identical to --cpus 1" || echo "--cpus $c $f DIFFERS"
@@ -1507,7 +1507,7 @@ counterexamples are listed in [CONTINUATION.md](CONTINUATION.md#remaining-suppor
 input is opened, with exit status 1 and a diagnostic that points to the product scope:
 
 ```
-$ king -b /path/that/does/not/exist.bed --pca
+$ open-king -b /path/that/does/not/exist.bed --pca
 FATAL ERROR - --pca is outside open-king's minimal relatedness/QC product scope.
 $ echo $?
 1
@@ -1528,8 +1528,8 @@ KING's release notes record repeated changes to the (unpublished) IBD-segment al
 ### Run the parity suite yourself
 
 ```
-$ python3 tests/parity/run_parity.py --impl target/release/king -q
-[parity] 480 case(s), impl=target/release/king, jobs=8
+$ python3 tests/parity/run_parity.py --impl target/release/open-king -q
+[parity] 480 case(s), impl=target/release/open-king, jobs=8
 parity: 480 PASS, 0 FAIL, 480 total (876 output file(s) byte-compared, 8 diff-excluded)
 ```
 
@@ -1559,7 +1559,7 @@ different files, one truncated mid-number). `--cpus 1` makes it deterministic.
 ```
 $ mkdir -p ref new
 $ (cd ref && /path/to/king -b /tmp/kingdocs/multifam.bed --related --ibdseg --degree 2 --cpus 1 > stdout.txt 2>&1)
-$ (cd new && king             -b /tmp/kingdocs/multifam.bed --related --ibdseg --degree 2 --cpus 1 > stdout.txt 2>&1)
+$ (cd new && open-king     -b /tmp/kingdocs/multifam.bed --related --ibdseg --degree 2 --cpus 1 > stdout.txt 2>&1)
 
 $ diff -rq ref new
 Files ref/stdout.txt and new/stdout.txt differ
@@ -1583,7 +1583,7 @@ That is the normal result. Now the same procedure on the case that does not pass
 ```
 $ mkdir -p g/ref g/new
 $ (cd g/ref && /path/to/king -b /tmp/kingdocs/bigish.bed --related --degree 2 --cpus 1 > stdout.txt 2>&1)
-$ (cd g/new && king             -b /tmp/kingdocs/bigish.bed --related --degree 2 --cpus 1 > stdout.txt 2>&1)
+$ (cd g/new && open-king     -b /tmp/kingdocs/bigish.bed --related --degree 2 --cpus 1 > stdout.txt 2>&1)
 $ ./scrub.sh g/ref/stdout.txt > g/ref.norm; ./scrub.sh g/new/stdout.txt > g/new.norm
 
 $ diff g/ref.norm g/new.norm && echo "console: byte-identical"
@@ -1602,7 +1602,7 @@ The fast screening count and every output byte now match. Check `--build` the sa
 ```
 $ mkdir -p b/ref b/new
 $ (cd b/ref && /path/to/king -b /tmp/kingdocs/bigish.bed --build --cpus 1 >/dev/null 2>&1)
-$ (cd b/new && king             -b /tmp/kingdocs/bigish.bed --build --cpus 1 >/dev/null 2>&1)
+$ (cd b/new && open-king     -b /tmp/kingdocs/bigish.bed --build --cpus 1 >/dev/null 2>&1)
 
 $ for f in kingupdateids.txt kingupdateparents.txt kingbuild.log; do
       cmp -s b/ref/$f b/new/$f && echo "$f: byte-identical" || echo "$f: DIFFERS"
@@ -1634,7 +1634,7 @@ page.
 zero bytes.
 
 ```
-$ king -b /tmp/kingdocs/threegen.bed --kinship --prefix one_
+$ open-king -b /tmp/kingdocs/threegen.bed --kinship --prefix one_
 Within-family kinship data saved in file one_.kin
 There is only one family.
 
@@ -1649,7 +1649,7 @@ FIDs the file is complete regardless of size. **Workarounds:** use `--ibs`, whos
 complete and carries the same `Kinship` column plus the raw counts —
 
 ```
-$ king -b /tmp/kingdocs/threegen.bed --ibs --prefix ibs_
+$ open-king -b /tmp/kingdocs/threegen.bed --ibs --prefix ibs_
 $ ls -la ibs_.ibs; head -2 ibs_.ibs | cut -f1-9
 -rw-r--r--@ 1 wgu  wheel  8849 Aug 14 22:51 ibs_.ibs
 FID	ID1	ID2	Z0	Phi	N_SNP	N_IBS0	N_IBS1	N_IBS2
@@ -1661,7 +1661,7 @@ TG	TG_C1	TG_C2	0.250	0.2500	20000	288	5044	14668
 **`--related` silently becomes `--kinship` below 10 samples.**
 
 ```
-$ king -b /tmp/kingdocs/trio.bed --related --prefix t3_
+$ open-king -b /tmp/kingdocs/trio.bed --related --prefix t3_
 [... startup banner and loading block elided ...]
 
 --related is replaced with --kinship for a small sample size.
@@ -1680,7 +1680,7 @@ Note that `Options in effect` now reads `--kinship`, and the `.kin` has 10 colum
 real segment path. The reference binary behaves identically:
 
 ```
-$ king -b /tmp/kingdocs/pair.bed --ibdseg --prefix p2_
+$ open-king -b /tmp/kingdocs/pair.bed --ibdseg --prefix p2_
 Options in effect:
 	--kinship
 
@@ -1710,7 +1710,7 @@ is being read*, not at output time.
 **Missing input is a fatal error with exit 1**, and the message is on stdout:
 
 ```
-$ king -b /tmp/kingdocs/nope.bed --kinship > e.out 2>&1; echo "exit=$?"; tail -4 e.out
+$ open-king -b /tmp/kingdocs/nope.bed --kinship > e.out 2>&1; echo "exit=$?"; tail -4 e.out
 exit=1
 
 FATAL ERROR -

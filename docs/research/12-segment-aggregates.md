@@ -47,7 +47,7 @@ same bytes. In particular
 * `--bysample` / `--bySNP` / `--ibs` / `--ibdseg` / `--related` / `--unrelated` /
   `--build` / `--cluster` all agree.
 
-So the rule already implemented in `king_core::ibdseg::usable_segments` — cut at each
+So the rule already implemented in `open_king_core::ibdseg::usable_segments` — cut at each
 chromosome change and each marker gap > 1 000 000 bp, then between complete 64-marker
 words of the **global** grid whose 64-gap span exceeds 10 000 000 bp, keep a piece iff it
 holds ≥ 5 complete words *and* its word-aligned span exceeds 10 000 000 bp — is the whole
@@ -71,9 +71,9 @@ has 17; that difference is entirely the `--related` downgrade.
 
 The usable-segment rule is implemented **twice**:
 
-* `crates/king-core/src/ibdseg.rs::usable_segments` — used by `--ibdseg`
+* `crates/open-king-core/src/ibdseg.rs::usable_segments` — used by `--ibdseg`
   (`analysis/ibdseg.rs:191`);
-* `crates/king-cli/src/analysis/segments.rs::usable` / `usable_x` — used by `--ibs`
+* `crates/open-king-cli/src/analysis/segments.rs::usable` / `usable_x` — used by `--ibs`
   and the QC passes (`analysis/ibs.rs:68`).
 
 Both are byte-correct today. Since §1.1 proves there is only one rule, they should collapse

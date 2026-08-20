@@ -60,7 +60,7 @@ def read_bed_planes(path, n_samples, keep):
     """Bit planes over the retained variants, sample-major, 64 markers per uint64 word.
 
     Returns (plane0, plane1), each (n_samples, n_words) uint64.  plane0 = "homozygous",
-    plane1 = "carries A1 when homozygous / het" — the encoding king-io/bed.rs uses:
+    plane1 = "carries A1 when homozygous / het" — the encoding open-king-io/bed.rs uses:
     code 00 -> (1,1), 01 (missing) -> (0,0), 10 (het) -> (0,1), 11 -> (1,0).
     """
     bpv = (n_samples + 3) // 4

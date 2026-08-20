@@ -6,7 +6,7 @@ the captured corpus or a reading taken off the reference binary
 the parity corpus or on constructed filesets.
 
 **Outcome, stated first: no rule changed.** Every variant tried scored the same as or
-worse than the committed engine on all four graders, so `crates/king-core/src/ibdseg.rs`
+worse than the committed engine on all four graders, so `crates/open-king-core/src/ibdseg.rs`
 carries only a documentation update. What this attack did produce is a much sharper
 localisation of the fault, three new instruments, and four measurements that rule out the
 model the current geometry is built on. §8 lists what is still unexplained.

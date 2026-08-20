@@ -80,7 +80,7 @@ import kingdata as kd  # noqa: E402
 KING = os.environ.get(
     "KING", "/Users/wgu/Desktop/GeneQuire Project/GeneQuire/software/king/king"
 )
-IMPL = os.environ.get("OPEN_KING", os.path.join(_ROOT, "target", "release", "king"))
+IMPL = os.environ.get("OPEN_KING", os.path.join(_ROOT, "target", "release", "open-king"))
 WORK = os.path.join(_HERE, "work", "avfs")
 
 AV = re.compile(

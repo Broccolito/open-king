@@ -1,7 +1,7 @@
 # The informativeness gate — solved
 
 **Status:** measured, then validated out-of-sample, and now **implemented** —
-`MIN_INFORMATIVE` in `crates/king-core/src/ibdseg.rs`, gating both `Scan::runs` (with
+`MIN_INFORMATIVE` in `crates/open-king-core/src/ibdseg.rs`, gating both `Scan::runs` (with
 `inf1`) and `Scan::ibd2` (with `inf2`), with `MIN_RUN1` dropped to 1. §10 below described
 the patch before it landed; it landed as written. The corpus scorecard that resulted is in
 `docs/PARITY.md` §4.1 and differs slightly from §1's table here, because `Scan::ibd2` was
@@ -391,7 +391,7 @@ The same rule, unchanged, against the corpus captured at other reporting floors:
 
 ## 10. The patch
 
-`crates/king-core/src/ibdseg.rs` was **not** changed by this investigation beyond its
+`crates/open-king-core/src/ibdseg.rs` was **not** changed by this investigation beyond its
 documentation: at the time of writing another session was mid-rewrite of `Scan::ibd2`, and
 two agents editing one file loses work. The change is small and additive:
 

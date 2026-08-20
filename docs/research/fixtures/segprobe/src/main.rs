@@ -10,10 +10,10 @@
 
 use std::collections::HashMap;
 
-use king_cli::cli;
-use king_cli::load;
-use king_core::ibdseg::{self, Usable};
-use king_io::Genotypes;
+use open_king_cli::cli;
+use open_king_cli::load;
+use open_king_core::ibdseg::{self, Usable};
+use open_king_io::Genotypes;
 
 struct Ctx {
     variant: u32,
@@ -161,7 +161,7 @@ fn ctx(bed: &str) -> Ctx {
         pos,
         segs,
         denom,
-        seglen: king_cli::analysis::ibdseg::seglength_bp(&parsed.options),
+        seglen: open_king_cli::analysis::ibdseg::seglength_bp(&parsed.options),
         g: loaded.fileset.genotypes,
         idx,
         iids,

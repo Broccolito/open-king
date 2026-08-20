@@ -353,7 +353,7 @@ Note **chromosome 25 / `XY` is pooled with the autosomes**. Codes `23`/`X`, `24`
 
 Everything above describes the relatedness path, which filters nothing. `--autoQC` is the
 exception, and its rules are all verified against the reference. Full derivation, with the
-experiment that fixes each rule, in `crates/king-cli/src/analysis/autoqc.rs`.
+experiment that fixes each rule, in `crates/open-king-cli/src/analysis/autoqc.rs`.
 
 | step | test | applies to |
 | --- | --- | --- |

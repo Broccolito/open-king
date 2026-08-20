@@ -1,8 +1,8 @@
 """Assert that `engine.py` with default `Params` *is* the committed Rust engine.
 
-Runs `king --ibdseg` and `king --ibs` from the built binary over every corpus dataset and
-compares, row by row, the four `.seg` columns and the `MaxIBD2` column against the
-mirror's own output. Any difference is a bug in `engine.py`.
+Runs `open-king --ibdseg` and `open-king --ibs` from the built binary over every corpus
+dataset and compares, row by row, the four `.seg` columns and the `MaxIBD2` column against
+the mirror's own output. Any difference is a bug in `engine.py`.
 
 **The `.seg` pass is checked at all three floors the corpus captures** — `--seglength` 3
 (the default), 5 and 10 — and that is not cosmetic. The run merge of
@@ -13,7 +13,7 @@ cannot see it at all, and for a while did not: the merge was committed to `Scan`
 rule reads `--seglength` must be exercised away from the default or the mirror is only
 asserted where the rule is dormant.
 
-    python3 check_mirror.py [path/to/open-king/king]
+    python3 check_mirror.py [path/to/open-king/open-king]
 """
 
 import os
@@ -25,7 +25,7 @@ import kingdata as kd
 import engine as E
 
 IMPL = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
-    kd.ROOT, "target", "release", "king")
+    kd.ROOT, "target", "release", "open-king")
 
 #: The `--seglength` floors to check the `.seg` pass at, in Mb. 3 is the default and is
 #: passed implicitly; 5 and 10 are where the run merge is live.

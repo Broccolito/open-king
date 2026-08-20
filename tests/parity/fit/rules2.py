@@ -144,7 +144,7 @@ def call_pair(ds, i, j, p=P(), want=False):
         if p.ibd2_mode == "count":
             ok2 = ok1 & (a1 <= p.t2)
         elif p.ibd2_mode == "hetbreak":
-            # the two-word contingency rule pinned in crates/king-core/src/ibdseg.rs
+            # the two-word contingency rule pinned in crates/open-king-core/src/ibdseg.rs
             brk = np.zeros(a1.size, dtype=bool)
             if a1.size > 1:
                 brk[:-1] = (a1[:-1] >= 2) & (a1[1:] > 0)

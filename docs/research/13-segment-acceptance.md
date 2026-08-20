@@ -38,7 +38,7 @@ Two further corrections from `10-…fixtures` §7 were adopted: the pair filter 
 10 000 000 bp, not `>` (bisected on a fixture: 9 990 000 absent, 10 000 000 present), and
 the `--seglength` floor is likewise inclusive (the committed code already had the latter).
 
-The engine in `crates/king-core/src/ibdseg.rs` now implements exactly the rule of
+The engine in `crates/open-king-core/src/ibdseg.rs` now implements exactly the rule of
 `11-segment-rule-fit.md` §9 with those corrections, and reproduces its score to the row:
 
 ```
@@ -48,7 +48,7 @@ MAE(PropIBD) 0.00327   worst 0.1753
 ```
 
 `<prefix>splitped.txt` is now written and is **byte-identical on all ten datasets**
-(`crates/king-cli/src/analysis/splitped.rs`, ported from
+(`crates/open-king-cli/src/analysis/splitped.rs`, ported from
 `tests/parity/probes/splitped.py`). Every remaining `ibdseg` failure is now the numbers in
 `king.seg` alone — plus `kingX.seg` on the single `sexchr__ibdseg_degree2` case.
 

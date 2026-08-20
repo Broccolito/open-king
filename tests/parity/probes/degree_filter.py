@@ -2,7 +2,7 @@
 """Differential probe for the `--ibdseg --degree` reporting filter.
 
 Establishes, against the reference binary, the rule implemented as
-`king_core::ibdseg::reported_at_degree`:
+`open_king_core::ibdseg::reported_at_degree`:
 
     d == 0  ->  every pair with a >10 Mb segment is reported
     d >  0  ->  PropIBD > 2^-(d+0.5),  or, at d == 1 only, IBD2Seg >= 0.08
@@ -42,7 +42,7 @@ FIRST_DEGREE_IBD2 = 0.08
 
 
 def reported_at_degree(degree: int, ibd2_seg: float, prop_ibd: float) -> bool:
-    """The predicate under test — mirrors `king_core::ibdseg::reported_at_degree`."""
+    """The predicate under test — mirrors `open_king_core::ibdseg::reported_at_degree`."""
     if degree == 0:
         return True
     cut = 2.0 ** -(abs(degree) + 0.5)

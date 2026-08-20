@@ -7,7 +7,7 @@ HetHet markers over at least three words*, and the reported segment stops at the
 confirmed chunk.
 
 **It is now the committed rule.** It lives in `engine.py::ibd2_words` (mirroring
-`Scan::ibd2_words` in `crates/king-core/src/ibdseg.rs`) and this file only re-exports it
+`Scan::ibd2_words` in `crates/open-king-core/src/ibdseg.rs`) and this file only re-exports it
 and keeps the superseded rule alive, so the before/after table of §8.1 still reproduces.
 
     python3 chunk.py            # scorecard: MaxIBD2 and Pr_IBD2 against the reference

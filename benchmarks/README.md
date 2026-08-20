@@ -12,16 +12,16 @@ and `resource`.
 
 ```bash
 # open-king alone, results into benchmarks/results/
-python3 benchmarks/run_benchmark.py --work-dir /tmp/king-bench
+python3 benchmarks/run_benchmark.py --work-dir /tmp/open-king-bench
 
 # open-king against a reference KING build, with output diffs
 python3 benchmarks/run_benchmark.py \
-    --work-dir /tmp/king-bench \
-    --binary-a target/release/king      --label-a open-king \
+    --work-dir /tmp/open-king-bench \
+    --binary-a target/release/open-king      --label-a open-king \
     --binary-b /path/to/king-2.3.2      --label-b king-2.3.2
 
 # just build the input filesets and print their sizes
-python3 benchmarks/run_benchmark.py --work-dir /tmp/king-bench --gen-only
+python3 benchmarks/run_benchmark.py --work-dir /tmp/open-king-bench --gen-only
 ```
 
 `--work-dir` must sit outside the repository. Generated filesets and every run's
@@ -170,7 +170,7 @@ The harness is built to compare two binaries. Pass the reference with
 
 ```bash
 python3 benchmarks/run_benchmark.py \
-    --work-dir /tmp/king-bench \
+    --work-dir /tmp/open-king-bench \
     --binary-b /path/to/king-2.3.2 --label-b king-2.3.2
 ```
 

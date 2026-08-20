@@ -31,7 +31,7 @@ Nothing here reads KING's source.
     python3 segcanvas.py            # every section
     python3 segcanvas.py 1 3        # only sections 1 and 3
     SEGCANVAS_JOBS=12 python3 segcanvas.py
-    KING=../../../target/release/king python3 segcanvas.py 9   # our binary, same rig
+    KING=../../../target/release/open-king python3 segcanvas.py 9   # our binary, same rig
 """
 
 from __future__ import annotations

@@ -631,7 +631,7 @@ def say(msg: str) -> None:
 
 def resolve_binary(spec: str) -> str:
     """Absolutize a binary path: cases run with cwd=<temp dir>, so a relative
-    --impl like 'target/release/king' would otherwise not be found."""
+    --impl like 'target/release/open-king' would otherwise not be found."""
     found = shutil.which(spec)
     if found:
         return str(Path(found).resolve())

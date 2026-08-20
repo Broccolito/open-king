@@ -6,7 +6,7 @@ short-map tail: the first 4,096 retained autosomal markers, a strict 10% boundar
 analysis-specific application, fatal placement, percentage, exit code and file set.
 
 Usage:
-    python3 a1_major.py --ref /path/to/king --impl target/release/king
+    python3 a1_major.py --ref /path/to/king --impl target/release/open-king
 """
 
 from __future__ import annotations

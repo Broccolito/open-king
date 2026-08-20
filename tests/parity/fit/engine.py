@@ -1,4 +1,4 @@
-"""A faithful Python mirror of `crates/king-core/src/ibdseg.rs`, made variable.
+"""A faithful Python mirror of `crates/open-king-core/src/ibdseg.rs`, made variable.
 
 Why this exists: the remaining parity gap is *boundary geometry* on a minority of called
 segments, and iterating on it in Rust costs a rebuild plus a full corpus replay per idea.
@@ -64,7 +64,7 @@ LONG = 10_000_000
 
 # --- the `--seglength` run merge (`docs/research/20-seglength-floor.md`) ----------
 # Mirrors `MERGE_MAX_WORDS` / `MERGE_FREE` / `MERGE_COST1` / `MERGE_COST2` in
-# `crates/king-core/src/ibdseg.rs`. Every one is bisected on `mergelab.py` canvases
+# `crates/open-king-core/src/ibdseg.rs`. Every one is bisected on `mergelab.py` canvases
 # against the reference binary, never fitted to the corpus.
 MERGE_WORDS = 2     # unusable words a merge may bridge
 MERGE_FREE = 2      # bad markers a merge gets for nothing
@@ -202,7 +202,7 @@ class Params:
     ibd2_fringe_off: int = 1   # markers between the call's end and that mismatch
 
     # --- how `<prefix>.seg` prints PropIBD ---------------------------------
-    # "printed"   — the committed rule (`king_core::ibdseg::seg_prop_ibd`): the two
+    # "printed"   — the committed rule (`open_king_core::ibdseg::seg_prop_ibd`): the two
     #               columns are rounded to the four decimals the file shows, then
     #               combined as `i2*1e-4 + i1*5e-5` and printed. Exact on all 4 172
     #               reference `.seg` rows.
@@ -248,7 +248,7 @@ PROP19 = Params(seg_prop="unrounded", merge=False,
 
 
 def seg_prop_ibd(ibd1_seg, ibd2_seg):
-    """`PropIBD` as `<prefix>.seg` prints it — `king_core::ibdseg::seg_prop_ibd`.
+    """`PropIBD` as `<prefix>.seg` prints it — `open_king_core::ibdseg::seg_prop_ibd`.
 
     The two columns are first rounded to the four decimals the file shows; the printed
     value is then `i2*1e-4 + i1*5e-5` on those integers. The 1 313 of 4 172 reference rows

@@ -1,7 +1,7 @@
 """Candidate IBD-segment callers, parameterised so the rule space can be searched.
 
 `call_pair` is one knob-set applied to one pair; `Params` is the knob-set.  The default
-`Params()` reproduces the Rust engine in `crates/king-core/src/ibdseg.rs` exactly (the
+`Params()` reproduces the Rust engine in `crates/open-king-core/src/ibdseg.rs` exactly (the
 `baseline_matches_rust` check in fit.py pins that), so every experiment is a delta from
 a known point.
 """

@@ -1,6 +1,6 @@
 # open-king command-line reference
 
-`king` reads one PLINK1 fileset and writes relatedness results as plain text. This page is
+`open-king` reads one PLINK1 fileset and writes relatedness results as plain text. This page is
 the complete reference for its command line: every option the parser accepts, what each one
 does, which analyses it affects, and the handful of parser behaviours that surprise people.
 
@@ -9,7 +9,7 @@ or IBD segments out of them — and who may be replacing KING 2.3.2 with this bi
 running both and diffing. It assumes you know what a kinship coefficient is; it assumes
 nothing about this codebase.
 
-Every command below was run against `target/release/king` and every output block is pasted
+Every command below was run against `target/release/open-king` and every output block is pasted
 from that run. Reproduce them with the corpus the parity suite ships:
 
 ```
@@ -52,18 +52,18 @@ links to it.
 ## 1. Synopsis
 
 ```
-king -b <file>.bed [analysis ...] [parameter ...]
+open-king -b <file>.bed [analysis ...] [parameter ...]
 ```
 
 `-b` names the input. At least one *analysis* option must be given or nothing is computed.
 Parameters modify whatever analyses are running. Options may appear in any order, before or
 after `-b`.
 
-There is **no `--help` and no `--version`.** Running `king` with no arguments prints the
+There is **no `--help` and no `--version`.** Running `open-king` with no arguments prints the
 banner, the full option table, and a fatal error:
 
 ```
-$ king
+$ open-king
 KING 2.3.2 - (c) 2010-2023 Wei-Min Chen
 
 The following parameters are in effect:
@@ -108,11 +108,11 @@ way you meant it. `[ON]` marks a switch that is on; an option with no bracket is
 unset. The `--noscreen [-1717986816]` you see there is not a typo — see
 [`--noscreen`](#--noscreen-n).
 
-`king --help` is not an error you can act on either; it parses as an undefined option and the
+`open-king --help` is not an error you can act on either; it parses as an undefined option and the
 run continues:
 
 ```
-$ king -b multifam.bed --kinship --help
+$ open-king -b multifam.bed --kinship --help
 WARNING - 
 Problems encountered parsing command line:
 
@@ -126,7 +126,7 @@ Command line parameter --help is undefined
 Kinship for every pair in a fileset:
 
 ```
-$ king -b multifam.bed --kinship
+$ open-king -b multifam.bed --kinship
 KING 2.3.2 - (c) 2010-2023 Wei-Min Chen
 
 The following parameters are in effect:
@@ -207,9 +207,9 @@ The three commands most people want:
 
 | goal | command |
 | --- | --- |
-| kinship for all pairs | `king -b study.bed --kinship` |
-| relatives up to 2nd degree, with IBD segments | `king -b study.bed --related --degree 2` |
-| find duplicate / MZ samples | `king -b study.bed --duplicate` |
+| kinship for all pairs | `open-king -b study.bed --kinship` |
+| relatives up to 2nd degree, with IBD segments | `open-king -b study.bed --related --degree 2` |
+| find duplicate / MZ samples | `open-king -b study.bed --duplicate` |
 
 ---
 
@@ -225,7 +225,7 @@ The argument names the `.bed` **file itself**, not the fileset stem, and it must
 literal lower-case `.bed`. A stem is not accepted:
 
 ```
-$ king -b multifam --kinship
+$ open-king -b multifam --kinship
 
 FATAL ERROR - 
 Genotype file multifam cannot be opened
@@ -235,7 +235,7 @@ A readable file whose name does not end in `.bed` is rejected even when its cont
 valid `.bed` (the same file copied to `plain`, with `plain.bim`/`plain.fam` alongside):
 
 ```
-$ king -b plain --kinship
+$ open-king -b plain --kinship
 
 FATAL ERROR - 
 Please use PLINK binary format as input.
@@ -309,7 +309,7 @@ $ king -b major.bed --ibs          # KING 2.3.2
 FATAL ERROR -
 Too many first alleles as the major allele (~77.9%). Please use plink1.9 --make-bed to regenerate the genotype data again.
 
-$ king -b major.bed --ibs          # open-king
+$ open-king -b major.bed --ibs          # open-king
 FATAL ERROR -
 Too many first alleles as the major allele (~77.9%). Please use plink1.9 --make-bed to regenerate the genotype data again.
 ```
@@ -334,7 +334,7 @@ binaries now refuse segment work on an unsorted map at the same point and with t
 diagnostic. On a map whose positions run backwards within each chromosome:
 
 ```
-$ king -b unsortedpos.bed --ibdseg     # both -> kingsplitped.txt only
+$ open-king -b unsortedpos.bed --ibdseg     # both -> kingsplitped.txt only
 Positions unsorted: rs1_1009689 at 65904473, rs1_1055261 at 65851170.
   Note chromosomal positions can be sorted conveniently using other tools such as PLINK.
 ```
@@ -342,7 +342,7 @@ Positions unsorted: rs1_1009689 at 65904473, rs1_1055261 at 65851170.
 On a map whose chromosomes run 22 → 1 with positions ascending inside each:
 
 ```
-$ king -b unsortedchr.bed --ibdseg     # both -> kingsplitped.txt only
+$ open-king -b unsortedchr.bed --ibdseg     # both -> kingsplitped.txt only
 Chromosomes unsorted: rs22_14205438 on chr 22, rs21_1002722 on chr 21.
   Note chromosomal positions can be sorted conveniently using other tools such as PLINK.
 ```
@@ -369,7 +369,7 @@ The `sexchr` fileset carries 2 000 SNPs each on chr 1 and 2, 1 500 on 23, 300 on
 25 and 50 on 26:
 
 ```
-$ king -b sexchr.bed --kinship
+$ open-king -b sexchr.bed --kinship
   Genotype data consist of 4150 autosome SNPs (including 150 XY SNPs), 1500 X-chromosome SNPs, 300 Y-chromosome SNPs, 50 mitochondrial SNPs
   PLINK maps loaded: 6000 SNPs
 ```
@@ -378,7 +378,7 @@ $ king -b sexchr.bed --kinship
 Alphabetic spellings give the identical partition:
 
 ```
-$ king -b alphachr.bed --kinship   # same data, chromosomes written X / Y / XY / MT
+$ open-king -b alphachr.bed --kinship   # same data, chromosomes written X / Y / XY / MT
   Genotype data consist of 4150 autosome SNPs (including 150 XY SNPs), 1500 X-chromosome SNPs, 300 Y-chromosome SNPs, 50 mitochondrial SNPs
   PLINK maps loaded: 6000 SNPs
 ```
@@ -387,7 +387,7 @@ Codes not in any class are removed and reported. Rewriting chr 24 as `0` and chr
 `chr1`:
 
 ```
-$ king -b unknownchr.bed --kinship
+$ open-king -b unknownchr.bed --kinship
   Genotype data consist of 4150 autosome SNPs (including 150 XY SNPs), 1500 X-chromosome SNPs
   350 other SNPs are removed.
   PLINK maps loaded: 5650 SNPs
@@ -411,7 +411,7 @@ exist.
 There is **no separator inserted**. `--prefix ZZ_` gives `ZZ_.kin`:
 
 ```
-$ king -b multifam.bed --kinship --prefix ZZ_
+$ open-king -b multifam.bed --kinship --prefix ZZ_
 Within-family kinship data saved in file ZZ_.kin
 Between-family kinship data saved in file ZZ_.kin0
 $ ls ZZ_*
@@ -423,7 +423,7 @@ and the QC and segment files, whose suffixes have no leading dot, come out as
 `<prefix>bySample.txt`, not `<prefix>.bySample.txt`:
 
 ```
-$ king -b multifam.bed --bysample --prefix ZZ_
+$ open-king -b multifam.bed --bysample --prefix ZZ_
 QC statistics by samples saved in file ZZ_bySample.txt
 $ ls ZZ_*
 ZZ_allsegs.txt
@@ -482,17 +482,17 @@ All three conditions are visible on the same fileset (`sexchr`, 1 500 X markers,
 families):
 
 ```
-$ king -b sexchr.bed --kinship            -> king.kin king.kin0 kingX.kin kingX.kin0
-$ king -b sexchr.bed --kinship --degree 2 -> king.kin king.kin0
-$ king -b sexchr.bed --ibdseg             -> king.seg kingallsegs.txt kingsplitped.txt
-$ king -b sexchr.bed --ibdseg --degree 2  -> king.seg kingX.seg kingallsegs.txt kingsplitped.txt
+$ open-king -b sexchr.bed --kinship            -> king.kin king.kin0 kingX.kin kingX.kin0
+$ open-king -b sexchr.bed --kinship --degree 2 -> king.kin king.kin0
+$ open-king -b sexchr.bed --ibdseg             -> king.seg kingallsegs.txt kingsplitped.txt
+$ open-king -b sexchr.bed --ibdseg --degree 2  -> king.seg kingX.seg kingallsegs.txt kingsplitped.txt
 ```
 
 and cutting the same fileset down to 400 X markers removes the X files from the first
 command:
 
 ```
-$ king -b x400.bed --kinship              -> king.kin king.kin0
+$ open-king -b x400.bed --kinship              -> king.kin king.kin0
 ```
 
 ### Column headers
@@ -550,7 +550,7 @@ Reports pairs at **degree 1 by default** — the only analysis with a non-zero d
 Widen it with [`--degree`](#--degree-d):
 
 ```
-$ king -b bigish.bed --related
+$ open-king -b bigish.bed --related
   Final Stage (with 50000 SNPs): 3 pairs of relatives (up to 1st-degree) are confirmed
 Between-family relatives (kinship >= 0.17678) saved in file king.kin0
 Note only duplicates and 1st-degree relatives are included in the inference.
@@ -564,7 +564,7 @@ Two size gates. Under **10 samples** the run silently becomes a `--kinship` run 
 same columns, and `--degree` is discarded:
 
 ```
-$ king -b trio.bed --related
+$ open-king -b trio.bed --related
 --related is replaced with --kinship for a small sample size.
 Autosome genotypes stored in 79 words for each of 3 individuals.
 
@@ -582,7 +582,7 @@ reproduced deliberately.
 `<p>.con`. The concordance floor is [`--minConc`](#--minconc-x) (default 0.80):
 
 ```
-$ king -b dups.bed --duplicate
+$ open-king -b dups.bed --duplicate
 2 pairs of duplicates with heterozygote concordance rate > 80% are saved in file king.con
 ```
 
@@ -612,7 +612,7 @@ reach) and [`--degree`](#--degree-d) (which pairs are reported). Under **5 sampl
 becomes a `--kinship` run:
 
 ```
-$ king -b trio.bed --ibdseg
+$ open-king -b trio.bed --ibdseg
 --kinship analysis carried out instead for such a small sample size.
 ```
 
@@ -661,7 +661,7 @@ not a computation switch: everything is still computed, fewer rows are written.
   ([BEHAVIOR.md Q5](BEHAVIOR.md#q5----degree-semantics)). The console echoes the rounded form:
 
   ```
-  $ king -b multifam.bed --kinship --degree 2
+  $ open-king -b multifam.bed --kinship --degree 2
   Between-family kinship data (up to degree 2, 32 pairs in total) saved in file king.kin0
   ```
 
@@ -690,7 +690,7 @@ Bare `--degree` with no value means **1** (see [§6](#6-how-the-parser-behaves))
 above the useful range work as the formula says. Note the reference's typo, reproduced:
 
 ```
-$ king -b bigish.bed --related --degree 3
+$ open-king -b bigish.bed --related --degree 3
   59 pairs of relatives (up to 3nd-degree) are identified
 ```
 
@@ -726,16 +726,16 @@ single behaviour satisfies both builds. The full measurement is in
 with a notice:
 
 ```
-$ king -b multifam.bed --ibdseg --seglength 5
+$ open-king -b multifam.bed --ibdseg --seglength 5
 KING starts at Fri Aug 14 22:35:54 2026
 Minimum segment length is set as 5000000 bp
 .Loading genotype data in PLINK binary format...
 
-$ king -b multifam.bed --ibdseg --seglength 0.99
+$ open-king -b multifam.bed --ibdseg --seglength 0.99
 KING supports minimum segment length from 1 to 10 Mb at the moment.
 Default seglength of 3Mb is used.
 
-$ king -b multifam.bed --ibdseg --seglength 10.01
+$ open-king -b multifam.bed --ibdseg --seglength 10.01
 KING supports minimum segment length from 1 to 10 Mb at the moment.
 Default seglength of 3Mb is used.
 ```
@@ -751,7 +751,7 @@ runs where it changes the output bytes. The `Minimum segment length is set as <n
 above the block is the only report of the value:
 
 ```
-$ king -b bigish.bed --ibdseg --seglength 5
+$ open-king -b bigish.bed --ibdseg --seglength 5
 Minimum segment length is set as 5000000 bp
 ...
 Options in effect:
@@ -767,14 +767,14 @@ rest of the echo rules.
 decimals and printed as a percentage:
 
 ```
-$ king -b dups.bed --duplicate --minConc 0.99
+$ open-king -b dups.bed --duplicate --minConc 0.99
 2 pairs of duplicates with heterozygote concordance rate > 99% are saved in file king.con
 ```
 
 Out of `[0, 1]` it warns and is used anyway, percentage and all:
 
 ```
-$ king -b dups.bed --duplicate --minConc 1.5
+$ open-king -b dups.bed --duplicate --minConc 1.5
 minConc value is out of range and not specified.
 No duplicates are found with heterozygote concordance rate > 150%.
 ```
@@ -786,12 +786,12 @@ and `--ibdseg` build their own lists, which carry only `--degree`, `--cpus` and 
 so the value is dropped there without a word:
 
 ```
-$ king -b bigish.bed --duplicate --minConc 0.9
+$ open-king -b bigish.bed --duplicate --minConc 0.9
 Options in effect:
 	--duplicate
 	--minConc 0.9
 
-$ king -b bigish.bed --kinship --minConc 0.9
+$ open-king -b bigish.bed --kinship --minConc 0.9
 Options in effect:
 	--kinship
 ```
@@ -808,7 +808,7 @@ subset to keep) and `<p>unrelated_toberemoved.txt` (the complement), plus
 `<p>allsegs.txt`. Both are two-column `FID<TAB>IID`, no header.
 
 ```
-$ king -b bigish.bed --unrelated --degree 2
+$ open-king -b bigish.bed --unrelated --degree 2
 Clustering up to 2nd-degree relatives in families...
 A list of 84 unrelated individuals saved in file kingunrelated.txt
 An alternative list of 116 to-be-removed individuals saved in file kingunrelated_toberemoved.txt
@@ -822,8 +822,8 @@ and `<p>updateids.txt` when families actually merge. `<p>cluster.kin` additional
 usable segments, because its relationship columns are segment-derived:
 
 ```
-$ king -b bigish.bed --cluster   -> kingallsegs.txt kingcluster.kin kingupdateids.txt
-$ king -b multifam.bed --cluster -> kingallsegs.txt
+$ open-king -b bigish.bed --cluster   -> kingallsegs.txt kingcluster.kin kingupdateids.txt
+$ open-king -b multifam.bed --cluster -> kingallsegs.txt
 ```
 
 Unlike every other analysis, selecting `--cluster` suppresses the
@@ -843,14 +843,14 @@ reconstruction tail is printed unconditionally, whether or not that write happen
 with no merges names a file that is not on disk:
 
 ```
-$ king -b multifam.bed --build     # no families merge
+$ open-king -b multifam.bed --build     # no families merge
 Details of pedigree reconstruction are available in log file kingbuild.log
 Update-ID information is saved in file kingupdateids.txt
 No pedigrees can be reconstructed.
 $ ls king*
 kingallsegs.txt  kingbuild.log  kingupdateparents.txt
 
-$ king -b bigish.bed --build      # three pairs of families merge
+$ open-king -b bigish.bed --build      # three pairs of families merge
 $ ls king*
 kingallsegs.txt  kingbuild.log  kingupdateids.txt  kingupdateparents.txt
 ```
@@ -889,7 +889,7 @@ Note the spelling: the option is `--bySNP`, matched case-insensitively, but it i
 from the X data. It writes no `.kin` and does not need `--kinship`.
 
 ```
-$ king -b missing.bed --autoQC
+$ open-king -b missing.bed --autoQC
 Auto-QC step 1: Apply SNP call rate filter 80.0% on 10000 SNPs (in 6 samples)
   1569 autosome SNPs have call rate < 80.0%
   0 X-chr SNPs have call rate < 80.0%
@@ -942,7 +942,7 @@ page sit. Swept on `missing`:
 | 1.0 | 80.0% | 100.0% |
 
 ```
-$ king -b missing.bed --autoQC --callrateM 0.5
+$ open-king -b missing.bed --autoQC --callrateM 0.5
 Auto-QC step 1: Apply SNP call rate filter 40.0% on 10000 SNPs (in 6 samples)
   220 autosome SNPs have call rate < 40.0%
   0 X-chr SNPs have call rate < 40.0%
@@ -955,7 +955,7 @@ rather than downward. `--callrateN` does not move step 1; only `--callrateM` doe
 Both together:
 
 ```
-$ king -b missing.bed --autoQC --callrateN 0.99 --callrateM 0.9
+$ open-king -b missing.bed --autoQC --callrateN 0.99 --callrateM 0.9
 Auto-QC step 1: Apply SNP call rate filter 80.0% on 10000 SNPs (in 6 samples)
   1569 autosome SNPs have call rate < 80.0%
 Auto-QC step 2: Apply sample call rate filter 99.0% on 6 samples (with 5232 SNPs)
@@ -1018,7 +1018,7 @@ fatal reports. A string option takes the next token unconditionally, option or n
 the run is rejected for `--trait` alone:
 
 ```
-$ king -b multifam.bed --trait --related --kinship
+$ open-king -b multifam.bed --trait --related --kinship
 
 FATAL ERROR - 
 open-king's minimal relatedness product does not implement: --trait.
@@ -1033,7 +1033,7 @@ banner, then **rejected**: naming it is fatal, exit 1, before the input is opene
 value follows.
 
 ```
-$ king -b multifam.bed --kinship --maxP 0.05
+$ open-king -b multifam.bed --kinship --maxP 0.05
 
 FATAL ERROR - 
 open-king's minimal relatedness product does not implement: --maxP.
@@ -1065,7 +1065,7 @@ See [§8](#8-accepted-compatibility-spellings-outside-product-scope).
 before the input is opened:
 
 ```
-$ king -b multifam.bed --risk
+$ open-king -b multifam.bed --risk
 
 FATAL ERROR - 
 open-king's minimal relatedness product does not implement: --risk.
@@ -1101,7 +1101,7 @@ See [§8](#8-accepted-compatibility-spellings-outside-product-scope).
 Worker threads. Echoed, and reported:
 
 ```
-$ king -b multifam.bed --kinship --cpus 3
+$ open-king -b multifam.bed --kinship --cpus 3
 3 CPU cores are used.
 ```
 
@@ -1132,7 +1132,7 @@ reads a file literally named `alt`, with no suffix appended.
 *String, default empty.* Same, for the `.bim`.
 
 ```
-$ king -b geno.bed --fam alt.ped --bim alt.map --kinship
+$ open-king -b geno.bed --fam alt.ped --bim alt.map --kinship
 Read in PLINK fam file alt.ped...
   PLINK pedigrees loaded: 20 samples
 Read in PLINK bim file alt.map...
@@ -1166,16 +1166,16 @@ every other numeric code is dropped
 On the `sexchr` fileset (chr 1, 2, 23, 24, 25, 26):
 
 ```
-$ king -b sexchr.bed --kinship                 # default 23
+$ open-king -b sexchr.bed --kinship                 # default 23
   Genotype data consist of 4150 autosome SNPs (including 150 XY SNPs), 1500 X-chromosome SNPs, 300 Y-chromosome SNPs, 50 mitochondrial SNPs
   PLINK maps loaded: 6000 SNPs
 
-$ king -b sexchr.bed --kinship --sexchr 26
+$ open-king -b sexchr.bed --kinship --sexchr 26
 Non-human samples are analyzed, with 26 pairs of chromosomes
   Genotype data consist of 5950 autosome SNPs, 50 X-chromosome SNPs
   PLINK maps loaded: 6000 SNPs
 
-$ king -b sexchr.bed --kinship --sexchr 2
+$ open-king -b sexchr.bed --kinship --sexchr 2
 Non-human samples are analyzed, with 2 pairs of chromosomes
   Genotype data consist of 2000 autosome SNPs, 2000 X-chromosome SNPs
   2000 other SNPs are removed.
@@ -1186,7 +1186,7 @@ Any value other than 23 prints the `Non-human samples are analyzed` line. Values
 fatal:
 
 ```
-$ king -b sexchr.bed --kinship --sexchr 1
+$ open-king -b sexchr.bed --kinship --sexchr 1
 
 FATAL ERROR - 
 Sex chromosome 1 out of range.
@@ -1198,12 +1198,12 @@ instead of numbers gives the default partition at `--sexchr 22`, while the numer
 is re-partitioned:
 
 ```
-$ king -b alphachr.bed --kinship --sexchr 22    # chromosomes written X / Y / XY / MT
+$ open-king -b alphachr.bed --kinship --sexchr 22    # chromosomes written X / Y / XY / MT
 Non-human samples are analyzed, with 22 pairs of chromosomes
   Genotype data consist of 4150 autosome SNPs (including 150 XY SNPs), 1500 X-chromosome SNPs, 300 Y-chromosome SNPs, 50 mitochondrial SNPs
   PLINK maps loaded: 6000 SNPs
 
-$ king -b sexchr.bed --kinship --sexchr 22      # same data, numeric codes
+$ open-king -b sexchr.bed --kinship --sexchr 22      # same data, numeric codes
 Non-human samples are analyzed, with 22 pairs of chromosomes
   Genotype data consist of 4300 autosome SNPs (including 300 XY SNPs), 1500 Y-chromosome SNPs, 150 mitochondrial SNPs
   50 other SNPs are removed.
@@ -1223,7 +1223,7 @@ scripts. **Outside the minimal product scope**: open-king has no R dependency. A
 plotting request exits 1 before opening the input:
 
 ```
-$ king -b multifam.bed --rplot
+$ open-king -b multifam.bed --rplot
 
 FATAL ERROR - 
 open-king's minimal relatedness product does not implement: --rplot.
@@ -1239,7 +1239,7 @@ See docs/SCOPE.md for the product-scope contract.
 pre-I/O scope gate:
 
 ```
-$ king -b multifam.bed --plink
+$ open-king -b multifam.bed --plink
 
 FATAL ERROR - 
 open-king's minimal relatedness product does not implement: --plink.
@@ -1258,7 +1258,7 @@ The prefix must be writable — the loader probes it by creating and removing
 `<prefix>$TMP$.ped` before it parses a single row, so a nonexistent directory fails early:
 
 ```
-$ king -b multifam.bed --kinship --prefix nodir/x
+$ open-king -b multifam.bed --kinship --prefix nodir/x
 Read in PLINK fam file multifam.fam...
 
 FATAL ERROR - 
@@ -1285,7 +1285,7 @@ the output files. Five rules cover everything.
 prefix works:
 
 ```
-$ king -b multifam.bed --rel
+$ open-king -b multifam.bed --rel
 Options in effect:
 	--related
 ```
@@ -1293,7 +1293,7 @@ Options in effect:
 An **ambiguous** prefix is an error, not a resolution — it is reported and then ignored:
 
 ```
-$ king -b multifam.bed --r
+$ open-king -b multifam.bed --r
 WARNING - 
 Problems encountered parsing command line:
 
@@ -1305,7 +1305,7 @@ Ambiguous two-character prefixes include `by`, `ca`, `co`, `ib`, `ma`, `no`, `pc
 the option is undefined, so `--related=1` is not a way to pass a value:
 
 ```
-$ king -b multifam.bed --related=1 --kinship
+$ open-king -b multifam.bed --related=1 --kinship
 WARNING - 
 Problems encountered parsing command line:
 
@@ -1321,7 +1321,7 @@ Repeating a switch turns it back off. `--related --related` leaves `--related` *
 which is why the run below falls through to the "no analysis selected" notice:
 
 ```
-$ king -b multifam.bed --related --related
+$ open-king -b multifam.bed --related --related
 Please specify one of the following 24 options: --related --kinship --autoQC --mtscore --risk --ibs --homog --ibdseg --mds --pca --cluster --build --bysample --bysnp --tdt --unrelated --duplicate --roh --grm --gdt --pc -- --pcgdt --
 ```
 
@@ -1341,7 +1341,7 @@ A rejected token is not silently dropped — it comes back as an ignored argumen
 option keeps its no-value behaviour:
 
 ```
-$ king -b multifam.bed --kinship --degree 3.0
+$ open-king -b multifam.bed --kinship --degree 3.0
               Inference Parameter : --degree [1], --noscreen [-1717986816],
 WARNING - 
 Problems encountered parsing command line:
@@ -1357,7 +1357,7 @@ The int toggle is why bare `--degree` (default 0) becomes **1** while bare `--se
 (default 23) becomes **0** — and 0 is out of range:
 
 ```
-$ king -b multifam.bed --kinship --sexchr
+$ open-king -b multifam.bed --kinship --sexchr
 
 FATAL ERROR - 
 Sex chromosome 0 out of range.
@@ -1367,7 +1367,7 @@ Strings are the dangerous case, because they take the next token unconditionally
 no warning:
 
 ```
-$ king -b multifam.bed --trait --related --kinship
+$ open-king -b multifam.bed --trait --related --kinship
                 Association Model : --trait [--related], --covariate [],
 	--kinship
 ```
@@ -1380,7 +1380,7 @@ A bare token, or a single-dash token other than `-b`/`-B`, is reported with its 
 argument position and skipped:
 
 ```
-$ king -b multifam.bed --kinship -h foo
+$ open-king -b multifam.bed --kinship -h foo
 WARNING - 
 Problems encountered parsing command line:
 
@@ -1392,7 +1392,7 @@ Command line parameter foo (#5) ignored
 later bare `-b` throws away an earlier one:
 
 ```
-$ king -bmultifam.bed -b --kinship
+$ open-king -bmultifam.bed -b --kinship
 
 FATAL ERROR - 
 Genotype files are required. e.g.,
@@ -1403,7 +1403,7 @@ A lone `--` borrows the following non-dash token as an option name, and the borr
 never takes a value of its own:
 
 ```
-$ king -b multifam.bed -- related
+$ open-king -b multifam.bed -- related
 Options in effect:
 	--related
 ```
@@ -1432,16 +1432,16 @@ Measured, on the corpus:
 
 | command | exit |
 | --- | ---: |
-| `king` | 1 |
-| `king -b multifam.bed --kinship` | 0 |
-| `king -b multifam.bed` (no analysis) | 0 |
-| `king -b multifam.bed --pca` (excluded analysis) | 1 |
-| `king --xyz -b multifam.bed --kinship` (bad option) | 0 |
-| `king -b nosuch.bed --kinship` | 1 |
-| `king -b multifam.bed --kinship --sexchr 1` | 1 |
-| `king -b multifam.bed --kinship --maxP 0` (excluded parameter) | 1 |
-| `king -b multifam.bed --risk` (excluded analysis) | 1 |
-| `king -b multifam.bed --kinship --prefix no/such/` | 1 |
+| `open-king` | 1 |
+| `open-king -b multifam.bed --kinship` | 0 |
+| `open-king -b multifam.bed` (no analysis) | 0 |
+| `open-king -b multifam.bed --pca` (excluded analysis) | 1 |
+| `open-king --xyz -b multifam.bed --kinship` (bad option) | 0 |
+| `open-king -b nosuch.bed --kinship` | 1 |
+| `open-king -b multifam.bed --kinship --sexchr 1` | 1 |
+| `open-king -b multifam.bed --kinship --maxP 0` (excluded parameter) | 1 |
+| `open-king -b multifam.bed --risk` (excluded analysis) | 1 |
+| `open-king -b multifam.bed --kinship --prefix no/such/` | 1 |
 
 Two things a shell script must not infer from the exit status:
 
@@ -1501,7 +1501,7 @@ Their associated parameters are rejected too, thirteen of them: `--projection`, 
 `--trait`, `--covariate`, `--maxP`, `--invnorm`, `--model`, `--prevalence`, `--noflip`,
 `--phefile`, `--covfile`, `--prunedsnp` and `--rpath`.
 
-The list is `Options::unsupported_requests()` in `crates/king-cli/src/cli.rs`, and the two
+The list is `Options::unsupported_requests()` in `crates/open-king-cli/src/cli.rs`, and the two
 groups above are its 24 entries. Nothing in [§5](#5-option-reference) is exempt from it: an
 option described there as parsed and echoed is still rejected if it appears here.
 
@@ -1520,7 +1520,7 @@ See docs/SCOPE.md for the product-scope contract.
 `--fam`/`--bim`) and merges the filesets. open-king rejects this form before file lookup:
 
 ```
-$ king -b multifam.bed,dups.bed --kinship          # open-king, exit 1
+$ open-king -b multifam.bed,dups.bed --kinship          # open-king, exit 1
 
 FATAL ERROR -
 open-king's minimal relatedness product does not implement: comma-separated multi-fileset input.

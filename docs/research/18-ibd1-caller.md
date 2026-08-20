@@ -294,7 +294,7 @@ for each IBD1 call [lo, hi], in order:
     IBD1Seg numerator += sum of pos[p.hi] - pos[p.lo] over pieces with that >= seglength
 ```
 
-`ibd1_pieces` in `crates/king-core/src/ibdseg.rs` is this; `pieces()` in
+`ibd1_pieces` in `crates/open-king-core/src/ibdseg.rs` is this; `pieces()` in
 `docs/research/fixtures/ibd1canvas.py` and in `tests/parity/fit/seg18.py` are the same
 function, and the three agree everywhere. Over the whole overlap family × eight
 `--seglength` floors the model reproduces the reference on **48 of 48** combinations.
@@ -310,7 +310,7 @@ Default seglength of 3Mb is used.
 ```
 
 Accepted at `--seglength 10.001` ("Minimum segment length is set as 10001000 bp"), rejected
-at `10.01` — the stored value is rounded to two decimals before the range test. `king-cli`
+at `10.01` — the stored value is rounded to two decimals before the range test. `open-king-cli`
 already models this (`console::SEGLENGTH_MIN/MAX`, `analysis::ibdseg::seglength_bp`), which
 is why the canvas reproduces it; recorded here because it looks exactly like a caller rule
 until you read the console.
@@ -343,7 +343,7 @@ per pair, per usable segment [w0, w1] covering markers [lo, hi]:
 
 `predict1()` in `docs/research/fixtures/ibd1canvas.py` is the caller; `subtract()` there and
 `pieces()` in `tests/parity/fit/seg18.py` are §6; `Scan::ibd1` and `ibd1_pieces` in
-`crates/king-core/src/ibdseg.rs` are the port.
+`crates/open-king-core/src/ibdseg.rs` are the port.
 
 ## 8. Out of sample
 
@@ -446,7 +446,7 @@ and, if the merged calls are also allowed to feed the ">10 Mb" pair filter, **1 
 pairs**. Real unrelated pairs are full of one-IBS0 interruptions, so the reference must
 require something further that the canvas has not yet asked for — a bound on how many
 merges, or on the runs' own lengths, or on their `inf1`. Until that is measured the clause
-stays out of `crates/king-core`, where on net it would lose 114 `IBD1Seg` rows at 5 Mb and
+stays out of `crates/open-king-core`, where on net it would lose 114 `IBD1Seg` rows at 5 Mb and
 109 at 10 Mb.
 
 ## 10. Reproducing everything here

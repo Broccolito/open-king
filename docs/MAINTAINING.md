@@ -34,7 +34,7 @@ estimators can be embedded in other software. That is only defensible if the imp
 is genuinely independent. The moment a contributor has read the original source, everything
 they touch afterwards is derivative, and the fact is not recoverable after the fact — a
 reviewer cannot tell by looking at a diff. So the rule is absolute rather than
-best-effort, and it is stated at the top of `crates/king-core/src/ibdseg.rs` as well as
+best-effort, and it is stated at the top of `crates/open-king-core/src/ibdseg.rs` as well as
 here.
 
 **What you may use instead**, and what everything currently in the tree came from:
@@ -213,7 +213,7 @@ tests/parity/
 ```
 
 **One file in `fit/` is not a scratch script.** `fit/engine.py` is a line-for-line Python
-mirror of `crates/king-core/src/ibdseg.rs` with every disputed rule exposed as a `Params`
+mirror of `crates/open-king-core/src/ibdseg.rs` with every disputed rule exposed as a `Params`
 field, so a candidate rule can be scored over the whole corpus in a second instead of a
 rebuild-and-replay. It is a *mirror, not a second source of truth*: `fit/check_mirror.py`
 asserts that with default `Params` it reproduces the built binary's own `.seg` columns and
@@ -293,7 +293,7 @@ All four crate roots carry `#![forbid(unsafe_code)]`. Keep it that way.
 ## 3. Build and check
 
 ```bash
-cargo build --release                                   # -> target/release/king
+cargo build --release                                   # -> target/release/open-king
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --check
@@ -304,7 +304,7 @@ CI (`.github/workflows/ci.yml`) runs exactly these four on Linux, macOS and Wind
 `tests/parity/BASELINE.txt`:
 
 ```bash
-python3 tests/parity/run_parity.py --impl ./target/release/king --baseline
+python3 tests/parity/run_parity.py --impl ./target/release/open-king --baseline
 ```
 
 That is a two-sided gate. `BASELINE.txt` records the outcome of every case *with its
@@ -342,24 +342,24 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace                                             # 355 passed, 0 failed
 cargo clean && cargo build --release            # must work from a clean checkout
-python3 tests/parity/run_parity.py --impl target/release/king      # record the exact count
-python3 tests/parity/run_parity.py --impl target/release/king --baseline   # must MATCH
+python3 tests/parity/run_parity.py --impl target/release/open-king      # record the exact count
+python3 tests/parity/run_parity.py --impl target/release/open-king --baseline   # must MATCH
 python3 tests/parity/run_parity.py --impl "<reference>"            # must be 480/480
-python3 tests/parity/measure_gaps.py --impl target/release/king -q # the numbers PARITY.md §4 quotes
+python3 tests/parity/measure_gaps.py --impl target/release/open-king -q # the numbers PARITY.md §4 quotes
 KING_GOLDEN=tests/parity/golden \
-  cargo test -p king-core --test ibdseg_parity -- --nocapture      # .seg scorecard, DEFAULT floor
+  cargo test -p open-king-core --test ibdseg_parity -- --nocapture      # .seg scorecard, DEFAULT floor
 python3 tests/parity/fit/scorecard.py                              # .seg scorecard, ALL THREE floors
 cd tests/parity/fit && python3 check_mirror.py                     # must print MIRROR OK (3/5/10 Mb)
 python3 seg17.py && python3 seg18.py && python3 seg19.py && python3 seg20.py  # historical bundles
 python3 seg21.py && python3 seg23.py                               # the committed rule, 3/5/10 Mb
-python3 docs/research/fixtures/gradebinary.py target/release/king          # 6000/6000
-python3 docs/research/fixtures/gradebinary.py target/release/king --ibd1   # 540/540 + 60/60
+python3 docs/research/fixtures/gradebinary.py target/release/open-king          # 6000/6000
+python3 docs/research/fixtures/gradebinary.py target/release/open-king --ibd1   # 540/540 + 60/60
 python3 docs/research/fixtures/segwriter.py                        # the two .seg writer rules
-python3 tests/parity/probes/xseg_probe.py --impl target/release/king  # 1040/1040, 625/625
+python3 tests/parity/probes/xseg_probe.py --impl target/release/open-king  # 1040/1040, 625/625
 python3 tests/parity/probes/degree_filter.py --ref "<reference>"   # 0 false-keep, 0 false-drop
 python3 docs/research/fixtures/oosseg.py --ref "<reference>" \
   --expect-known-safe-divergence                                  # OUT OF SAMPLE: pinned 68/72
-python3 tests/parity/probes/segment_residuals.py --ref "<reference>" --impl target/release/king
+python3 tests/parity/probes/segment_residuals.py --ref "<reference>" --impl target/release/open-king
 python3 docs/research/fixtures/avscore.py 1 work/*                 # reported intervals: 296/297 exact
 # the --build rigs: all four are out-of-sample, none is visible to the 480 captures
 cd docs/research/fixtures
@@ -434,7 +434,7 @@ nothing `PARITY.md` does not measure.
 Two test suites want the goldens and skip themselves without them:
 
 ```bash
-KING_GOLDEN=tests/parity/golden cargo test -p king-core --test ibdseg_parity -- --nocapture
+KING_GOLDEN=tests/parity/golden cargo test -p open-king-core --test ibdseg_parity -- --nocapture
 ```
 
 prints the per-dataset `.seg` scorecard rather than just passing. Its two totals are not the
@@ -491,7 +491,7 @@ probes, dataset-independent).
 *reference* and overwrites the capture:
 
 ```bash
-python3 tests/parity/run_parity.py --impl target/release/king \
+python3 tests/parity/run_parity.py --impl target/release/open-king \
         --ref "/path/to/reference/king" --update --filter ibdseg/
 ```
 
@@ -522,19 +522,19 @@ reference with `cwd` set to the case directory, and rewrites absolute input path
 
 ```bash
 # everything
-python3 tests/parity/run_parity.py --impl target/release/king
+python3 tests/parity/run_parity.py --impl target/release/open-king
 
 # one group or one case, with diffs
-python3 tests/parity/run_parity.py --impl target/release/king --filter ibdseg/ -v
-python3 tests/parity/run_parity.py --impl target/release/king \
+python3 tests/parity/run_parity.py --impl target/release/open-king --filter ibdseg/ -v
+python3 tests/parity/run_parity.py --impl target/release/open-king \
         --filter core/bigish__related_degree3 -v
 
 # prove the harness itself is sound: must be 480/480
 python3 tests/parity/run_parity.py --impl "/path/to/reference/king"
 
 # how big the differences are, not just that they exist
-python3 tests/parity/measure_gaps.py --impl target/release/king -q
-python3 tests/parity/measure_gaps.py --impl target/release/king --by-dataset king.seg
+python3 tests/parity/measure_gaps.py --impl target/release/open-king -q
+python3 tests/parity/measure_gaps.py --impl target/release/open-king --by-dataset king.seg
 
 # the row-level .seg scorecard at all three captured floors (3 / 5 / 10 Mb), measured
 # from the binary against the goldens -- PARITY.md §4.4 quotes this table
@@ -543,8 +543,8 @@ python3 tests/parity/fit/scorecard.py --per-dataset   # split by dataset
 python3 tests/parity/fit/scorecard.py --residual      # print every non-exact row
 
 # the regression gate: per case AND per output file, against the committed record
-python3 tests/parity/run_parity.py --impl target/release/king --baseline
-python3 tests/parity/run_parity.py --impl target/release/king --baseline --write-baseline
+python3 tests/parity/run_parity.py --impl target/release/open-king --baseline
+python3 tests/parity/run_parity.py --impl target/release/open-king --baseline --write-baseline
 
 # AND THE ONE THE SUITE CANNOT DO: fresh filesets on unused seeds, byte-diffed against
 # the reference. The suite above is saturated on the segment columns (982/982 at every
@@ -593,7 +593,7 @@ Working backwards from the output, which is the order that keeps you honest:
    whatever parameter combinations matter) *before* writing any Rust. You cannot fit to
    evidence you have not collected, and the captures will contradict your assumptions —
    that is what they are for.
-2. **Write the module.** `crates/king-cli/src/analysis/<flag>.rs`, declared in
+2. **Write the module.** `crates/open-king-cli/src/analysis/<flag>.rs`, declared in
    `analysis/mod.rs`. It owns its output files and its console body. Domain logic —
    anything that computes rather than prints — belongs in `king-core`.
 3. **Wire the flag.** Add it to the option table in `cli.rs` if it is not already there
@@ -802,8 +802,8 @@ that ratio, you are reading noise.
 ### 8.4 Grading *our* binary on the canvases — `gradebinary.py`
 
 ```bash
-python3 docs/research/fixtures/gradebinary.py target/release/king          # IBD2Seg, 6000 canvases
-python3 docs/research/fixtures/gradebinary.py target/release/king --ibd1   # IBD1Seg, 600
+python3 docs/research/fixtures/gradebinary.py target/release/open-king          # IBD2Seg, 6000 canvases
+python3 docs/research/fixtures/gradebinary.py target/release/open-king --ibd1   # IBD1Seg, 600
 ```
 
 This replays exactly the cached canvases with an open-king build and compares marker-interval

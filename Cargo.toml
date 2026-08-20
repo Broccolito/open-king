@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/king-io",
-    "crates/king-core",
-    "crates/king-cli",
+    "crates/open-king-io",
+    "crates/open-king-core",
+    "crates/open-king-cli",
 ]
 
 [workspace.package]
@@ -15,8 +15,8 @@ repository = "https://github.com/Broccolito/open-king"
 authors = ["Wanjun Gu"]
 
 [workspace.dependencies]
-king-io = { path = "crates/king-io" }
-king-core = { path = "crates/king-core" }
+open-king-io = { path = "crates/open-king-io" }
+open-king-core = { path = "crates/open-king-core" }
 
 [profile.release]
 opt-level = 3

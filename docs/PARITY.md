@@ -9,7 +9,7 @@ quoted**, so any claim here can be re-run rather than taken on trust.
 
 > **What "the reference" means here, and the caveat that applies to every number below.**
 > One binary: `KING 2.3.2 - (c) 2010-2023 Wei-Min Chen`, Mach-O 64-bit **arm64**, run on
-> macOS (Darwin 25.5.0, Apple silicon). Every rule in `king-core::ibdseg` and every figure in
+> macOS (Darwin 25.5.0, Apple silicon). Every rule in `open-king-core::ibdseg` and every figure in
 > this document was measured against that one build on that one host. Two consequences,
 > both of which a reader should carry:
 >
@@ -64,31 +64,31 @@ cd /path/to/open-king
 cargo build --release
 
 # pass/fail for all 480 cases  -> "480 PASS, 0 FAIL, 480 total"
-python3 tests/parity/run_parity.py --impl ./target/release/king
+python3 tests/parity/run_parity.py --impl ./target/release/open-king
 
 # the same, as a regression gate: compare per case AND per output file against the
 # recorded outcome, and fail on any difference in either direction
-python3 tests/parity/run_parity.py --impl ./target/release/king --baseline
+python3 tests/parity/run_parity.py --impl ./target/release/open-king --baseline
 
 # per-file row/column scorecards; every captured file is byte-identical in all its cases
-python3 tests/parity/measure_gaps.py --impl ./target/release/king -q
+python3 tests/parity/measure_gaps.py --impl ./target/release/open-king -q
 
 # per-dataset roll-up for one output file
-python3 tests/parity/measure_gaps.py --impl ./target/release/king -q --by-dataset king.seg
+python3 tests/parity/measure_gaps.py --impl ./target/release/open-king -q --by-dataset king.seg
 
 # harness self-check: the reference against its own captures must be 480/480
 python3 tests/parity/run_parity.py --impl "/path/to/reference/king"
 
 # the row-level .seg scorecard at the default floor, per dataset
-KING_GOLDEN=tests/parity/golden cargo test -p king-core --test ibdseg_parity -- --nocapture
+KING_GOLDEN=tests/parity/golden cargo test -p open-king-core --test ibdseg_parity -- --nocapture
 
 # the row-level .seg scorecard at ALL THREE captured floors (3 / 5 / 10 Mb) -- §4.4.
 # Measured from the binary against the goldens; the table above covers only the default.
 python3 tests/parity/fit/scorecard.py                 # add --per-dataset or --residual
 
 # our binary against the reference on the constructed canvases (§5.0)
-GRADE_CACHE=$TMPDIR/g2.json python3 docs/research/fixtures/gradebinary.py target/release/king
-GRADE_CACHE=$TMPDIR/g1.json python3 docs/research/fixtures/gradebinary.py target/release/king --ibd1
+GRADE_CACHE=$TMPDIR/g2.json python3 docs/research/fixtures/gradebinary.py target/release/open-king
+GRADE_CACHE=$TMPDIR/g1.json python3 docs/research/fixtures/gradebinary.py target/release/open-king --ibd1
 
 # the two writer rules, from the captures alone -- no binary, no engine (§4.3, §4.5)
 python3 docs/research/fixtures/segwriter.py
@@ -119,16 +119,16 @@ Measured on the tree this document describes:
 
 | command | result |
 | --- | --- |
-| `run_parity.py --impl target/release/king` | **480 PASS, 0 FAIL, 480 total**, 876 output files byte-compared, 8 diff-excluded |
-| `run_parity.py --impl target/release/king --baseline` | `baseline: MATCH (480 case(s))` |
+| `run_parity.py --impl target/release/open-king` | **480 PASS, 0 FAIL, 480 total**, 876 output files byte-compared, 8 diff-excluded |
+| `run_parity.py --impl target/release/open-king --baseline` | `baseline: MATCH (480 case(s))` |
 | `run_parity.py --impl <reference>` | **480 PASS, 0 FAIL**, 876 files byte-compared — the normalization is complete and the goldens are self-consistent |
 | `probes/degree_filter.py --ref <reference>` | 38 298 cases, **0 false-keep, 0 false-drop** |
-| `probes/xseg_probe.py --impl target/release/king` | `<prefix>X.seg` out of sample on 1 040 built runs: emission gate **1 040/1 040**, bytes at the default floor **625/625** of the runs whose autosomal `.seg` also matches, raised floors **160/160** (§6.1) |
+| `probes/xseg_probe.py --impl target/release/open-king` | `<prefix>X.seg` out of sample on 1 040 built runs: emission gate **1 040/1 040**, bytes at the default floor **625/625** of the runs whose autosomal `.seg` also matches, raised floors **160/160** (§6.1) |
 | `docs/research/fixtures/gate8.py` | brackets the `--degree 1` IBD2 clause to (0.0789, 0.0829] — its ladder refuses at `PropIBD` 0.0789 and accepts at 0.0829 |
-| `gradebinary.py target/release/king` | **6 000 / 6 000** canvases — the release binary against the reference's own readings, `IBD2Seg` |
-| `gradebinary.py target/release/king --ibd1` | **540 / 540** on the closed families **and 60 / 60** on the one that was open before the run merge — 600 / 600 in total |
+| `gradebinary.py target/release/open-king` | **6 000 / 6 000** canvases — the release binary against the reference's own readings, `IBD2Seg` |
+| `gradebinary.py target/release/open-king --ibd1` | **540 / 540** on the closed families **and 60 / 60** on the one that was open before the run merge — 600 / 600 in total |
 | `segwriter.py` | `.seg`'s `PropIBD` rule consistent on **4 172 / 4 172** reference rows with **0** refutations, refuted on `.kin` (42 rows) and `cluster.kin` (3); row-order block size **uniquely 16** over 2..80 across all 50 `.seg` captures |
-| `cargo test -p king-core --test ibdseg_parity` | `TOTAL gold=982 row=982 est=982 infType=982 missing=0 extra=0 meandPropIBD=0.000017 worst=0.0001` |
+| `cargo test -p open-king-core --test ibdseg_parity` | `TOTAL gold=982 row=982 est=982 infType=982 missing=0 extra=0 meandPropIBD=0.000017 worst=0.0001` |
 | `tests/parity/fit/scorecard.py` | the three-floor row scorecard of §4.4: `982/982/982` at 3 Mb, at 5 **and at 10**; 0 extra and 0 missing at all three; MAE and worst row a true `0.000000 / 0.0000` at each |
 | `tests/parity/fit/check_mirror.py` | **MIRROR OK** — the mirror reproduces the binary's `.seg` columns on all 982 rows **at each of 3 / 5 / 10 Mb** (2 946 rows) and 861 `MaxIBD2` values, 10 datasets |
 | `tests/parity/fit/seg19.py` | the `19-…` scorecard, unchanged: `806 / 982 / 982` at 3 Mb, `755 / 910 / 946` at 5, `713 / 844 / 937` at 10 — the "before" the merge is measured against |
@@ -136,7 +136,7 @@ Measured on the tree this document describes:
 | `tests/parity/fit/seg21.py` | the push + IBD2-merge corrections, same scale: `20` (previous commit) `806 / 795 / 793`, `21` `806 / 817 / 811` exact, `IBD1Seg` `982 / 982 / 970` and `IBD2Seg` `982 / 982 / 972` |
 | `tests/parity/fit/seg23.py` | the window bound and the budget word set, same scale: `21` (previous commit) `806 / 817 / 811` exact, **`23` (committed) `806 / 817 / 820`**, `IBD1Seg` and `IBD2Seg` both `982 / 982 / 982`, MAE at 10 Mb 0.000067 → **0.000022** |
 | `docs/research/fixtures/oosseg.py --ref <reference>` | **out of sample**, 24 fresh filesets × 3 floors on 8 unused seeds: **68 / 72** runs byte-identical, **4 of 6 713 rows** value-differing — 0 extra, 0 missing; all four are the deliberate exact-64 safety divergence (§4.6) |
-| `tests/parity/probes/segment_residuals.py --ref <reference> --impl target/release/king` | merged IBD1 and IBD2 calls both feed the >10 Mb pair filter; 39 999/40 001-marker controls exact; exactly four expected value divergences at 40 000 markers (§4.6) |
+| `tests/parity/probes/segment_residuals.py --ref <reference> --impl target/release/open-king` | merged IBD1 and IBD2 calls both feed the >10 Mb pair filter; 39 999/40 001-marker controls exact; exactly four expected value divergences at 40 000 markers (§4.6) |
 | `tests/parity/fit/seg18.py` | `18-…`'s own numbers, unchanged: committed `exact 747  ibd1 982  ibd2 896  MAE 0.000067`; retired overlap rule `709 / 826 / 896` |
 | full cached `--build` research replay | **277 / 347** logs byte-identical; another **52** have the same distinct lines and differ only in repetition/count residue; of 18 semantic-or-stale residuals, 2 are truncated debugger artifacts and 2 are held-out `<FID>-><IID>` renaming shapes (§6.2) |
 | `docs/research/fixtures/build_shapes.py` | **out of sample**, `updateparents.txt` + the console tail over 20 held-out merge shapes: **18 OK, 0 MISMATCH, 2 skipped** (the still-open renaming shapes) |
@@ -341,7 +341,7 @@ now pinned against purpose-built pedigree probes (`tests/parity/probes/pederr.py
 * **`.kin`'s `InfType` is not `.seg`'s.** The `Dup/MZ` clause additionally requires
   `HetConc > 0.8`; the same pair at `IBD1Seg 0.0182 / IBD2Seg 0.8128` prints `Dup/MZ` in
   `.seg` and `FS` in `.kin`. Bracketed to (0.7986, 0.8004] on a 72-pair ladder; `--minConc`
-  does not move it. `king_core::ibdseg::inf_type` stays ungated because `.seg` genuinely
+  does not move it. `open_king_core::ibdseg::inf_type` stays ungated because `.seg` genuinely
   uses the plain `IBD2Seg > 0.7`; the gate lives in the `.kin` writers.
 
 ### 4.3 `.seg`'s `PropIBD` is a different number from `.kin`'s — and now an exact one
@@ -386,7 +386,7 @@ Zero were observed. And the rule is `.seg`'s alone — the same test refutes it 
 (42 rows) and `kingcluster.kin` (3), both of which open-king reproduces byte for byte using
 the full-precision value.
 
-Committed as `king_core::ibdseg::seg_prop_ibd`, reaching **one column of one file**:
+Committed as `open_king_core::ibdseg::seg_prop_ibd`, reaching **one column of one file**:
 `InfType`, the `--degree` filter, `--unrelated`'s greedy and `--related`'s `Error` grader
 all still read `Segments::prop_ibd`. Worth **806 → 982** byte-exact rows at 3 Mb,
 **755 → 900** at 5 Mb and **713 → 832** at 10 Mb.
@@ -401,7 +401,7 @@ allowed to differ.
 
 `<dataset>__ibdseg`, the default 3 Mb reporting floor, 982 rows over 10 datasets. "all four"
 is `IBD1Seg`, `IBD2Seg`, `PropIBD` and `InfType` all byte-exact — the `row=` column of
-`cargo test -p king-core --test ibdseg_parity`; "both est." is the two estimate columns only,
+`cargo test -p open-king-core --test ibdseg_parity`; "both est." is the two estimate columns only,
 its `est=`.
 
 | dataset | all four | both est. | `IBD1Seg` | `IBD2Seg` | `InfType` | of |
@@ -1310,7 +1310,7 @@ normalized console streams, file sets and file bytes match the reference.
 **3. Sample IDs colliding only in case — fixed.** The reference folds ASCII case when checking
 `(FID, IID)` uniqueness — established independently in
 [`BEHAVIOR.md`](BEHAVIOR.md#q6--the-sample-id-sort-comparator), which records `{A, a}` and
-`{ab, aB}` being rejected at load. `king-io` now canonicalises only the identity key while
+`{ab, aB}` being rejected at load. `open-king-io` now canonicalises only the identity key while
 retaining the original spelling for output, so exact duplicates and case-only FID/IID
 collisions stop at the same pedigree-validation point.
 
@@ -1443,7 +1443,7 @@ including the corrections this section previously got wrong:
 * **Samples of unknown sex are not excluded**, unlike in `--kinship`'s `X.kin`; their rows
   appear with the `.fam` code printed raw.
 
-**Held out** — `python3 tests/parity/probes/xseg_probe.py --impl target/release/king`, which
+**Held out** — `python3 tests/parity/probes/xseg_probe.py --impl target/release/open-king`, which
 prints `presence 1040/1040`, `default 875/880`, `default_given_autosome_ok 625/625`,
 `nondefault 140/160` (105/160 before the push and IBD2-merge corrections landed). The two
 captures are 28 rows of one 6-sample family, so nothing here was
@@ -1727,7 +1727,7 @@ Two further rules were measured the same way, and one is a sharp negative:
 
 `updateparents.txt` and `updateids.txt` are both written and byte-identical, and the rule
 half of the log with them — none of which can flip the case, but all of which generalise.
-The `build.log` derivation lives in `crates/king-cli/src/analysis/build.rs`'s module doc;
+The `build.log` derivation lives in `crates/open-king-cli/src/analysis/build.rs`'s module doc;
 the rigs are `docs/research/fixtures/avfs.py` (held-out pedigree shapes),
 `avfs_score.py` (the `Join3/Join2` scorecard, about twenty seconds),
 `build_shapes.py` (twenty merge shapes and the `updateparents.txt` scorecard),
@@ -1804,7 +1804,7 @@ cases for a reason that has nothing to do with the code.
   regenerating the corpus, re-capturing goldens, running the suite and its regression
   baseline, **the fixture rigs and the canvas technique with its read-back arithmetic
   (§8)**, the never-fit-to-the-corpus rule with the incident that motivates it (§8.7), and
-  adding an analysis. Read it before changing anything in `king-core::ibdseg`.
+  adding an analysis. Read it before changing anything in `open-king-core::ibdseg`.
 * `README.md` — the cold-reader entry point. It quotes this file and claims nothing this
   file does not measure; `CITATION.cff` carries the same credit machine-readably.
 * `docs/SPEC.md` — the reference's observable behaviour, flag by flag.

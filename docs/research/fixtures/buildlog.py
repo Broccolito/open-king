@@ -29,7 +29,7 @@ and one where the unimplemented `PO.S` branch consumes a synthetic id.
 every cluster whose sibships are all pairs, which is where the named pair is forced and the
 candidate `R` set can be read off a degree-2 `.kin0`.  Both score 107 of 113, on different
 failure sets; what separates them by hand is `three_fs` and `ord3`.  See
-`crates/king-cli/src/analysis/build.rs`.
+`crates/open-king-cli/src/analysis/build.rs`.
 
 **`cut`** re-reads every `AV.FS`/`AV.HS` line under `work/` and brackets the
 `uncle|aunt` / `grandfather|…` boundary from printed values alone: 259 values,
@@ -65,7 +65,7 @@ WORK = os.path.join(_HERE, "work", "buildlog")
 KING = os.environ.get(
     "KING", "/Users/wgu/Desktop/GeneQuire Project/GeneQuire/software/king/king"
 )
-IMPL = os.environ.get("OPEN_KING", os.path.join(_ROOT, "target", "release", "king"))
+IMPL = os.environ.get("OPEN_KING", os.path.join(_ROOT, "target", "release", "open-king"))
 
 AV = re.compile(
     r"INFERENCE AV\.FS: (\S+) is ([\w, ]+?) of (\S+) and (\S+), Join3/Join2=([\d.]+)"

@@ -33,7 +33,7 @@ jobs:
       # asserts it measured all 10 datasets, so a missing corpus fails loudly rather
       # than passing while measuring nothing.
       #
-      # This MUST run before `cargo test`, not after. `king-core`'s
+      # This MUST run before `cargo test`, not after. `open-king-core`'s
       # `plink_entrypoint_matches_a_reference_row_without_text_roundtrip`
       # opens `tests/parity/golden/multifam.bed` directly, so with the old ordering it
       # panicked on every fresh checkout while passing on any developer machine that had
@@ -46,7 +46,7 @@ jobs:
       # The row-level segment scorecard. docs/PARITY.md §4.4 quotes its "row=" and "est="
       # totals, so a change here is visible in the log of the run that made it.
       - name: segment scorecard
-        run: cargo test -p king-core --test ibdseg_parity -- --nocapture
+        run: cargo test -p open-king-core --test ibdseg_parity -- --nocapture
         env:
           KING_GOLDEN: tests/parity/golden
 
@@ -79,4 +79,4 @@ jobs:
         with:
           python-version: '3.12'
       - run: cargo build --release
-      - run: python3 tests/parity/run_parity.py --impl ./target/release/king -q --baseline
+      - run: python3 tests/parity/run_parity.py --impl ./target/release/open-king -q --baseline

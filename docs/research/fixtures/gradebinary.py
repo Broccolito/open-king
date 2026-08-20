@@ -8,8 +8,8 @@ engine against KING 2.3.2 — no Python model on either side. It is the instrume
 `docs/PARITY.md` §5.0 quotes, and it is how `17-seg-caller.md` §14.10 was landed: a rule the
 corpus cannot see at all is separated here, 5 723 against 6 000.
 
-    python3 gradebinary.py ../../../target/release/king           # the IBD2 column
-    python3 gradebinary.py ../../../target/release/king --ibd1    # the IBD1 column
+    python3 gradebinary.py ../../../target/release/open-king           # the IBD2 column
+    python3 gradebinary.py ../../../target/release/open-king --ibd1    # the IBD1 column
 
 **IBD2 mode** (default) reads `IBD2Seg` on the six families of `17-seg-caller.md` §14.6: the
 exhaustive word sequences of length <= 4 and 5 over `{C, z, x, y}`, length 4 over the
@@ -153,7 +153,7 @@ def main(argv):
     ibd1 = "--ibd1" in argv[1:]
     binary = args[0] if args else os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
-        "..", "..", "..", "target", "release", "king")
+        "..", "..", "..", "target", "release", "open-king")
     tag = os.environ.get("GRADE_TAG", "openking")
     cache = os.environ.get("GRADE_CACHE") or os.path.join(
         tempfile.gettempdir(), "openking_gradebinary_%s%s.json"

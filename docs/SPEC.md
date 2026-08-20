@@ -204,7 +204,7 @@ contract rather than a KING console-parity claim.
 
 ### 1.5 Library-first shape
 
-The CLI is a parity harness, not the product. `king-core` exposes the relatedness engine as
+The CLI is a parity harness, not the product. `open-king-core` exposes the relatedness engine as
 the typed, owned `Bundle -> RelatednessReport` flow documented in [API.md](API.md). Exact
 pair counts, estimators, pedigree expectations, relationship classes, and raw/normalized
 segment metrics are reachable without going through text. The `king`-compatible CLI shares

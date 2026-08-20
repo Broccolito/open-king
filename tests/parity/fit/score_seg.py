@@ -58,7 +58,7 @@ def run_impl(impl: str, ds: str, args: list[str], workdir: Path) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--impl", default=str(PARITY.parent.parent / "target/release/king"))
+    ap.add_argument("--impl", default=str(PARITY.parent.parent / "target/release/open-king"))
     ap.add_argument("--variant", default="ibdseg", choices=sorted(EXTRA_ARGS))
     ap.add_argument("--dump", help="dataset whose per-row diff to print")
     ap.add_argument("--limit", type=int, default=40)

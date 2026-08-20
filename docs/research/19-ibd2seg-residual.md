@@ -291,7 +291,7 @@ fringe shapes including a leading IBS0.
 
 ## 7. The port
 
-`target/release/king` put through the same rig — the two 16-point sweeps of §1 and §3 plus
+`target/release/open-king` put through the same rig — the two 16-point sweeps of §1 and §3 plus
 §6's exhaustive sweep, 416 filesets — reproduces the reference on **416 of 416**
 (`fringecanvas.py` §7, which caches our binary's answers separately so it can never
 contaminate the reference's).

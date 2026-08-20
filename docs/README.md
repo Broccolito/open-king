@@ -16,7 +16,7 @@ coefficient is; none of them assumes anything about this codebase.
 | [`COOKBOOK.md`](COOKBOOK.md) | Just show me the command. Twelve task-oriented recipes: find duplicates, screen a cohort, pick an unrelated set, QC a fileset, migrate from KING |
 | [`SCOPE.md`](SCOPE.md) | What is this package intentionally responsible for? The minimal relatedness/QC core, deliberately excluded analyses, and computing scope |
 
-Every command in all four pages was executed against `target/release/king` and its output
+Every command in all four pages was executed against `target/release/open-king` and its output
 pasted from that run.
 
 **Start here for common tasks:** find duplicate samples →
@@ -52,7 +52,7 @@ format, or a named black-box experiment.
 ## Reproducing anything in these docs
 
 ```bash
-cargo build --release                                           # -> target/release/king
+cargo build --release                                           # -> target/release/open-king
 python3 tests/parity/generate_corpus.py --outdir /tmp/kingdocs  # 13 filesets, ~6 s
 ```
 

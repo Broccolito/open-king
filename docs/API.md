@@ -1,6 +1,6 @@
 # Typed Rust API
 
-The `king-core` crate exposes the minimal relatedness product without console output or
+The `open-king-core` crate exposes the minimal relatedness product without console output or
 text-file parsing. The owned flow is:
 
 ```text
@@ -8,7 +8,7 @@ PLINK1 .bed/.bim/.fam -> Bundle -> RelatednessReport
 ```
 
 ```rust
-use king_core::{Bundle, BundleError, RelatednessOptions};
+use open_king_core::{Bundle, BundleError, RelatednessOptions};
 
 fn main() -> Result<(), BundleError> {
     let bundle = Bundle::from_plink("cohort.bed")?;
@@ -19,7 +19,7 @@ fn main() -> Result<(), BundleError> {
 ```
 
 `Bundle::from_plink` loads the autosomal analysis matrix. `Bundle::new` adopts an existing
-`king_io::Fileset`, and `Bundle::fileset` keeps the validated low-level data reachable.
+`open_king_io::Fileset`, and `Bundle::fileset` keeps the validated low-level data reachable.
 
 ## Report contents
 

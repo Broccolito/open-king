@@ -341,7 +341,7 @@ and `IBD2Seg` 1 and 8, the worst row falls by a factor of six at both, and the p
 exact. The two passes' merges are close to independent: each helps on its own and the two
 together are the sum.
 
-`python3 tests/parity/run_parity.py --impl ./target/release/king`: **464 → 472 of 480.**
+`python3 tests/parity/run_parity.py --impl ./target/release/open-king`: **464 → 472 of 480.**
 Closed: `ibdseg/sexchr__{ibdseg_degree2, related_degree2_ibdseg}` (both were also missing
 `kingX.seg` entirely) and six of the eleven `.seg` floor cases —
 `{admixed, dups, threegen}__ibdseg_seglength{5,10}`. Self-check stays 480/480; 307 tests,

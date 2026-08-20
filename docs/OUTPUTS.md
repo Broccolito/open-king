@@ -1,6 +1,6 @@
 # Output files — the complete reference
 
-Every file `king` can write, what triggers it, what its columns mean, how each column is
+Every file `open-king` can write, what triggers it, what its columns mean, how each column is
 formatted, and what order its rows come out in.
 
 This page is for someone who has PLINK filesets and wants to read the results. It does not
@@ -14,12 +14,12 @@ and none of them affects a data column of any file below.
 
 ```bash
 cd /path/to/open-king
-cargo build --release                                          # -> target/release/king
+cargo build --release                                          # -> target/release/open-king
 python3 tests/parity/generate_corpus.py --outdir /tmp/kingdocs # 13 test filesets, ~20 s
 ```
 
 Then run the command quoted above each listing, from an empty directory, with
-`target/release/king` on your `PATH` as `king`. Output below is pasted verbatim; the
+`target/release/open-king` on your `PATH` as `open-king`. Output below is pasted verbatim; the
 console excerpts start at `Options in effect:` and drop the load-time preamble (which
 echoes your own input paths).
 
@@ -74,11 +74,11 @@ in front of the autoQC suffixes, and a prefix containing `/` writes into that di
 (which must already exist).
 
 ```bash
-king -b /tmp/kingdocs/sexchr.bed --autoQC  --prefix ZZ_
-king -b /tmp/kingdocs/sexchr.bed --kinship --prefix ZZ_
-king -b /tmp/kingdocs/sexchr.bed --ibdseg --degree 2 --prefix ZZ_
-king -b /tmp/kingdocs/sexchr.bed --kinship --prefix run.2026
-mkdir -p sub && king -b /tmp/kingdocs/sexchr.bed --kinship --prefix sub/x_
+open-king -b /tmp/kingdocs/sexchr.bed --autoQC  --prefix ZZ_
+open-king -b /tmp/kingdocs/sexchr.bed --kinship --prefix ZZ_
+open-king -b /tmp/kingdocs/sexchr.bed --ibdseg --degree 2 --prefix ZZ_
+open-king -b /tmp/kingdocs/sexchr.bed --kinship --prefix run.2026
+mkdir -p sub && open-king -b /tmp/kingdocs/sexchr.bed --kinship --prefix sub/x_
 ```
 
 ```
@@ -188,7 +188,7 @@ for l in open('/tmp/kingdocs/multifam.fam'):
         f[1]=m.get(f[1],f[1]); f[2]=m.get(f[2],f[2]); f[3]=m.get(f[3],f[3])
     out.append(' '.join(f))
 open('sort.fam','w').write('\n'.join(out)+'\n')"
-king -b /tmp/kingdocs/multifam.bed --fam sort.fam --kinship --prefix s
+open-king -b /tmp/kingdocs/multifam.bed --fam sort.fam --kinship --prefix s
 ```
 
 `.fam` lists the family as `10, 9, 2, 007, 70`:
@@ -292,8 +292,8 @@ label mismatch inside the first degree score `1`.
 A real pair showing both:
 
 ```bash
-king -b /tmp/kingdocs/monomorphic.bed --kinship --prefix k
-king -b /tmp/kingdocs/monomorphic.bed --related --prefix r
+open-king -b /tmp/kingdocs/monomorphic.bed --kinship --prefix k
+open-king -b /tmp/kingdocs/monomorphic.bed --related --prefix r
 ```
 
 `k.kin`, filtered to its non-zero `Error` rows with
@@ -354,7 +354,7 @@ contains exactly one distinct FID.
 ### `--kinship` — 10 columns
 
 ```bash
-king -b /tmp/kingdocs/multifam.bed --kinship --prefix mf
+open-king -b /tmp/kingdocs/multifam.bed --kinship --prefix mf
 ```
 
 ```
@@ -391,7 +391,7 @@ unrelated. The boundaries are successive halvings on the `2^(−k/2)` grid.
 ### `--related` — 16 columns
 
 ```bash
-king -b /tmp/kingdocs/bigish.bed --related --cpus 4
+open-king -b /tmp/kingdocs/bigish.bed --related --cpus 4
 ```
 
 ```
@@ -459,7 +459,7 @@ families over five autosomes — the same generator that produces the 13 corpus 
 ### `--kinship` — 8 columns
 
 ```bash
-king -b /tmp/kingdocs/multifam.bed --kinship --prefix mf
+open-king -b /tmp/kingdocs/multifam.bed --kinship --prefix mf
 ```
 
 ```
@@ -492,7 +492,7 @@ first-degree relative.
 ### `--related` — 14 columns
 
 ```bash
-king -b /tmp/kingdocs/bigish.bed --related --cpus 4
+open-king -b /tmp/kingdocs/bigish.bed --related --cpus 4
 ```
 
 ```
@@ -512,8 +512,8 @@ That is why the file above has three rows out of 19 327 possible pairs.
 ### `--degree` filters `.kin0` and nothing else
 
 ```bash
-king -b /tmp/kingdocs/multifam.bed --kinship            --prefix a_
-king -b /tmp/kingdocs/multifam.bed --kinship --degree 2 --prefix b_
+open-king -b /tmp/kingdocs/multifam.bed --kinship            --prefix a_
+open-king -b /tmp/kingdocs/multifam.bed --kinship --degree 2 --prefix b_
 echo "a_ rows $(( $(wc -l < a_.kin0) - 1 ));  b_ rows $(( $(wc -l < b_.kin0) - 1 ))"
 ```
 
@@ -535,7 +535,7 @@ cross-family pairs, in serial `i < j` `.fam` order.
 For **N ≥ 100 only if at least one duplicate is found**; otherwise no file at all.
 
 ```bash
-king -b /tmp/kingdocs/dups.bed --duplicate
+open-king -b /tmp/kingdocs/dups.bed --duplicate
 ```
 
 ```
@@ -562,7 +562,7 @@ Row 2 is an MZ twin pair with 26 discordant genotypes, most of them genotyping e
 `--minConc` (default 0.80) is the threshold on `HetConc`, applied **strictly**:
 
 ```bash
-king -b /tmp/kingdocs/dups.bed --duplicate --minConc 0.999 --prefix c
+open-king -b /tmp/kingdocs/dups.bed --duplicate --minConc 0.999 --prefix c
 ```
 
 drops the MZ pair (`HetConc 0.99512`) and keeps only the exact duplicate.
@@ -570,7 +570,7 @@ drops the MZ pair (`HetConc 0.99512`) and keeps only the exact duplicate.
 The header-only case — 65 bytes, no data rows:
 
 ```bash
-king -b /tmp/kingdocs/unrelated.bed --duplicate   # 30 samples, no duplicates
+open-king -b /tmp/kingdocs/unrelated.bed --duplicate   # 30 samples, no duplicates
 ```
 
 ```
@@ -593,7 +593,7 @@ length for IBD analysis is at least 100 Mb** — the same total the console repo
 `Total length of <n> chromosomal segments usable for IBD segment analysis is <x> Mb.`
 
 ```bash
-king -b /tmp/kingdocs/multifam.bed --ibs      # 691.5 Mb usable -> long form
+open-king -b /tmp/kingdocs/multifam.bed --ibs      # 691.5 Mb usable -> long form
 ```
 
 ```
@@ -643,7 +643,7 @@ the gate and genuinely has no IBD2.
 The short form, when the map has less than 100 Mb of usable segments:
 
 ```bash
-king -b /tmp/kingdocs/pair.bed --ibs     # 42.6 Mb usable -> "Segments too short."
+open-king -b /tmp/kingdocs/pair.bed --ibs     # 42.6 Mb usable -> "Segments too short."
 ```
 
 ```
@@ -662,7 +662,7 @@ column carrying the between-family estimator.
 The `MaxIBD2`/`Pr_IBD2` pair is appended on the same ≥ 100 Mb trigger as `.ibs`.
 
 ```bash
-king -b /tmp/kingdocs/multifam.bed --ibs
+open-king -b /tmp/kingdocs/multifam.bed --ibs
 ```
 
 ```
@@ -695,7 +695,7 @@ pair appears only if it has at least one long (> 10 Mb) IBD segment, and only se
 above the `--seglength` floor (default 3 Mb) are counted. Row order is 16-sample blocks.
 
 ```bash
-king -b /tmp/kingdocs/multifam.bed --ibdseg
+open-king -b /tmp/kingdocs/multifam.bed --ibdseg
 ```
 
 ```
@@ -723,7 +723,7 @@ separates PO (`1.0000 / 0.0000`) from FS (roughly `0.50 / 0.25`) at the same `Pr
 > open-king reproduces both rules. Measured on a run that writes both files:
 >
 > ```bash
-> king -b /tmp/kingdocs/bigish.bed --related --degree 2 --ibdseg --cpus 4 --prefix r
+> open-king -b /tmp/kingdocs/bigish.bed --related --degree 2 --ibdseg --cpus 4 --prefix r
 > ```
 >
 > ```
@@ -738,9 +738,9 @@ separates PO (`1.0000 / 0.0000`) from FS (roughly `0.50 / 0.25`) at the same `Pr
 `--seglength` moves the estimates by changing which segments are reported at all:
 
 ```bash
-king -b /tmp/kingdocs/multifam.bed --ibdseg                --prefix s3
-king -b /tmp/kingdocs/multifam.bed --ibdseg --seglength 5  --prefix s5
-king -b /tmp/kingdocs/multifam.bed --ibdseg --seglength 10 --prefix s10
+open-king -b /tmp/kingdocs/multifam.bed --ibdseg                --prefix s3
+open-king -b /tmp/kingdocs/multifam.bed --ibdseg --seglength 5  --prefix s5
+open-king -b /tmp/kingdocs/multifam.bed --ibdseg --seglength 10 --prefix s10
 for p in s3 s5 s10; do printf "%-4s " $p; awk -F'\t' '$2=="A_C1" && $4=="A_C2"' $p.seg; done
 ```
 
@@ -770,7 +770,7 @@ only if it holds at least five complete 64-marker words and spans more than 10 M
 last filter is why a 22-chromosome map can yield 18 segments rather than 22.
 
 ```bash
-king -b /tmp/kingdocs/multifam.bed --ibdseg
+open-king -b /tmp/kingdocs/multifam.bed --ibdseg
 ```
 
 ```
@@ -801,7 +801,7 @@ denominator for the X files, never for the autosomal ones. A map with X markers 
 looks like this:
 
 ```bash
-king -b /tmp/kingdocs/sexchr.bed --ibdseg --degree 2
+open-king -b /tmp/kingdocs/sexchr.bed --ibdseg --degree 2
 ```
 
 ```
@@ -863,7 +863,7 @@ FAM3 C_C3 FAM3 C_C3 C_F C_M 1 0 0
 **Invents a mate, and splits a disconnected family.** Both in one file:
 
 ```bash
-king -b /tmp/kingdocs/dups.bed --ibdseg
+open-king -b /tmp/kingdocs/dups.bed --ibdseg
 ```
 
 ```
@@ -896,7 +896,7 @@ partition your sample set exactly.
 samples, where the clustering step is disabled and selection falls back to the pedigree.
 
 ```bash
-king -b /tmp/kingdocs/multifam.bed --unrelated
+open-king -b /tmp/kingdocs/multifam.bed --unrelated
 ```
 
 `kingunrelated.txt` has 8 rows — every family's two founders, the children dropped. Its
@@ -920,7 +920,7 @@ FAM1	A_C3
 The tiny-dataset path still writes both:
 
 ```bash
-king -b /tmp/kingdocs/trio.bed --unrelated
+open-king -b /tmp/kingdocs/trio.bed --unrelated
 ```
 
 console: `This function is currently disabled for tiny dataset with sample size < 10.`
@@ -962,7 +962,7 @@ kinship-only sparse fallback, `updateids.txt` still records the merge but `clust
 `allsegs.txt` are absent. Merging requires ≥ 100 samples.
 
 ```bash
-king -b /tmp/kingdocs/bigish.bed --cluster --cpus 4
+open-king -b /tmp/kingdocs/bigish.bed --cluster --cpus 4
 ```
 
 ```
@@ -1003,7 +1003,7 @@ it wrote the file** — on an unmerged run the line appears and no file exists. 
 reference's behaviour, reproduced.)
 
 ```bash
-king -b /tmp/kingdocs/bigish.bed --build --cpus 4
+open-king -b /tmp/kingdocs/bigish.bed --build --cpus 4
 ```
 
 ```
@@ -1032,7 +1032,7 @@ in the shape PLINK's `--update-parents` wants.
 `No pedigrees can be reconstructed.`
 
 ```bash
-king -b /tmp/kingdocs/bigish.bed --build --cpus 4
+open-king -b /tmp/kingdocs/bigish.bed --build --cpus 4
 ```
 
 ```
@@ -1068,7 +1068,7 @@ A free-text narrative of what `--build` reconstructed, echoed to stdout as it is
 when there was nothing to reconstruct.**
 
 ```bash
-king -b /tmp/kingdocs/bigish.bed --build --cpus 4
+open-king -b /tmp/kingdocs/bigish.bed --build --cpus 4
 ```
 
 ```
@@ -1089,7 +1089,7 @@ Two line kinds:
   `updateparents.txt`.
 
 ```bash
-king -b /tmp/kingdocs/multifam.bed --build
+open-king -b /tmp/kingdocs/multifam.bed --build
 ```
 
 leaves `kingbuild.log` at **0 bytes** — nothing was reconstructed.
@@ -1113,7 +1113,7 @@ blocks only if the pedigree has parent–offspring pairs / trios.
 Minimal form — a fileset of unrelated singletons with autosomes only:
 
 ```bash
-king -b /tmp/kingdocs/unrelated.bed --bysample --prefix un
+open-king -b /tmp/kingdocs/unrelated.bed --bysample --prefix un
 ```
 
 ```
@@ -1126,7 +1126,7 @@ POOL P03 0 0 1 20000 0.0000 0.3486
 Full form — every optional block present:
 
 ```bash
-king -b /tmp/kingdocs/sexchr.bed --bysample
+open-king -b /tmp/kingdocs/sexchr.bed --bysample
 ```
 
 ```
@@ -1173,7 +1173,7 @@ Per-marker QC from `--bySNP`. **Space separated**, one row per retained marker.
 `bySNP.txt` is *not* simply the `.bim` in file order when your map interleaves classes.
 
 ```bash
-king -b /tmp/kingdocs/sexchr.bed --bySNP
+open-king -b /tmp/kingdocs/sexchr.bed --bySNP
 head -1 kingbySNP.txt; awk 'NR>1{if(!seen[$2]++) print}' kingbySNP.txt
 ```
 
@@ -1233,7 +1233,7 @@ analyses does.
 prints on stdout. **Fixed-width, space padded; it contains no tab at all.**
 
 ```bash
-king -b /tmp/kingdocs/sexchr.bed --autoQC
+open-king -b /tmp/kingdocs/sexchr.bed --autoQC
 ```
 
 ```
@@ -1282,7 +1282,7 @@ the one that actually applies the looser step-1 threshold. On a dataset with rea
 missingness the file shows the grouping:
 
 ```bash
-king -b /tmp/kingdocs/missing.bed --autoQC
+open-king -b /tmp/kingdocs/missing.bed --autoQC
 awk 'NR>1{print $2}' king_autoQC_snptoberemoved.txt | uniq -c
 ```
 
@@ -1336,7 +1336,7 @@ the autosomal between-family stage ran (so: at least two families). Both X files
 written unconditionally.
 
 ```bash
-king -b /tmp/kingdocs/sexchr.bed --kinship
+open-king -b /tmp/kingdocs/sexchr.bed --kinship
 ```
 
 ```
@@ -1379,7 +1379,7 @@ full sisters, not the autosomal 0.25.
 **Under `--related`: within-family X *segment* sharing, 9 different columns.**
 
 ```bash
-king -b /tmp/kingdocs/sexchr.bed --related
+open-king -b /tmp/kingdocs/sexchr.bed --related
 ```
 
 console: `Within-family X-chr IBD-sharing inference saved in file kingX.kin`
@@ -1403,7 +1403,7 @@ by `--degree`.
 `X.kin`, minus `PhiX`, plus the second FID. Written whenever the `--kinship` X pass runs.
 
 ```bash
-king -b /tmp/kingdocs/sexchr.bed --kinship
+open-king -b /tmp/kingdocs/sexchr.bed --kinship
 ```
 
 ```
@@ -1449,7 +1449,7 @@ g.simulate(spec, g.dataset_seed(20260813, "bigx"), ".")
 
 ```bash
 python3 bigx.py
-king -b bigx.bed --related --cpus 4
+open-king -b bigx.bed --related --cpus 4
 ```
 
 ```
@@ -1475,7 +1475,7 @@ There is no marker-count threshold — the gate is the same usable-segment const
 `In addition to autosomes, <n> segments of length <x> Mb on X-chr can be further used.`
 
 ```bash
-king -b /tmp/kingdocs/sexchr.bed --ibdseg --degree 2
+open-king -b /tmp/kingdocs/sexchr.bed --ibdseg --degree 2
 cat -e kingX.seg
 ```
 
@@ -1561,7 +1561,7 @@ and flushed every 65 536 bytes, and the final partial buffer is never written. U
 of content that means a **zero-byte file**:
 
 ```bash
-king -b /tmp/kingdocs/nuclear.bed --kinship --prefix nuc   # 6 samples, one family
+open-king -b /tmp/kingdocs/nuclear.bed --kinship --prefix nuc   # 6 samples, one family
 wc -c nuc.kin
 ```
 
@@ -1574,7 +1574,7 @@ Relabelling all 200 `bigish` samples into one family:
 
 ```bash
 awk '{$1="ONE"; print}' /tmp/kingdocs/bigish.fam > one.fam
-king -b /tmp/kingdocs/bigish.bed --fam one.fam --kinship --cpus 4 --prefix one
+open-king -b /tmp/kingdocs/bigish.bed --fam one.fam --kinship --cpus 4 --prefix one
 echo "one.kin: $(wc -c < one.kin) bytes, $(( $(wc -l < one.kin) - 1 )) rows of $(( 200*199/2 ))"
 ```
 
@@ -1594,8 +1594,8 @@ FID, or use `--ibs`, which is never truncated.
 
 ```bash
 awk '{$1="S"NR; print}' /tmp/kingdocs/unrelated.fam > sing.fam
-king -b /tmp/kingdocs/unrelated.bed --fam sing.fam --kinship --prefix k
-king -b /tmp/kingdocs/unrelated.bed --fam sing.fam --ibs     --prefix i
+open-king -b /tmp/kingdocs/unrelated.bed --fam sing.fam --kinship --prefix k
+open-king -b /tmp/kingdocs/unrelated.bed --fam sing.fam --ibs     --prefix i
 wc -c i.ibs i.ibs0 iallsegs.txt k.kin0; ls k.kin
 ```
 

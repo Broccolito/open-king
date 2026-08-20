@@ -1,6 +1,6 @@
 """Score `--ibs`'s MaxIBD2 / Pr_IBD2 columns under the shared IBD2 caller.
 
-The caller is `king_core::ibdseg::Scan::ibd2` transcribed; the only thing varied here is
+The caller is `open_king_core::ibdseg::Scan::ibd2` transcribed; the only thing varied here is
 how its calls are *measured* (`.seg`'s own-ends ruler vs `--ibs`'s word grid) and whether
 the informativeness gate of `docs/research/13-informativeness-gate.md` is applied, and
 over which words.

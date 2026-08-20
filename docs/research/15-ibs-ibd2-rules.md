@@ -77,7 +77,7 @@ same fileset:
 `--ibs` runs straight through the IBS0 words; `IBD2Seg` is worth about the block alone.
 The two passes agree about the *ruler* — `dups`' MZ pair prints `IBD2Seg 1.0000` and
 `Pr_IBD2 0.8984`, and 0.8984 is the word-aligned total over the same `D` — but they do not
-agree about the calls, so `king_core::ibdseg::Scan::ibd2_words` (this pass) and
+agree about the calls, so `open_king_core::ibdseg::Scan::ibd2_words` (this pass) and
 `Scan::ibd2` (`.seg`) are separate functions over the same word masks until someone
 explains the IBS0 asymmetry.
 

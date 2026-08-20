@@ -31,7 +31,7 @@ python3 tests/parity/generate_corpus.py --outdir tests/parity/work/data
 
 cd tests/parity/fit
 python3 truth.py             # replay the simulator; must print 10/10 datasets reproduced
-python3 fit.py baseline      # mirrors crates/king-core/src/ibdseg.rs exactly
+python3 fit.py baseline      # mirrors crates/open-king-core/src/ibdseg.rs exactly
 python3 report.py            # the fitted rule, per dataset and per --seglength variant
 ```
 

@@ -584,9 +584,9 @@ def section6():
 
 def section7():
     """The Rust port against the same rig: our binary must read what the reference reads."""
-    hdr("7. the port — `target/release/king` on the fringe canvases")
+    hdr("7. the port — `target/release/open-king` on the fringe canvases")
     repo = os.path.dirname(os.path.dirname(os.path.dirname(ROOT)))
-    ours = os.environ.get("OPENKING", os.path.join(repo, "target", "release", "king"))
+    ours = os.environ.get("OPENKING", os.path.join(repo, "target", "release", "open-king"))
     if not os.path.exists(ours):
         print("  %s not built — skipping" % ours)
         return

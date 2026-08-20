@@ -9,7 +9,7 @@ actually runs: whole simulated filesets the caller has never seen, on seeds that
 nowhere else in this repository, compared **byte for byte** against KING 2.3.2.
 
     python3 oosseg.py --ref /path/to/king                 # the committed draw
-    python3 oosseg.py --ref /path/to/king --impl ./target/release/king
+    python3 oosseg.py --ref /path/to/king --impl ./target/release/open-king
     python3 oosseg.py --ref ... --expect-known-safe-divergence
     python3 oosseg.py --ref ... --seeds 5 6 7 --shapes twofam
 
@@ -150,7 +150,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--ref", required=True, help="path to the KING 2.3.2 reference binary")
     ap.add_argument("--impl", default=os.path.normpath(
-        os.path.join(_HERE, "..", "..", "..", "target", "release", "king")))
+        os.path.join(_HERE, "..", "..", "..", "target", "release", "open-king")))
     ap.add_argument("--seeds", type=int, nargs="*", default=SEEDS)
     ap.add_argument("--shapes", nargs="*", default=["twofam", "threegen", "multi"])
     ap.add_argument("--floors", nargs="*", default=FLOORS)

@@ -22,7 +22,7 @@ carry `.seg` goldens for all three, and reports, per floor:
 `docs/PARITY.md` §4.4 quotes this table. It reads the goldens directly and needs no
 reference binary.
 
-    python3 scorecard.py [path/to/open-king/king]        # the table
+    python3 scorecard.py [path/to/open-king/open-king]        # the table
     python3 scorecard.py --per-dataset                   # split by dataset
     python3 scorecard.py --residual                      # every non-exact row
 """
@@ -37,7 +37,7 @@ import kingdata as kd
 #: (floor in Mb, the golden-case suffix that captured it).
 FLOORS = [(3, "__ibdseg"), (5, "__ibdseg_seglength5"), (10, "__ibdseg_seglength10")]
 
-IMPL = os.path.join(kd.ROOT, "target", "release", "king")
+IMPL = os.path.join(kd.ROOT, "target", "release", "open-king")
 
 
 def read_seg(path):

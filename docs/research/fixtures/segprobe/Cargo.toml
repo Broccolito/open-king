@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-king-io = { path = "../../../../crates/king-io" }
-king-core = { path = "../../../../crates/king-core" }
-king-cli = { path = "../../../../crates/king-cli" }
+open-king-io = { path = "../../../../crates/open-king-io" }
+open-king-core = { path = "../../../../crates/open-king-core" }
+open-king-cli = { path = "../../../../crates/open-king-cli" }
 
 [profile.release]
 opt-level = 3

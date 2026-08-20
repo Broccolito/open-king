@@ -2,7 +2,7 @@
 """Held-out pedigree shapes that raise `INFERENCE AV.FS` in the reference's `--build` log.
 
 These are the fixtures behind the `Join3/Join2` finding recorded in
-`crates/king-cli/src/analysis/build.rs` and `docs/PARITY.md` §6.2: nuclear families whose
+`crates/open-king-cli/src/analysis/build.rs` and `docs/PARITY.md` §6.2: nuclear families whose
 *fathers* are undeclared full sibs, so clustering merges them and pedigree reconstruction
 has to decide avuncular-vs-grandparent for each (R; N1, N2) triple. Padding singletons push
 the sample count past the hundred-sample clustering gate, which is what makes the reference
@@ -21,7 +21,7 @@ gitignored and these filesets are regenerated on demand.
 
 **The scorer is preserved now** — losing it once cost a whole round. `segprobe/` is a
 standalone crate that dumps each pair's reported IBD intervals through
-`king_core::ibdseg::Scan` and intersects them; `avscore.py` drives it over every
+`open_king_core::ibdseg::Scan` and intersects them; `avscore.py` drives it over every
 `kingbuild.log` any rig has left behind and scores `Join3/Join2` at `%.3lf`:
 
     cd segprobe && cargo build --release
