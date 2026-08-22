@@ -54,8 +54,18 @@ for a in "${ASSETS[@]}"; do
   # submission without them, and the rejection arrives minutes later rather than
   # at signing time.
   codesign --force --options runtime --timestamp --sign "$IDENTITY" "$d/open-king"
-  codesign -dv --verbose=2 "$d/open-king" 2>&1 \
-    | grep -qE 'flags=0x10000\(runtime\)' || { echo "hardened runtime not set"; exit 1; }
+  # Capture first, then match. Piping straight into `grep -q` looks equivalent and is
+  # not: `grep -q` exits at the first match, which is line 4 of codesign's 14, so
+  # codesign takes SIGPIPE and exits 141 -- and `set -o pipefail` above turns that into
+  # the pipeline's status. The guard then fires on a signature that is perfectly good.
+  # That is not hypothetical: it is why v0.1.1 shipped unsigned.
+  siginfo="$(codesign -dv --verbose=2 "$d/open-king" 2>&1)"
+  grep -qE 'flags=0x10000\(runtime\)' <<<"$siginfo" \
+    || { echo "hardened runtime not set"; echo "$siginfo"; exit 1; }
+  grep -q 'Timestamp=' <<<"$siginfo" \
+    || { echo "no secure timestamp"; echo "$siginfo"; exit 1; }
+  grep -q "TeamIdentifier=$TEAM_ID" <<<"$siginfo" \
+    || { echo "wrong or missing TeamIdentifier"; echo "$siginfo"; exit 1; }
 
   # Repackage flat, so the archive holds one file with no enclosing directory
   # and no AppleDouble sidecars.
