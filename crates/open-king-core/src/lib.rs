@@ -8,6 +8,13 @@
 //! These type definitions are the contract between the submodules and `open-king-cli`.
 
 #![forbid(unsafe_code)]
+// Doc comments in this crate deliberately link to private items -- the segment engine's
+// rules are documented for maintainers, and the constant or helper that pins a rule is
+// usually private. Rustdoc's default is to warn on those links, which turns every one of
+// them into an error under `RUSTDOCFLAGS="-D warnings"`. The convention is intentional,
+// so the lint is off rather than the links rewritten. `cargo doc --document-private-items`
+// resolves them all.
+#![allow(rustdoc::private_intra_doc_links)]
 
 pub mod counts;
 pub mod ibdseg;
