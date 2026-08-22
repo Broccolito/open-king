@@ -12,6 +12,7 @@ the measurements behind every claim.
 | Regression baseline | `MATCH (480 cases)` |
 | Rust verification | all workspace tests pass; clippy `-D warnings`, formatting, release build, and `open-king-core` docs pass |
 | Library surface | typed `Bundle -> RelatednessReport` API in `open-king-core`; see [`API.md`](API.md) |
+| Dense-panel `--ibdseg` | byte-identical to KING 2.3.2 on a 663,197-marker x 157-sample panel (v0.1.1; [`PARITY.md`](PARITY.md) §5.14) |
 | Live issues | only [#11](https://github.com/Broccolito/open-king/issues/11), the five held-out supported-core residuals |
 
 Reproduce the primary gates:
@@ -67,8 +68,11 @@ The 480-case corpus is saturated, so every remaining item needs a held-out discr
 All five are tracked by issue #11.
 
 1. **Segment acceptance gate:** one constructed brother/sister pair is emitted by open-king
-   and omitted by KING. It does not occur in the captured corpus. The existing `>=10`
-   informative-marker rule has a measured counterexample and needs a new discriminator.
+   and omitted by KING. It does not occur in the captured corpus. Since v0.1.1 the `>=10`
+   rule it contradicts is known to be the *first row* of a table the reference reads off
+   the total marker count (`PARITY.md` §5.14), but that does not explain this pair: its
+   fileset carries 5,000 markers, which is that same first row, and open-king's answer on
+   it is unchanged. The discriminator this still needs must live inside the first tier.
 2. **`HomIBS0` exact ties:** zero golden rows differ; two of 1,189 random-pedigree rows and
    four of nine hand-placed exact ties differ in the last printed digit. Integer counts and
    the algebraic ratio are correct; no tested floating evaluation reproduces all reference

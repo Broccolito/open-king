@@ -5,6 +5,14 @@ sixteen remaining parity cases (**464 → 472 of 480**), including the whole `se
 and six of the eleven `--seglength 5/10` `.seg` cases, and it does not touch a single byte
 at the default floor.
 
+**One correction, made in v0.1.1 and marked in place below.** §3's two-word cap is a
+*first-tier* reading. On a 663 197-marker panel with markers about 4 300 bp apart the
+reference joins two runs across **four** unusable words, which refutes both readings §11
+item 3 left open — "two words" and "129 marker intervals" alike — so the cap now applies
+only to filesets under 400 000 markers. Nothing else here changes and every number below
+is reproduced unchanged; see `docs/PARITY.md` §5.14 and
+`open_king_core::ibdseg::MERGE_MAX_WORDS`.
+
 `docs/research/18-ibd1-caller.md` §9 measured this clause on two of its five conditions,
 found that implementing it that way made the corpus much worse, and left it out with a
 note. This document measures the other three, which is what turns it from a liability into
@@ -130,6 +138,12 @@ and the second condition is a hard cap on the interruption's width.
 The rig cannot separate "at most two words" from "at most 129 marker intervals", because a
 run gap is always `64j + 1` markers. They make identical predictions on any word-aligned
 scan, which is all of them; §11 records it as open.
+
+**And "absolute" means absolute in this tier.** Every row above is measured at one spacing
+on a canvas of a few thousand markers. A 663 197-marker panel merges across four unusable
+words, refuting both readings at once — see the correction note at the top of this
+document. What the table above still fixes exactly is the first tier, which is where the
+whole corpus lives.
 
 ## 4. The budget: two bad markers free, then a fixed price
 
@@ -414,9 +428,11 @@ that has none. Items 4 and 5 stand.
    go both ways and `multifam`'s five `IBD1Seg` rows (all too low, worst 0.0277) are the
    largest single block left; `missing` is the cheapest place to start, being 14 rows with
    one wrong one at both floors.
-3. **"Two words" or "129 marker intervals"?** Indistinguishable on a word-aligned scan
-   (§3). A fringe canvas whose usable segment starts mid-word could in principle make a run
-   gap that is not `64j + 1`, and would separate them.
+3. **"Two words" or "129 marker intervals"? — closed, and the answer is neither.** They
+   are indistinguishable on a word-aligned scan (§3), and the fringe canvas this item asked
+   for was never needed: a 663 197-marker panel merges across four unusable words and 257
+   marker intervals, which no cap of two and no cap of 129 permits. The cap is a first-tier
+   parameter; `PARITY.md` §5.14 has the measurement and what it does and does not pin.
 4. **Whether a gate-refused run's own markers enter `X`.** §6 leaves it undecided; the
    committed rule sums only the unusable words. A canvas with a gate-refused run carrying
    close to 9 A1A1/A1A1 markers between two interruptions whose budget is exactly on the

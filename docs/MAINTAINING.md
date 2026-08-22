@@ -1050,8 +1050,8 @@ The workflow holds no Apple credential; `grep -rn 'secrets\.' .github/workflows/
 nothing. So after the workflow publishes:
 
 ```bash
-APPLE_ID=... APPLE_APP_PASSWORD=... scripts/notarize-macos-release.sh v0.1.0
-scripts/verify-release-assets.sh v0.1.0
+APPLE_ID=... APPLE_APP_PASSWORD=... scripts/notarize-macos-release.sh v0.1.1
+scripts/verify-release-assets.sh v0.1.1
 ```
 
 The first downloads the macOS pair CI built, signs each with the Developer ID under the

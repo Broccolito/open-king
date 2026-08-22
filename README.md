@@ -125,8 +125,8 @@ to each [release](https://github.com/Broccolito/open-king/releases). Download, c
 SHA-256 and extract:
 
 ```bash
-curl -LO https://github.com/Broccolito/open-king/releases/download/v0.1.0/open-king-macos-arm64.zip
-curl -LO https://github.com/Broccolito/open-king/releases/download/v0.1.0/SHA256SUMS.txt
+curl -LO https://github.com/Broccolito/open-king/releases/download/v0.1.1/open-king-macos-arm64.zip
+curl -LO https://github.com/Broccolito/open-king/releases/download/v0.1.1/SHA256SUMS.txt
 shasum -a 256 -c SHA256SUMS.txt --ignore-missing
 unzip open-king-macos-arm64.zip
 ./open-king
@@ -314,6 +314,13 @@ open and are tracked under
 [issue #11](https://github.com/Broccolito/open-king/issues/11): a segment acceptance gate,
 the data-derived sparse PO/FS cutoff, `HomIBS0` tie rendering, `MI_Removal`, and unusual
 pedigree reconstruction shapes.
+
+One further difference was found the same way and is now **fixed**: `--ibdseg` chooses its
+segment-acceptance parameters from the fileset's total marker count, off a three-row table
+no corpus dataset is large enough to see, and v0.1.1 implements that table. On a
+663,197-marker x 157-sample panel `--ibdseg` is byte-identical to the reference where it
+previously differed on every reported pair, with `--kinship` and all 480 corpus cases
+unmoved. [`docs/PARITY.md`](docs/PARITY.md) §5.14.
 
 Every number above is measured against one reference build: KING 2.3.2, Mach-O arm64, macOS.
 KING's segment algorithm is unpublished and its release notes record repeated changes across

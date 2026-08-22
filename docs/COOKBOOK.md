@@ -53,10 +53,10 @@ Reference material this page deliberately does not duplicate:
 
 ```
 $ cargo build --release
-   Compiling open-king-io v0.1.0 (/Users/wgu/Desktop/open-king/crates/open-king-io)
+   Compiling open-king-io v0.1.1 (/Users/wgu/Desktop/open-king/crates/open-king-io)
    Compiling rayon v1.12.0
-   Compiling open-king-core v0.1.0 (/Users/wgu/Desktop/open-king/crates/open-king-core)
-   Compiling open-king-cli v0.1.0 (/Users/wgu/Desktop/open-king/crates/open-king-cli)
+   Compiling open-king-core v0.1.1 (/Users/wgu/Desktop/open-king/crates/open-king-core)
+   Compiling open-king-cli v0.1.1 (/Users/wgu/Desktop/open-king/crates/open-king-cli)
     Finished `release` profile [optimized] target(s) in 19.18s
 real 19.27
 ```

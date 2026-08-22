@@ -602,7 +602,7 @@ from `docs/research/`, so their numbers must not move.
 | piece | status | where |
 | --- | --- | --- |
 | **The entire non-segment surface** — `N_SNP`, `Z0`, `Phi`, `HetHet`, `IBS0`, `HetConc`, `HomIBS0`, `Kinship`, and the whole command line | **no row anywhere differs**, over 4 805 rows; 220/220 `params` cases | §3, §4.2 |
-| **The acceptance gate** — a run is called iff popcount over its own *complete* 64-marker words of `inf1 = p1_i & p1_j & (p0_i \| p0_j)` (IBD1) or `inf2` (IBD2) is **≥ 10**. `inf2` is `p1_i & p1_j & ~ibs1` — HetHet plus A1A1/A1A1, a het-vs-A1A1 marker being uninformative (`17-…` §14.3, bisected at 10 against 20) | exact **and unique** | `13-informativeness-gate.md`, `17-seg-caller.md` §14.3, `tests/parity/fit/gate_*.py` |
+| **The acceptance gate** — a run is called iff popcount over its own *complete* 64-marker words of `inf1 = p1_i & p1_j & (p0_i \| p0_j)` (IBD1) or `inf2` (IBD2) is **≥ the gate that run reads off a marker-count table** — 10 below 400 000 markers, **20** from there to 2 000 000, 100 above (§5.14); every corpus dataset is in the first row, which is why 10 looked universal. `inf2` is `p1_i & p1_j & ~ibs1` — HetHet plus A1A1/A1A1, a het-vs-A1A1 marker being uninformative (`17-…` §14.3, bisected at 10 against 20) | exact **and unique** within a tier; the tier boundaries bisected to the marker | `13-informativeness-gate.md`, `17-seg-caller.md` §14.3, `tests/parity/fit/gate_*.py`, §5.14 |
 | **Which pairs are reported** (`--degree` inclusion, the `.kin0` `N ≥ 100` gate, the `< 10` and `< 5` sample downgrades) | **0 extra, 0 missing rows on every output file in the corpus**; the degree filter itself **0 false-keep, 0 false-drop over 38 298 cases** | §3, §4.2, `probes/degree_filter.py`, `fixtures/gate8.py` |
 | **The per-segment listing itself** — `allsegs.txt` | byte-identical in **all 165** cases | §3 |
 | **Denominators and thresholds** — `D` = sum over autosomal `allsegs.txt` rows; `--seglength` inclusive, and applied to each surviving `IBD1Seg` piece on its own | exact at 3, 5 and 10 Mb | §4.4 |
@@ -1226,6 +1226,15 @@ missing** `.seg` rows — and it propagates into `X.seg`, which mirrors `.seg`'s
 (3 sons, 3 daughters) with 1 000 X markers. It is the only default-floor case in that probe's
 1 040 runs whose `X.seg` differs, and it differs because `king.seg` does.
 
+**This is not §5.14's marker-count table, and saying so is the point.** The `>= 10` this
+counterexample contradicts is now known to be the *first row* of a table the reference reads
+off the total marker count, and the row below it — 20, from 400 000 markers — closes a
+second and much larger counterexample. It does not touch this one. The fileset here carries
+5 000 markers in all (two autosomes of 2 000 apiece plus the 1 000 X markers), which is that
+same first row, so the gate over it is 10 both before and after that fix and open-king's
+answer on this case is unchanged to the byte. Issue #11 item 1 stands, and what it still
+needs is a discriminator that lives **inside** the first tier.
+
 **2. `.fam` SEX fields outside {0,1,2} — fixed.** Measured by sweeping 43 spellings through
 `X.seg`'s raw `Sex` column:
 
@@ -1396,6 +1405,77 @@ independent compilations: every kinship, IBS, segment and QC file in the corpus 
 between build A and build B. What is not reproducible is its banner and one option whose
 value was never initialised. That strengthens the goldens as a target and narrows the
 standing "one build" caveat at the end of §5.0 to the places where it actually bites.
+
+### 5.14 `--ibdseg`'s segment-acceptance parameters are a table keyed on the marker count
+
+**Found by counterexample on real data, fixed in v0.1.1, and invisible to all 480 captured
+cases** — every corpus dataset is at most 50 000 markers, and the smallest fileset that can
+see this is 400 000. Reported as
+[#13](https://github.com/Broccolito/open-king/issues/13) and
+[#14](https://github.com/Broccolito/open-king/issues/14).
+
+The instrument is a 663 197-marker × 157-sample autosomal panel — an LD-pruned common-SNV
+grid, markers about 4 300 bp apart, an order of magnitude more markers and an order of
+magnitude denser than anything in the corpus or the fixture rigs. Against KING 2.3.2 on it,
+`--kinship` was already exact (770 `.kin0` rows and 11 476 `.kin` rows, byte-identical), and
+`--ibdseg` was wrong on **every one** of the 7 pairs it reports: `IBD1Seg` and `PropIBD` on
+all seven and `InfType` on one, which read `3rd` against the reference's `4th`. Two separate
+faults, and they had to be fixed together.
+
+**1. The informativeness gate is a table, not a constant.** The reference chooses it once
+per run from the total marker count:
+
+| markers | gate | minimum candidate length |
+| ---: | ---: | ---: |
+| `< 400 000` | 10 | 400 000 bp |
+| `400 000 … 2 000 000` | **20** | 400 000 bp |
+| `> 2 000 000` | 100 | 100 000 bp |
+
+`docs/research/13-informativeness-gate.md`'s measurement of 10 is not withdrawn: it is
+exact, it is validated out of sample on 1 170 pairs with no overlap, and every fixture and
+dataset behind it is in the first row. What was wrong was promoting a first-row measurement
+to a universal constant. That the trigger is the **count** and nothing about the markers
+took 283 controlled reference runs and a single-marker bisection: appending one all-missing
+marker — uncallable for any pair and uncountable by any gate — to take a fileset from
+399 999 markers to 400 000 moves 27 Mb of called IBD, and padding the count alone with the
+span and the usable-segment set held fixed reproduces the step. Both boundaries are bisected
+to the marker, at exactly 400 000 and again at exactly 2 000 001. The second column is
+recorded but not implemented: this caller has no separate candidate-length gate to key on,
+the first two rows agree on 400 000 bp, and nothing here reaches the third row.
+
+**2. The IBD1 merge cap of two unusable words is a first-tier reading.**
+`20-seglength-floor.md` §3 bisected it as absolute — three unusable words merge at no floor,
+however little they carry and however short the gap — on a rig whose markers sit 20 000 bp
+apart, and `21-push-merge.md` §4 reproduced it. It is a genuine count and not a distance in
+disguise; `23-gap-bound.md` §5 finds a corpus merge across two unusable words and
+9 652 629 bp. But on this panel the reference joins across **four**, which no cap of two and
+no cap of 129 marker intervals permits — so `20-…` §11 item 3, "two words or 129 marker
+intervals?", is answered *neither*. The cap now applies only to the first tier.
+
+**Which of the two things that move together — the marker count or the spacing a dense
+panel comes with — the merge cap is really keyed on is not separated.** Two observations at
+opposite ends of both cannot tell them apart. The tier is used because it is the boundary
+that is independently bisected here, and because keying it there leaves every first-tier
+measurement reproduced exactly as measured. A fixture holding the marker count inside one
+tier and moving only the spacing would settle it.
+
+**Why they had to land together.** On this panel, correcting the merge cap alone makes the
+result *worse*: an eighth pair appears that the reference does not report. The cap was
+masking the gate.
+
+**Verification, all of it.**
+
+| check | result |
+| --- | --- |
+| `ibd.seg` vs KING 2.3.2 on the panel | **byte-identical** (`cmp`), 7 pairs, all four columns |
+| `ibdallsegs.txt`, `ibdsplitped.txt` | byte-identical |
+| `--kinship` on the same panel | `kin.kin` 11 476 rows and `kin.kin0` 770 rows, byte-identical — unregressed |
+| captured parity corpus | **480 PASS / 0 FAIL**, 876 files byte-compared, baseline `MATCH` — not one case moves |
+| determinism | `--ibdseg` run three times, byte-identical each time and to the reference |
+
+The corpus not moving is a result and not a formality: it is the check that the fix is a
+*table* rather than a new constant. Had any of the 480 changed, the first row would have
+been wrong.
 
 ---
 

@@ -78,7 +78,7 @@
         <p>
           There are two paths. Download a prebuilt archive from the GitHub release, or build
           from source. Both end at the same binary. The version documented here is
-          <code>v0.1.0</code>, from the repository <code>Broccolito/open-king</code>.
+          <code>v0.1.1</code>, from the repository <code>Broccolito/open-king</code>.
         </p>
 
         <p>
@@ -211,7 +211,7 @@
 
         <div class="code-block">
 <pre><code>mkdir -p ~/open-king-dl &amp;&amp; cd ~/open-king-dl
-BASE=https://github.com/Broccolito/open-king/releases/download/v0.1.0
+BASE=https://github.com/Broccolito/open-king/releases/download/v0.1.1
 
 curl -LO "$BASE/open-king-macos-arm64.zip"
 curl -LO "$BASE/SHA256SUMS.txt"
@@ -237,7 +237,7 @@ chmod +x ~/.local/bin/open-king</code></pre>
 
         <div class="code-block">
 <pre><code>mkdir -p ~/open-king-dl &amp;&amp; cd ~/open-king-dl
-BASE=https://github.com/Broccolito/open-king/releases/download/v0.1.0
+BASE=https://github.com/Broccolito/open-king/releases/download/v0.1.1
 
 curl -LO "$BASE/open-king-macos-x86_64.zip"
 curl -LO "$BASE/SHA256SUMS.txt"
@@ -282,7 +282,7 @@ chmod +x ~/.local/bin/open-king</code></pre>
 
         <div class="code-block">
 <pre><code>mkdir -p ~/open-king-dl &amp;&amp; cd ~/open-king-dl
-BASE=https://github.com/Broccolito/open-king/releases/download/v0.1.0
+BASE=https://github.com/Broccolito/open-king/releases/download/v0.1.1
 
 curl -LO "$BASE/open-king-linux-x86_64.zip"
 curl -LO "$BASE/SHA256SUMS.txt"
@@ -320,7 +320,7 @@ chmod +x ~/.local/bin/open-king</code></pre>
 
         <div class="code-block">
 <pre><code>mkdir $HOME\open-king-dl; cd $HOME\open-king-dl
-gh release download v0.1.0 --repo Broccolito/open-king `
+gh release download v0.1.1 --repo Broccolito/open-king `
   --pattern 'open-king-windows-x86_64.zip' --pattern 'SHA256SUMS.txt' --clobber
 
 (Get-FileHash open-king-windows-x86_64.zip -Algorithm SHA256).Hash.ToLower()
@@ -357,7 +357,7 @@ Move-Item .\open-king-bin\open-king.exe $HOME\bin\open-king.exe -Force</code></p
 <pre><code>gh auth login          # if you have not already
 gh auth status         # confirm
 
-gh release download v0.1.0 --repo Broccolito/open-king \
+gh release download v0.1.1 --repo Broccolito/open-king \
   --pattern 'open-king-macos-arm64.zip' --pattern 'SHA256SUMS.txt' --clobber</code></pre>
         </div>
 

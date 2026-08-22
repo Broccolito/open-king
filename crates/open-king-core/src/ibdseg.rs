@@ -34,10 +34,15 @@
 //!   corpus from each row's own printed columns.
 //! * [`Scan::ibd1`]'s word rule (no IBS0 tolerance at all) — verified by forced-IBS0
 //!   sweeps.
-//! * [`MIN_INFORMATIVE`] — **measured** on hand-written-genotype fixtures where the count
-//!   is exact, then validated on data that had no part in choosing it: the corpus
-//!   separates on it with no overlap at all, and a 512-invocation word-grid sweep agrees
-//!   511 times. It is what [`MIN_RUN1`] used to stand in for.
+//! * [`MIN_INFORMATIVE`] — **measured, and measured per tier.** The gate is not one
+//!   number: the reference reads it once per run off a hard table keyed on the run's
+//!   total marker count ([`Tier`]), and the ten every fixture and every corpus dataset
+//!   here sees is that table's first row. The ten itself is measured on
+//!   hand-written-genotype fixtures where the count is exact, then validated on data that
+//!   had no part in choosing it: the corpus separates on it with no overlap at all, and a
+//!   512-invocation word-grid sweep agrees 511 times. It is what [`MIN_RUN1`] used to
+//!   stand in for. What was wrong was reading a first-tier measurement as a universal
+//!   constant; a 663 197-marker panel gates at 20 and no corpus dataset can see it.
 //! * [`Scan::ibd2`], [`IBD2_HET_DIRTY`] and [`IBD2_REACH`] — **measured on a `.seg`-native
 //!   canvas** (`docs/research/17-seg-caller.md`), which is the instrument the rest of this
 //!   header used to ask for: every constant below is a bisection read off the reference
@@ -68,7 +73,8 @@
 //!   when a budget `cost * (bad - 2) <= informative` passes over the interrupting words,
 //!   and the gate is asked *first*, so a refused run lies inside an interruption instead
 //!   of ending one. **The two passes are otherwise not the same rule.** IBD1 joins across
-//!   at most two unusable words and measures the gap run-to-run; IBD2 has no cap at all,
+//!   at most [`MERGE_MAX_WORDS`] unusable words — two in the first tier, uncapped above
+//!   it — and measures the gap run-to-run; IBD2 has no cap in any tier,
 //!   measures everything between the two runs' **gate windows** rather than between the
 //!   runs, and its informative count is HetHet with a switch to A1A1/A1A1 below
 //!   [`MIN_INFORMATIVE`]. The conditioned merged calls also feed the ">10 Mb" pair
@@ -196,17 +202,41 @@ const MIN_RUN1: usize = 1;
 /// different experiments and nothing says they must move together.
 const MIN_RUN2: usize = 1;
 
-/// Unusable words an **IBD1** `--seglength` merge may bridge — `20-seglength-floor.md`.
+/// Unusable words an **IBD1** `--seglength` merge may bridge, by [`Tier`] —
+/// `20-seglength-floor.md`, re-read on a dense panel.
 ///
 /// Bisected on `mergelab.py` (§3): a one- and a two-word interruption are joined at every
 /// floor above their own gap, a three-word one at none, however little the interrupting
 /// words carry and however short the gap. Runs the gate refused do **not** count here —
-/// they lie inside the interruption and are stepped over (§6).
+/// they lie inside the interruption and are stepped over (§6). `21-push-merge.md` §4
+/// reproduces the two on a fixture built for the purpose, and it is genuinely a count and
+/// not a distance in disguise: `23-gap-bound.md` §5 finds a *corpus* merge across two
+/// unusable words and 9 652 629 bp, two and a half times the narrowest gap §3 refuses.
 ///
-/// The IBD2 pass has **no** such cap — `21-push-merge.md` §4 re-measures it on a fixture
-/// built for the purpose and joins fifteen unusable words. The two passes really do
-/// differ: the same fixture on the IBD1 pass still refuses three.
-const MERGE_MAX_WORDS: usize = 2;
+/// **Every one of those readings is a first-tier reading.** The rigs run at 20 000 bp
+/// spacing on canvases of a few thousand markers, and all thirteen corpus datasets are far
+/// under 400 000 markers. On a 663 197-marker autosomal panel — [`Tier`]'s second row,
+/// marker spacing about 4 300 bp — the reference joins two runs across **four** unusable
+/// words where this cap refuses. That refusal is one of the two faults that kept a real
+/// 157-sample cohort from matching, and it was the one masking the other: lift the cap
+/// alone and the run gains a pair the reference does not report. Lifted *with* the
+/// first-tier gate corrected, the whole run is byte-identical to KING 2.3.2 — seven
+/// reported pairs, all four printed columns.
+///
+/// So: two in the first tier, no cap above it, and `None` means no cap rather than a cap
+/// of zero. What is **not** separated is which of the two things that move together —
+/// the marker count that chooses the [`Tier`], or the spacing a dense panel comes with —
+/// the reference keys on. Two observations at opposite ends of both cannot tell them
+/// apart. The tier is used because it is the boundary this module already has bisected
+/// evidence for (the gate steps at exactly the same marker count), and because keying it
+/// there leaves every first-tier measurement above reproduced exactly as measured, corpus
+/// included. A fixture holding the marker count inside one tier and moving only the
+/// spacing would settle it; nothing here does.
+///
+/// The IBD2 pass has no cap in any tier — `21-push-merge.md` §4 joins fifteen unusable
+/// words at 10 000 bp spacing on a first-tier fixture, where the IBD1 pass still refuses
+/// three. The two passes really do differ.
+const MERGE_MAX_WORDS: [Option<usize>; 3] = [Some(2), None, None];
 
 /// The fraction of `--seglength` a call must reach to arm the one-word push.
 ///
@@ -246,24 +276,95 @@ const MERGE_COST1: u32 = 4;
 /// as bad alongside an opposite homozygote; the IBD1 pass does not count it at all.
 const MERGE_COST2: u32 = 3;
 
-/// Informative markers a run must carry over its **own complete words** to be called.
+/// Informative markers a run must carry over its **own complete words** to be called —
+/// **a three-row table keyed on the run's total marker count**, not one number.
 ///
 /// The absence of a contradiction is only evidence where a contradiction had the chance
-/// to appear, and this is that test: a run `[u..v]` is reported only if at least ten of
-/// the markers `64u ..= 64(v+1)-1` are informative for the pair, in the sense of
-/// `WordDiff::inf1` (IBD1) or `WordDiff::inf2` (IBD2). Failing runs are dropped
-/// outright — not shortened, not merged, not re-scored.
+/// to appear, and this is that test: a run `[u..v]` is reported only if at least
+/// [`Tier::min_informative`] of the markers `64u ..= 64(v+1)-1` are informative for the
+/// pair, in the sense of `WordDiff::inf1` (IBD1) or `WordDiff::inf2` (IBD2). Failing runs
+/// are dropped outright — not shortened, not merged, not re-scored.
 ///
-/// **Measured, then validated out of sample** (`docs/research/13-informativeness-gate.md`).
-/// The constant comes from hand-written-genotype fixtures where the count is exact: ten
-/// passes and nine fails at every run width from 1 to 14 words and for three different
-/// placements of the informative markers inside the run. The corpus then separates on it
-/// without having chosen it — over 1 170 pairs every one the reference refuses has at
-/// most 9 and every one it reports has at least 10, with 62 refusals sitting at exactly 9
-/// and 60 acceptances at exactly 10, so 9 costs 62 extra pairs and 11 costs 60 missing
-/// ones. A 512-invocation word-grid sweep (shifting the grid under fixed genotypes)
-/// agrees with the reference 511 times with no false accepts.
-const MIN_INFORMATIVE: u32 = 10;
+/// **The ten is measured, then validated out of sample**
+/// (`docs/research/13-informativeness-gate.md`). It comes from hand-written-genotype
+/// fixtures where the count is exact: ten passes and nine fails at every run width from 1
+/// to 14 words and for three different placements of the informative markers inside the
+/// run. The corpus then separates on it without having chosen it — over 1 170 pairs every
+/// one the reference refuses has at most 9 and every one it reports has at least 10, with
+/// 62 refusals sitting at exactly 9 and 60 acceptances at exactly 10, so 9 costs 62 extra
+/// pairs and 11 costs 60 missing ones. A 512-invocation word-grid sweep (shifting the grid
+/// under fixed genotypes) agrees with the reference 511 times with no false accepts.
+///
+/// **None of that is wrong, and all of it is about one tier.** Every fixture in that
+/// campaign and every dataset behind those 1 170 pairs carries far fewer than 400 000
+/// markers. What was wrong was promoting a first-tier measurement to a universal constant.
+/// The reference chooses the gate **once per run**, off a hard three-row table read on the
+/// total number of markers it is scanning:
+///
+/// | markers | gate | minimum candidate length |
+/// | ---: | ---: | ---: |
+/// | `< 400 000` | 10 | 400 000 bp |
+/// | `400 000 … 2 000 000` | **20** | 400 000 bp |
+/// | `> 2 000 000` | 100 | 100 000 bp |
+///
+/// **How it was established.** A 663 197-marker × 157-sample autosomal panel is the
+/// counterexample the corpus cannot contain: the reference's `.seg` disagreed with this
+/// caller on every reported pair — `IBD1Seg` and `PropIBD` on all of them and `InfType` on
+/// one — and a gate of 20 is half of what closes it (the other half is
+/// [`MERGE_MAX_WORDS`]). That the trigger is the **count**, and nothing about the markers
+/// themselves, took 283 controlled reference runs and a single-marker bisection: appending
+/// one **all-missing** marker — which no pair can call, no gate can count and no segment
+/// can span — to take a fileset from 399 999 markers to 400 000 moves 27 Mb of called IBD,
+/// and padding the count alone, with the span and the usable-segment set held fixed,
+/// reproduces the step. Both steps are bisected to the marker: at exactly 400 000, and
+/// again at exactly 2 000 001.
+///
+/// The **second column is recorded, not implemented**, and the difference is deliberate.
+/// This caller has no separate candidate-length gate for it to key: its length tests are
+/// `--seglength`-derived and measured in their own right ([`WINDOW_FRACTION`],
+/// [`PUSH_FRACTION`], and the final `>= min_bp`). The first two rows agree on 400 000 bp
+/// anyway, so no data this project can run separates them, and the third row is untested
+/// here — nothing in the corpus, the fixtures or the panel reaches 2 000 001 markers, so
+/// its 100 and its 100 000 bp are recorded from the same bisection and exercised by
+/// neither.
+const MIN_INFORMATIVE: [u32; 3] = [10, 20, 100];
+
+/// The marker counts at which [`MIN_INFORMATIVE`] steps, as the first count **in** each
+/// row after the first.
+const TIER_STEPS: [usize; 2] = [400_000, 2_000_001];
+
+/// The segment-acceptance parameters one run uses, chosen once from its marker count.
+///
+/// The reference evaluates the table once, at the top of the run, so every pair and every
+/// usable segment of one run sees the same numbers — and two runs over the *same*
+/// genotypes at different marker counts do not. That is the whole of why a `.seg` file's
+/// contents depend on how many markers sit beside the ones it is about, and why a caller
+/// that hard-codes the first row is exactly right on every small fileset and wrong on
+/// every large one. See [`MIN_INFORMATIVE`] and [`MERGE_MAX_WORDS`].
+///
+/// The count used is the length of the position array being scanned: the retained
+/// autosomal markers for the autosomal pass, the X markers for the X one. No fixture
+/// separates that from "every marker in the fileset", because every dataset here that has
+/// an X array is three orders of magnitude below the first step; the array's own length is
+/// used because it is the count the pass actually holds.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Tier {
+    /// This run's informativeness gate — one row of [`MIN_INFORMATIVE`].
+    min_informative: u32,
+    /// This run's IBD1 merge cap, `None` where there is none — [`MERGE_MAX_WORDS`].
+    merge_max_words: Option<usize>,
+}
+
+impl Tier {
+    /// The row of the table a run over `markers` markers reads.
+    fn of(markers: usize) -> Tier {
+        let row = TIER_STEPS.iter().filter(|&&step| markers >= step).count();
+        Tier {
+            min_informative: MIN_INFORMATIVE[row],
+            merge_max_words: MERGE_MAX_WORDS[row],
+        }
+    }
+}
 
 /// Het-vs-hom disagreements that make a word too dirty to sit inside a `.seg` IBD2 run.
 ///
@@ -619,8 +720,8 @@ impl Scan {
         (first - 1).min(self.seg.hi)
     }
 
-    /// Whether the run of scan words `k0..=k1` carries [`MIN_INFORMATIVE`] markers of
-    /// `inf`.
+    /// Whether the run of scan words `k0..=k1` carries `min_informative` markers of
+    /// `inf` — the count this run's [`Tier`] asks for.
     ///
     /// The window is the run's **own complete words** and nothing else. Markers in the
     /// flanking words the reported segment reaches into lengthen the call but contribute
@@ -629,11 +730,11 @@ impl Scan {
     /// added to the flanks, and with 10 it reports, the length growing independently.
     /// There is no per-word component either — ten markers packed into the first word of
     /// a fourteen-word run pass.
-    fn informative(inf: &[u64], k0: usize, k1: usize) -> bool {
+    fn informative(inf: &[u64], k0: usize, k1: usize, min_informative: u32) -> bool {
         let mut n = 0u32;
         for &m in &inf[k0..=k1] {
             n += m.count_ones();
-            if n >= MIN_INFORMATIVE {
+            if n >= min_informative {
                 return true;
             }
         }
@@ -654,12 +755,15 @@ impl Scan {
     /// The budget is `cost * (bad - MERGE_FREE) <= X`:
     ///
     /// * IBD1 — `bad` is the opposite homozygotes; `X` is the A1A1/A1A1 markers, unless
-    ///   the het-vs-A1A1 ones alone reach [`MIN_INFORMATIVE`], in which case it is those.
+    ///   the het-vs-A1A1 ones alone reach the run's own gate, in which case it is those.
     ///   The switch is a bisection, not a guess: with 16 to 40 A1A1/A1A1 markers in the
-    ///   interruption, 9 het-vs-A1A1 markers join and 10 do not (§5).
+    ///   interruption, 9 het-vs-A1A1 markers join and 10 do not (§5) — on a first-tier
+    ///   fixture, which is the only tier that bisection was taken in, so the switch moves
+    ///   with [`Tier::min_informative`] rather than staying at ten on the assumption that
+    ///   this one constant is two constants that happen to agree.
     /// * IBD2 — `bad` is the opposite homozygotes **plus** the het-vs-hom mismatches, and
     ///   `X` is `inf2` (HetHet + A1A1/A1A1), the very count the gate uses (§7).
-    fn merge_ok(&self, mid: &[usize], pass2: bool) -> bool {
+    fn merge_ok(&self, mid: &[usize], pass2: bool, tier: Tier) -> bool {
         let (mut bad, mut x, mut v) = (0u32, 0u32, 0u32);
         for &k in mid {
             bad += self.ibs0[k].count_ones();
@@ -676,7 +780,7 @@ impl Scan {
                 v += (self.inf1[k] & self.ibs1[k]).count_ones();
             }
         }
-        if v >= MIN_INFORMATIVE {
+        if v >= tier.min_informative {
             x = v;
         }
         let cost = if pass2 { MERGE_COST2 } else { MERGE_COST1 };
@@ -701,6 +805,7 @@ impl Scan {
         mis: &[u32],
         pos: &[i64],
         min_bp: i64,
+        tier: Tier,
     ) -> Vec<(usize, usize)> {
         let n = self.nwords();
         let ge_of = |b: usize| {
@@ -719,7 +824,7 @@ impl Scan {
                 let mid: Vec<usize> = (q + 1..a).filter(|&k| !covered(k)).collect();
                 if (pb + 1..a).any(|k| !ok[k])
                     && pos[self.marker(g2, 0)] - pos[self.marker(q + 1, 0) - 1] < min_bp
-                    && self.merge_ok(&mid, true)
+                    && self.merge_ok(&mid, true, tier)
                 {
                     *out.last_mut().unwrap() = (pa, b);
                     continue;
@@ -733,9 +838,10 @@ impl Scan {
     /// Join adjacent gate-passing runs across a short interruption — `20-…` §2.
     ///
     /// `runs` are the runs that already cleared the gate, in order; `usable` marks every
-    /// word of the scan. Two runs join iff at most [`MERGE_MAX_WORDS`] unusable words lie
-    /// between them, the gap from the earlier run's last marker to the later run's first
-    /// is **strictly** under `--seglength`, and [`Scan::merge_ok`] passes.
+    /// word of the scan. Two runs join iff no more unusable words lie between them than
+    /// this run's [`Tier::merge_max_words`] allows — two in the first tier and any number
+    /// above it — the gap from the earlier run's last marker to the later run's first is
+    /// **strictly** under `--seglength`, and [`Scan::merge_ok`] passes.
     ///
     /// The cap and the budget do **not** read the same words: the cap counts only the
     /// unusable ones, so a gate-refused run between them is stepped over (`20-…` §6),
@@ -749,16 +855,21 @@ impl Scan {
         pos: &[i64],
         min_bp: i64,
         pass2: bool,
+        tier: Tier,
     ) -> Vec<(usize, usize)> {
         let mut out: Vec<(usize, usize)> = Vec::with_capacity(runs.len());
         for (a, b) in runs {
             if let Some(&(pa, pb)) = out.last() {
                 let bad_words = (pb + 1..a).filter(|&k| !usable[k]).count();
                 let mid: Vec<usize> = (pb + 1..a).collect();
+                let within_cap = match tier.merge_max_words {
+                    Some(cap) => bad_words <= cap,
+                    None => true,
+                };
                 if bad_words > 0
-                    && bad_words <= MERGE_MAX_WORDS
+                    && within_cap
                     && pos[self.marker(a, 0)] - pos[self.marker(pb + 1, 0) - 1] < min_bp
-                    && self.merge_ok(&mid, pass2)
+                    && self.merge_ok(&mid, pass2, tier)
                 {
                     *out.last_mut().unwrap() = (pa, b);
                     continue;
@@ -823,17 +934,18 @@ impl Scan {
     ///
     /// **The `--seglength` run merge** (`docs/research/20-seglength-floor.md`) is applied
     /// by [`Scan::runs`] before any of the above: the gate is asked first, and two
-    /// surviving runs are joined when at most two unusable words lie between them, the
-    /// run-to-run gap is strictly under `--seglength`, and
+    /// surviving runs are joined when at most [`MERGE_MAX_WORDS`] unusable words lie
+    /// between them, the run-to-run gap is strictly under `--seglength`, and
     /// `4 * (opposite homozygotes - 2) <= X` over those words — where `X` is the
-    /// A1A1/A1A1 count unless the het-vs-A1A1 markers alone reach [`MIN_INFORMATIVE`].
+    /// A1A1/A1A1 count unless the het-vs-A1A1 markers alone reach the run's own gate.
     /// See [`Scan::merge_ok`]. It cannot fire at the default floor on real spacings, which
     /// is why `IBD1Seg` was already exact on all 982 corpus rows there; at 5 and 10 Mb this
     /// pass alone takes that column from 910 and 844 to 959 and 960, and the IBD2 side of
     /// the merge (`Scan::join_runs2`, `21-push-merge.md`) carries it the rest of the way to
     /// **982 and 970** by removing IBD2 territory this column would otherwise keep.
     pub fn ibd1(&self, pos: &[i64], min_bp: i64, merge: bool) -> Vec<Called> {
-        self.runs(|k| self.ibs0_at(k) == 0, MIN_RUN1, pos, min_bp, merge)
+        let tier = Tier::of(pos.len());
+        self.runs(|k| self.ibs0_at(k) == 0, MIN_RUN1, pos, min_bp, merge, tier)
     }
 
     /// Maximal runs of `good` words, at least `min_run` long, turned into segments.
@@ -848,6 +960,7 @@ impl Scan {
         pos: &[i64],
         min_bp: i64,
         merge: bool,
+        tier: Tier,
     ) -> Vec<Called> {
         let n = self.nwords();
         let usable: Vec<bool> = (0..n).map(&good).collect();
@@ -866,12 +979,13 @@ impl Scan {
                 k += 1;
             }
             let k1 = k - 1;
-            if k1 + 1 - k0 >= min_run && Scan::informative(&self.inf1, k0, k1) {
+            if k1 + 1 - k0 >= min_run && Scan::informative(&self.inf1, k0, k1, tier.min_informative)
+            {
                 kept.push((k0, k1));
             }
         }
         if merge {
-            kept = self.join_runs(kept, &usable, pos, min_bp, false);
+            kept = self.join_runs(kept, &usable, pos, min_bp, false, tier);
         }
         let mut out: Vec<Called> = Vec::new();
         for (k0, k1) in kept {
@@ -1049,6 +1163,7 @@ impl Scan {
         if n == 0 {
             return Vec::new();
         }
+        let tier = Tier::of(pos.len());
         let mis: Vec<u32> = self.ibs1.iter().map(|m| m.count_ones()).collect();
         let inf2: Vec<u32> = self.inf2.iter().map(|m| m.count_ones()).collect();
         let usable: Vec<bool> = (0..n).map(|k| !ibd2_dirty(self, k)).collect();
@@ -1065,7 +1180,7 @@ impl Scan {
             }
         };
         let gate_ok =
-            |g: usize, b: usize| inf2[g..=ge_of(b)].iter().sum::<u32>() >= MIN_INFORMATIVE;
+            |g: usize, b: usize| inf2[g..=ge_of(b)].iter().sum::<u32>() >= tier.min_informative;
 
         // **The bridge, and it is the gate asked twice.** A lone unusable word carrying no
         // opposite homozygote is absorbed iff both halves would pass the gate on their own:
@@ -1130,7 +1245,7 @@ impl Scan {
             }
         }
         if merge {
-            kept = self.join_runs2(kept, &ok, &mis, pos, min_bp);
+            kept = self.join_runs2(kept, &ok, &mis, pos, min_bp, tier);
         }
 
         let mut out: Vec<Called> = Vec::new();
@@ -1863,6 +1978,30 @@ mod tests {
             vec![chr; n],
             (0..n).map(|i| 1_000_000 + i as i64 * step).collect(),
         )
+    }
+
+    /// Both steps of the segment-acceptance table, at the marker — [`MIN_INFORMATIVE`].
+    ///
+    /// The regression this guards is not a wrong number, it is a number that stopped
+    /// being a table: every fixture in this file and every dataset in the parity corpus
+    /// sits in the first row, so nothing else here can tell 10 from a constant 10. The
+    /// counterexample that forced the table is a 663 197-marker panel, which is the second
+    /// row and is the count asserted below.
+    #[test]
+    fn the_acceptance_table_steps_at_400_000_and_2_000_001_markers() {
+        let gate = |n: usize| Tier::of(n).min_informative;
+        assert_eq!(gate(0), 10);
+        assert_eq!(gate(399_999), 10);
+        assert_eq!(gate(400_000), 20);
+        assert_eq!(gate(663_197), 20); // the panel that found it
+        assert_eq!(gate(2_000_000), 20);
+        assert_eq!(gate(2_000_001), 100);
+
+        // The IBD1 merge cap rides the same steps: two in the first row, none above it.
+        let cap = |n: usize| Tier::of(n).merge_max_words;
+        assert_eq!(cap(399_999), Some(2));
+        assert_eq!(cap(400_000), None);
+        assert_eq!(cap(2_000_001), None);
     }
 
     #[test]
