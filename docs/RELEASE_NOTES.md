@@ -1,4 +1,4 @@
-# open-king v0.1.1
+# open-king v0.1.2
 
 `open-king` reads a PLINK1 fileset and reports how every pair of samples in it is related:
 kinship coefficients, duplicate and monozygotic pairs, IBD segments, a relationship label
@@ -8,6 +8,50 @@ It is a clean-room, MIT-licensed Rust implementation of the relatedness core of
 [KING 2.3.2](https://www.kingrelatedness.com/), taking the same command line and writing
 byte-identical output. All 480 captured reference invocations reproduce exactly, across 876
 output files.
+
+## What changed in 0.1.2
+
+**The binary is unchanged.** No estimator, no output format and no command-line behaviour
+moves in this release: 480 PASS / 0 FAIL over 876 byte-compared files, `baseline: MATCH`,
+and the `.seg` row scorecard reads 982 / 982 / 982 with MAE 0.000000 at the 3, 5 and 10 Mb
+floors — the same numbers 0.1.1 published. What changed is that the macOS archives are now
+actually what this page has claimed they are.
+
+**v0.1.1's macOS archives shipped unsigned, and have been re-signed in place.** CI holds no
+Apple credential by design, so the macOS pair is signed and notarized by hand afterwards
+(`docs/MAINTAINING.md` §9). That step ran for 0.1.1 and failed, silently enough that the
+release went out anyway while `README.md`, this page and the documentation site all said the
+builds were notarized.
+
+The cause was the guard rather than the signing. `scripts/notarize-macos-release.sh`
+asserted the hardened runtime with
+
+```bash
+codesign -dv --verbose=2 "$d/open-king" 2>&1 | grep -qE 'flags=0x10000\(runtime\)' || exit 1
+```
+
+`grep -q` exits at its first match — line 4 of the 14 `codesign` writes — so `codesign` is
+still writing when the read end closes, takes `SIGPIPE`, and exits 141; `set -o pipefail`
+three lines above then makes 141 the status of the pipeline. The signature was correct every
+time and the script rejected it every time, reporting a signing failure for what was a
+plumbing failure. The assertion now captures `codesign`'s output once and matches against
+that, and checks the secure timestamp and `TeamIdentifier` while it has it, so a bad
+signature is caught before submission rather than twenty minutes into Apple's queue.
+
+**If you downloaded v0.1.1's macOS archives before 2026-08-22, replace them.** The assets
+and `SHA256SUMS.txt` on the v0.1.1 release have been regenerated, so the checksums you
+recorded then no longer match. The executable inside is byte-for-byte the one CI built from
+the tagged commit — only the signature is added. Both submissions were `Accepted` by Apple,
+`scripts/verify-release-assets.sh v0.1.1` passes all 17 checks, and
+`codesign --test-requirement="=notarized"` is satisfied against the published archive.
+
+**Two documentation-only repairs in `open-king-core`.** `seg_prop_ibd`'s doc comment linked
+twice to `Segments::prop_ibd`, a type that does not exist — the method is on `PairSegments`
+— which broke `cargo doc` under `-D warnings`. With that fixed the same build still failed
+on 29 `private_intra_doc_links` errors, so that lint is now allowed crate-wide: linking a
+rule's doc comment to the private constant that pins it is the convention this crate is
+documented in, and the alternative was deleting 29 working cross-references.
+`RUSTDOCFLAGS="-D warnings" cargo doc -p open-king-core --no-deps` exits 0.
 
 ## What changed in 0.1.1
 

@@ -125,8 +125,8 @@ to each [release](https://github.com/Broccolito/open-king/releases). Download, c
 SHA-256 and extract:
 
 ```bash
-curl -LO https://github.com/Broccolito/open-king/releases/download/v0.1.1/open-king-macos-arm64.zip
-curl -LO https://github.com/Broccolito/open-king/releases/download/v0.1.1/SHA256SUMS.txt
+curl -LO https://github.com/Broccolito/open-king/releases/download/v0.1.2/open-king-macos-arm64.zip
+curl -LO https://github.com/Broccolito/open-king/releases/download/v0.1.2/SHA256SUMS.txt
 shasum -a 256 -c SHA256SUMS.txt --ignore-missing
 unzip open-king-macos-arm64.zip
 ./open-king
