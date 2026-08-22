@@ -1809,7 +1809,7 @@ fn ibd1_pieces(c: Called, others: &[Called]) -> Vec<Called> {
 /// PropIBD = i2 * 1e-4 + i1 * 5e-5          , printed "%.4lf"
 /// ```
 ///
-/// # Why this is not the same number as [`Segments::prop_ibd`]
+/// # Why this is not the same number as [`PairSegments::prop_ibd`]
 ///
 /// The reference contradicts itself, and that is the whole finding. Run it once:
 ///
@@ -1859,7 +1859,7 @@ fn ibd1_pieces(c: Called, others: &[Called]) -> Vec<Called> {
 /// any floor: whatever `.seg` still gets wrong is `IBD1Seg` or `IBD2Seg`.
 ///
 /// It changes no decision anywhere. `InfType`, the `--degree` filter, `--unrelated` and
-/// `--related`'s `Error` all keep reading [`Segments::prop_ibd`]; this value reaches one
+/// `--related`'s `Error` all keep reading [`PairSegments::prop_ibd`]; this value reaches one
 /// column of one file.
 pub fn seg_prop_ibd(ibd1_seg: f64, ibd2_seg: f64) -> f64 {
     printed_units(ibd2_seg) as f64 * 1e-4 + printed_units(ibd1_seg) as f64 * 5e-5
