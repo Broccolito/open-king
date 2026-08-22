@@ -23,3 +23,9 @@ __pycache__/
 
 # Guard: an agent once cloned the repo inside itself (90 MB).
 /open-king/
+
+# Apple signing material for scripts/notarize-macos-release.sh: the Developer ID
+# private key and the notes file holding the app-specific password and the cert
+# passphrase. Local only -- these must never reach the remote. See MAINTAINING.md §9.
+/notarization/
+*.p12
